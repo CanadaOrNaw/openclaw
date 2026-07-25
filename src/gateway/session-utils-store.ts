@@ -340,7 +340,7 @@ export function listAgentsForGateway(
     includeSystem?: boolean;
   },
 ): {
-  defaultId: string;
+  defaultId?: string;
   mainKey: string;
   scope: SessionScope;
   agents: GatewayAgentRow[];
@@ -423,5 +423,10 @@ export function listAgentsForGateway(
       model ? { model } : {},
     );
   });
-  return { defaultId: basic.defaultId, mainKey: basic.mainKey, scope: basic.scope, agents };
+  return {
+    ...(basic.defaultId ? { defaultId: basic.defaultId } : {}),
+    mainKey: basic.mainKey,
+    scope: basic.scope,
+    agents,
+  };
 }

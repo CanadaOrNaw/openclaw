@@ -4,7 +4,7 @@ import {
   beginGatewayRootWorkAdmissionWhenOpen,
   GatewayDrainingError,
 } from "../../process/gateway-work-admission.js";
-import { normalizeAgentId, resolveAgentIdFromSessionKey } from "../../routing/session-key.js";
+import { normalizeAgentId, parseAgentSessionKey } from "../../routing/session-key.js";
 import { markCronJobActive } from "../active-jobs.js";
 import { createCronRunDiagnosticsFromError } from "../run-diagnostics.js";
 import { sweepCronRunSessions } from "../session-reaper.js";
@@ -189,9 +189,6 @@ async function onAdmittedTimer(state: CronServiceState) {
     sessionReaperDefaultAgentId = hasSessionReaperStore
       ? (state.deps.resolveDefaultAgentId?.() ?? state.deps.defaultAgentId)?.trim()
       : undefined;
-    if (hasSessionReaperStore && !sessionReaperDefaultAgentId) {
-      throw new Error("Cron session reaper requires the prepared configured default agent id.");
-    }
     const dueJobs = await locked(state, async () => {
       await ensureLoaded(state, { forceReload: true, skipRecompute: true });
       if (state.stopped || state.restartRecoveryPending) {
@@ -589,58 +586,61 @@ async function onAdmittedTimer(state: CronServiceState) {
     try {
       // Reaper discovery is maintenance: failure must never strand the timer
       // or leave the scheduler's execution slot permanently occupied.
-      if (sessionReaperDefaultAgentId) {
-        const defaultAgentId = sessionReaperDefaultAgentId;
-        const storeTargets = new Map<string, { agentId: string; storePath: string }>();
-        const addStoreTarget = (agentId: string, storePath: string) => {
-          storeTargets.set(`${agentId}\0${storePath}`, { agentId, storePath });
-        };
-        const resolveJobAgentId = (job: CronJob) =>
-          typeof job.agentId === "string" && job.agentId.trim()
-            ? normalizeAgentId(job.agentId)
-            : resolveAgentIdFromSessionKey(job.sessionKey, defaultAgentId);
-        const configuredAgentIds = state.deps.resolveSessionStoreAgentIds?.() ?? [];
-        if (state.deps.resolveSessionStorePath) {
-          for (const agentId of configuredAgentIds) {
-            const normalizedAgentId = normalizeAgentId(agentId);
-            addStoreTarget(
-              normalizedAgentId,
-              state.deps.resolveSessionStorePath(normalizedAgentId),
-            );
-          }
-          for (const job of state.store?.jobs ?? []) {
-            const agentId = resolveJobAgentId(job);
+      const storeTargets = new Map<string, { agentId: string; storePath: string }>();
+      const addStoreTarget = (agentId: string, storePath: string) => {
+        storeTargets.set(`${agentId}\0${storePath}`, { agentId, storePath });
+      };
+      const resolveJobAgentId = (job: CronJob, defaultAgentId?: string) => {
+        const owner = job.agentId?.trim() || parseAgentSessionKey(job.sessionKey)?.agentId;
+        return owner ? normalizeAgentId(owner) : defaultAgentId;
+      };
+      const configuredAgentIds = state.deps.resolveSessionStoreAgentIds?.() ?? [];
+      if (state.deps.resolveSessionStorePath) {
+        for (const agentId of configuredAgentIds) {
+          const normalizedAgentId = normalizeAgentId(agentId);
+          addStoreTarget(normalizedAgentId, state.deps.resolveSessionStorePath(normalizedAgentId));
+        }
+        for (const job of state.store?.jobs ?? []) {
+          const agentId = resolveJobAgentId(job, sessionReaperDefaultAgentId);
+          if (agentId) {
             addStoreTarget(agentId, state.deps.resolveSessionStorePath(agentId));
           }
-          addStoreTarget(defaultAgentId, state.deps.resolveSessionStorePath(defaultAgentId));
-        } else if (state.deps.sessionStorePath) {
-          for (const agentId of configuredAgentIds) {
-            addStoreTarget(normalizeAgentId(agentId), state.deps.sessionStorePath);
-          }
-          for (const job of state.store?.jobs ?? []) {
-            addStoreTarget(resolveJobAgentId(job), state.deps.sessionStorePath);
-          }
-          addStoreTarget(defaultAgentId, state.deps.sessionStorePath);
         }
+        if (sessionReaperDefaultAgentId) {
+          addStoreTarget(
+            sessionReaperDefaultAgentId,
+            state.deps.resolveSessionStorePath(sessionReaperDefaultAgentId),
+          );
+        }
+      } else if (state.deps.sessionStorePath) {
+        for (const agentId of configuredAgentIds) {
+          addStoreTarget(normalizeAgentId(agentId), state.deps.sessionStorePath);
+        }
+        for (const job of state.store?.jobs ?? []) {
+          const agentId = resolveJobAgentId(job, sessionReaperDefaultAgentId);
+          if (agentId) {
+            addStoreTarget(agentId, state.deps.sessionStorePath);
+          }
+        }
+        if (sessionReaperDefaultAgentId) {
+          addStoreTarget(sessionReaperDefaultAgentId, state.deps.sessionStorePath);
+        }
+      }
 
-        if (storeTargets.size > 0) {
-          const nowMs = state.deps.nowMs();
-          for (const { agentId, storePath } of storeTargets.values()) {
-            try {
-              await sweepCronRunSessions({
-                agentId,
-                defaultAgentId,
-                cronConfig: state.deps.cronConfig,
-                sessionStorePath: storePath,
-                nowMs,
-                log: state.deps.log,
-              });
-            } catch (err) {
-              state.deps.log.warn(
-                { err: String(err), storePath },
-                "cron: session reaper sweep failed",
-              );
-            }
+      if (storeTargets.size > 0) {
+        const nowMs = state.deps.nowMs();
+        for (const { agentId, storePath } of storeTargets.values()) {
+          try {
+            await sweepCronRunSessions({
+              agentId,
+              defaultAgentId: sessionReaperDefaultAgentId ?? agentId,
+              cronConfig: state.deps.cronConfig,
+              sessionStorePath: storePath,
+              nowMs,
+              log: state.deps.log,
+            });
+          } catch (err) {
+            state.deps.log.warn({ err: String(err), storePath }, "cron: session reaper sweep failed");
           }
         }
       }

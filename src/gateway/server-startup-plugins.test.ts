@@ -111,6 +111,7 @@ const runStartupSessionMigration = vi.hoisted(() => vi.fn(async (_params: unknow
 vi.mock("../agents/agent-scope.js", () => ({
   resolveAgentWorkspaceDir: () => "/workspace",
   resolveDefaultAgentId: () => "default",
+  tryResolveDefaultAgentId: () => "default",
 }));
 
 vi.mock("../agents/subagent-registry.js", () => ({

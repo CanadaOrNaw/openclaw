@@ -1,6 +1,10 @@
 // Route resolution helpers map user targets to configured channel routes.
 import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
-import { listAgentEntries, resolveDefaultAgentId } from "../agents/agent-scope.js";
+import {
+  listAgentEntries,
+  resolveDefaultAgentId,
+  tryResolveDefaultAgentId,
+} from "../agents/agent-scope.js";
 import type { ChatType } from "../channels/chat-type.js";
 import { normalizeChatType } from "../channels/chat-type.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
@@ -124,7 +128,7 @@ function listAgents(cfg: OpenClawConfig) {
 type AgentLookupCache = {
   agentsRef: OpenClawConfig["agents"] | undefined;
   byNormalizedId: Map<string, string>;
-  fallbackDefaultAgentId: string;
+  fallbackSoleAgentId?: string;
 };
 
 const agentLookupCacheByCfg = new WeakMap<OpenClawConfig, AgentLookupCache>();
@@ -147,7 +151,7 @@ function resolveAgentLookupCache(cfg: OpenClawConfig): AgentLookupCache {
   const next: AgentLookupCache = {
     agentsRef,
     byNormalizedId,
-    fallbackDefaultAgentId: sanitizeAgentId(resolveDefaultAgentId(cfg)),
+    fallbackSoleAgentId: tryResolveDefaultAgentId(cfg),
   };
   agentLookupCacheByCfg.set(cfg, next);
   return next;
@@ -157,20 +161,20 @@ export function pickFirstExistingAgentId(cfg: OpenClawConfig, agentId: string): 
   const lookup = resolveAgentLookupCache(cfg);
   const trimmed = (agentId ?? "").trim();
   if (!trimmed) {
-    return lookup.fallbackDefaultAgentId;
+    return sanitizeAgentId(
+      lookup.fallbackSoleAgentId ??
+        resolveDefaultAgentId(cfg, {
+          surface: "agent lookup",
+          hint: "Pass an explicit agent id instead of relying on an implicit route.",
+        }),
+    );
   }
   const normalized = normalizeAgentId(trimmed);
   const resolved = lookup.byNormalizedId.get(normalized);
   if (resolved) {
     return resolved;
   }
-  if (trimmed === DEFAULT_AGENT_ID) {
-    return DEFAULT_AGENT_ID;
-  }
-  if (lookup.byNormalizedId.size === 0) {
-    return sanitizeAgentId(trimmed);
-  }
-  return lookup.fallbackDefaultAgentId;
+  return sanitizeAgentId(trimmed);
 }
 
 type NormalizedPeerConstraint =
@@ -814,6 +818,12 @@ export function resolveAgentRoute(input: ResolveAgentRouteInput): ResolvedAgentR
     }
   }
 
-  return choose(resolveDefaultAgentId(input.cfg), "default");
+  return choose(
+    resolveDefaultAgentId(input.cfg, {
+      surface: `inbound ${channel} account "${accountId}" routing`,
+      hint: `Add a binding with "openclaw agents bind --agent <id> --bind ${channel}:${accountId}" (or a channel-wide ${channel}:* binding).`,
+    }),
+    "default",
+  );
 }
 /* oxlint-disable max-lines -- TODO: split this grandfathered oversized file. */
