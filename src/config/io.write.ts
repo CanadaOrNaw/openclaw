@@ -39,6 +39,7 @@ import {
 } from "./io.audit.js";
 import type { ConfigIoContext } from "./io.context.js";
 import { recordConfigWriteMetadata } from "./io.meta.js";
+import { assertAutomaticBindingsWriteAllowed } from "./io.ownership-write-guard.js";
 import {
   collectEnvRefPaths,
   containsConfigIncludeDirective,
@@ -224,6 +225,14 @@ export async function writeConfigFileFromContext(
           ).values(),
         ]
       : [];
+  assertAutomaticBindingsWriteAllowed({
+    bindingsIncludeOwned: snapshot.bindingsIncludeOwned === true,
+    ownershipPaths: topologyOwnershipPaths,
+    sourceBindings: Array.isArray(snapshot.sourceConfigBeforeMigrations?.bindings)
+      ? snapshot.sourceConfigBeforeMigrations.bindings
+      : [],
+    nextBindings: Array.isArray(nextConfig.bindings) ? nextConfig.bindings : [],
+  });
   const explicitSetPaths = [...(options.explicitSetPaths ?? []), ...topologyOwnershipPaths];
   const cronHandoffAgentId =
     retainedLegacyDefaultAgentId && nextAgentIds.has(normalizeAgentId(retainedLegacyDefaultAgentId))
