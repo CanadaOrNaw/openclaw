@@ -21,6 +21,7 @@ import {
   deleteStaleCronJobFamilyRows,
   loadedCronStoreFromRows,
   loadCronRows,
+  loadCronRowsWithEpoch,
   replaceCronRows,
   updateCronRuntimeRows,
 } from "./store/row-codec.js";
@@ -36,6 +37,8 @@ export type {
   QuarantinedCronConfigJob,
 } from "./store/types.js";
 import type { CronStoreFile } from "./types.js";
+
+export { CronStoreEpochMismatchError } from "./store/row-codec.js";
 
 function resolveDefaultCronDir(env: NodeJS.ProcessEnv): string {
   return path.join(resolveConfigDir(env), "cron");
@@ -83,12 +86,13 @@ export async function loadCronJobsStoreWithConfigJobs(
   const resolvedStorePath = path.resolve(storePath);
   const storeKey = cronStoreKey(resolvedStorePath);
   const database = openOpenClawStateDatabase({ env }).db;
-  const rows = loadCronRows(database, storeKey);
+  const { rows, storeEpoch } = loadCronRowsWithEpoch(database, storeKey);
   if (rows.length > 0) {
-    return loadedCronStoreFromRows(rows);
+    return loadedCronStoreFromRows(rows, storeEpoch);
   }
   return {
     store: { version: 1, jobs: [] },
+    storeEpoch,
     configJobs: [],
     configJobIndexes: [],
     configJobRuntimeEntries: [],
@@ -109,9 +113,10 @@ export function removeStaleCronJobFamilyRows(
   );
 }
 
-function emptyLoadedCronStore(): LoadedCronStore {
+function emptyLoadedCronStore(storeEpoch = 0): LoadedCronStore {
   return {
     store: { version: 1, jobs: [] },
+    storeEpoch,
     configJobs: [],
     configJobIndexes: [],
     configJobRuntimeEntries: [],
@@ -143,11 +148,15 @@ export async function loadCronJobsStoreWithConfigJobsReadOnly(
     if (!tableExists(db, "cron_jobs")) {
       return emptyLoadedCronStore();
     }
-    const rows = loadCronRows(db, storeKey);
+    const epochSchemaPresent = tableExists(db, "cron_store_epochs");
+    const { rows, storeEpoch } = loadCronRowsWithEpoch(db, storeKey, {
+      ensureEpochSchema: false,
+      epochSchemaPresent,
+    });
     if (rows.length > 0) {
-      return loadedCronStoreFromRows(rows);
+      return loadedCronStoreFromRows(rows, storeEpoch);
     }
-    return emptyLoadedCronStore();
+    return emptyLoadedCronStore(storeEpoch);
   } finally {
     db.close();
   }
@@ -173,6 +182,10 @@ export function loadCronJobsStoreSync(storePath: string): CronStoreFile {
 type SaveCronStoreOptions = {
   stateOnly?: boolean;
   env?: NodeJS.ProcessEnv;
+  /** Reject a stale full-store writer instead of replacing newer topology. */
+  expectedStoreEpoch?: number;
+  /** Advance the epoch when an ownership migration changes topology meaning. */
+  bumpStoreEpoch?: boolean;
 };
 
 async function atomicWrite(filePath: string, content: string, dirMode = 0o700): Promise<void> {
@@ -209,7 +222,10 @@ export async function saveCronJobsStore(
   assertCronStoreCanPersist(store);
   runOpenClawStateWriteTransaction(
     ({ db }) => {
-      replaceCronRows(db, storeKey, store);
+      replaceCronRows(db, storeKey, store, {
+        expectedStoreEpoch: opts?.expectedStoreEpoch,
+        bumpStoreEpoch: opts?.bumpStoreEpoch,
+      });
     },
     { env: opts?.env },
   );
@@ -243,19 +259,23 @@ export async function transformCronJobsStoreWithMetadata(
   transform: (loaded: LoadedCronStore) => CronStoreFile,
   acquireMetadata: (db: DatabaseSync) => boolean,
   env: NodeJS.ProcessEnv = process.env,
+  options?: { bumpStoreEpoch?: boolean },
 ): Promise<boolean> {
   const resolvedStorePath = path.resolve(storePath);
   const storeKey = cronStoreKey(resolvedStorePath);
   return runOpenClawStateWriteTransaction(
     ({ db }) => {
-      const rows = loadCronRows(db, storeKey);
-      const loaded = rows.length > 0 ? loadedCronStoreFromRows(rows) : emptyLoadedCronStore();
+      const { rows, storeEpoch } = loadCronRowsWithEpoch(db, storeKey);
+      const loaded =
+        rows.length > 0
+          ? loadedCronStoreFromRows(rows, storeEpoch)
+          : emptyLoadedCronStore(storeEpoch);
       if (!acquireMetadata(db)) {
         return false;
       }
       const next = transform(loaded);
       assertCronStoreCanPersist(next);
-      replaceCronRows(db, storeKey, next);
+      replaceCronRows(db, storeKey, next, { bumpStoreEpoch: options?.bumpStoreEpoch });
       return true;
     },
     { env },
