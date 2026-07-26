@@ -427,6 +427,7 @@ describe("onboard (non-interactive): gateway and remote auth", () => {
         {
           nonInteractive: true,
           mode: "local",
+          agent: "alpha",
           workspace: path.join(stateDir, "requested-workspace"),
           authChoice: "skip",
           skipSkills: true,

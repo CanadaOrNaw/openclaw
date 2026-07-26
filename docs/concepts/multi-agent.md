@@ -168,6 +168,7 @@ To let one agent search another agent's QMD session transcripts, add extra colle
 ```json5
 {
   agents: {
+    ownership: "explicit",
     defaults: {
       workspace: "~/workspaces/main",
     },
@@ -210,6 +211,7 @@ Direct chats collapse to the agent's main session key by default, so true isolat
 ```json5
 {
   agents: {
+    ownership: "explicit",
     list: [
       { id: "alex", workspace: "~/.openclaw/workspace-alex" },
       { id: "mia", workspace: "~/.openclaw/workspace-mia" },
@@ -270,6 +272,7 @@ Channels supporting multiple accounts: `discord`, `feishu`, `googlechat`, `imess
     ```json5
     {
       agents: {
+        ownership: "explicit",
         list: [
           { id: "main", workspace: "~/.openclaw/workspace-main" },
           { id: "coding", workspace: "~/.openclaw/workspace-coding" },
@@ -317,6 +320,7 @@ Channels supporting multiple accounts: `discord`, `feishu`, `googlechat`, `imess
     ```json5
     {
       agents: {
+        ownership: "explicit",
         list: [
           { id: "main", workspace: "~/.openclaw/workspace-main" },
           { id: "alerts", workspace: "~/.openclaw/workspace-alerts" },
@@ -366,6 +370,7 @@ Channels supporting multiple accounts: `discord`, `feishu`, `googlechat`, `imess
     ```js
     {
       agents: {
+        ownership: "explicit",
         defaults: {
           heartbeat: { agentId: "home" },
           systemAgent: { agentId: "home" },
@@ -439,6 +444,7 @@ Channels supporting multiple accounts: `discord`, `feishu`, `googlechat`, `imess
     ```json5
     {
       agents: {
+        ownership: "explicit",
         list: [
           {
             id: "chat",
@@ -470,6 +476,7 @@ Channels supporting multiple accounts: `discord`, `feishu`, `googlechat`, `imess
     ```json5
     {
       agents: {
+        ownership: "explicit",
         list: [
           {
             id: "chat",
@@ -556,6 +563,7 @@ Each agent can have its own sandbox and tool restrictions:
 ```js
 {
   agents: {
+    ownership: "explicit",
     list: [
       {
         id: "personal",
