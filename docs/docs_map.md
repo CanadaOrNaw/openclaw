@@ -3397,6 +3397,7 @@ Do not edit it by hand; run `pnpm docs:map:gen`.
 
 - Route: /gateway/config-agents
 - Headings:
+  - H2: Multi-agent ownership generation
   - H2: Agent defaults
   - H3: agents.defaults.workspace
   - H3: agents.defaults.repoRoot
