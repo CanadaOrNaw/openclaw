@@ -194,8 +194,6 @@ export async function writeConfigFileFromContext(
     nextAgentEntries.length > 1 && snapshot.config.agents?.ownership === "explicit";
   const shouldStampOwnershipGeneration =
     (persistOwnership || retainExplicitOwnership) && nextConfig.agents?.ownership === undefined;
-  const ownershipGenerationInserted =
-    shouldStampOwnershipGeneration && snapshot.config.agents?.ownership !== "explicit";
   if (shouldStampOwnershipGeneration) {
     nextConfig = {
       ...nextConfig,
@@ -213,7 +211,7 @@ export async function writeConfigFileFromContext(
   nextConfig = workspacePin.config;
   let transitionInsertedPaths = [
     ...workspacePin.insertedPaths,
-    ...(ownershipGenerationInserted ? [["agents", "ownership"]] : []),
+    ...(shouldStampOwnershipGeneration ? [["agents", "ownership"]] : []),
   ];
   if (previousSoleHandoffAgentId) {
     const materialized = materializeLegacyAgentOwnershipForActiveChannelsResult(
@@ -224,17 +222,18 @@ export async function writeConfigFileFromContext(
     nextConfig = materialized.config;
     transitionInsertedPaths = [...transitionInsertedPaths, ...materialized.insertedPaths];
   }
-  const topologyOwnershipPaths = persistOwnership
-    ? [
-        ...new Map(
-          [
-            ...legacySourceInsertedPaths,
-            ...retainedLegacyRuntimeInsertedPaths,
-            ...transitionInsertedPaths,
-          ].map((ownershipPath) => [ownershipPath.join("\0"), ownershipPath]),
-        ).values(),
-      ]
-    : [];
+  const topologyOwnershipPaths =
+    persistOwnership || retainExplicitOwnership
+      ? [
+          ...new Map(
+            [
+              ...legacySourceInsertedPaths,
+              ...retainedLegacyRuntimeInsertedPaths,
+              ...transitionInsertedPaths,
+            ].map((ownershipPath) => [ownershipPath.join("\0"), ownershipPath]),
+          ).values(),
+        ]
+      : [];
   assertAutomaticBindingsWriteAllowed({
     bindingsIncludeOwned: snapshot.bindingsIncludeOwned === true,
     ownershipPaths: topologyOwnershipPaths,
