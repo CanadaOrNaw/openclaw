@@ -204,6 +204,9 @@ async function loadRemoteGatewayRoster(cfg: OpenClawConfig): Promise<RemoteGatew
     });
   }
   const entries = result.agents.flatMap((entry) => {
+    if (entry.kind === "system") {
+      return [];
+    }
     const id = normalizeOptionalString(entry.id);
     return id ? [{ id: normalizeAgentId(id), ...(entry.name ? { name: entry.name } : {}) }] : [];
   });
@@ -240,7 +243,7 @@ async function loadRemoteGatewayRoster(cfg: OpenClawConfig): Promise<RemoteGatew
     ownership: result.ownership,
     // Old gateways expose only defaultId, where it remains authoritative.
     selectionRequired:
-      result.selectionRequired ?? (result.ownership ? result.ownership !== "sole" : false),
+      result.selectionRequired ?? (result.ownership === "explicit" && entries.length > 1),
     mainKey: result.mainKey,
     scope: result.scope,
   };

@@ -330,6 +330,21 @@ describe("getStatusSummary", () => {
     });
   });
 
+  it("omits a compatibility default from ownerless fleet heartbeat status", async () => {
+    vi.mocked(listGatewayAgentsBasic).mockReturnValue({
+      defaultId: "ops",
+      ownership: "explicit",
+      selectionRequired: true,
+      mainKey: "main",
+      scope: "per-sender",
+      agents: [{ id: "ops" }, { id: "research" }],
+    });
+
+    const summary = await getStatusSummary();
+
+    expect(summary.heartbeat).not.toHaveProperty("defaultAgentId");
+  });
+
   it("reports degraded SecretRef owners without exposing ref identifiers", async () => {
     setActiveDegradedSecretOwners([
       {
