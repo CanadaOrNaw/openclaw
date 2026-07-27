@@ -1,3 +1,4 @@
+import { listAgentEntries, resolveAgentWorkspaceDir } from "../agents/agent-scope.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import { formatConfigIssueLines } from "../config/issue-format.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
@@ -425,7 +426,7 @@ async function runGuidedOnboardingFlow(
     canConfirmMove: !alreadyConfigured,
   });
   const { allowWorkspaceChange, conflict: workspaceConflict } = workspaceSelection;
-  const appliedWorkspace = workspaceSelection.workspaceDir;
+  let appliedWorkspace = workspaceSelection.workspaceDir;
   if (alreadyConfigured) {
     await prompter.note(t("wizard.guided.alreadySetUp"), t("wizard.guided.welcomeTitle"));
     if (workspaceConflict) {
@@ -449,13 +450,19 @@ async function runGuidedOnboardingFlow(
       agentId: opts.agent,
       runtime,
     });
+    const selectedAgentExists = listAgentEntries(onboardingAgent.config).some(
+      (entry) => entry.id === onboardingAgent.agentId,
+    );
+    if (!opts.workspace?.trim() && selectedAgentExists) {
+      appliedWorkspace = resolveAgentWorkspaceDir(onboardingAgent.config, onboardingAgent.agentId);
+    }
     const applySetup =
       deps.applySetup ?? (await import("../system-agent/setup-apply.js")).applySystemAgentSetup;
     const applyProgress = prompter.progress(t("wizard.guided.settingUp"));
     try {
       const applied = await withConsoleSubsystemsSuppressed(() =>
         applySetup({
-          workspace,
+          workspace: appliedWorkspace,
           targetAgentId: onboardingAgent.agentId,
           ...(allowWorkspaceChange ? { allowWorkspaceChange: true } : {}),
           surface: "cli",
@@ -479,7 +486,7 @@ async function runGuidedOnboardingFlow(
         }),
         t("wizard.guided.aiAccessTitle"),
       );
-      return { workspace, next: "chat" };
+      return { workspace: appliedWorkspace, next: "chat" };
     }
   }
   if (wantsDiscovery) {
@@ -490,7 +497,7 @@ async function runGuidedOnboardingFlow(
       config: persistedConfig,
       prompter,
       runtime,
-      workspaceDir: workspace,
+      workspaceDir: appliedWorkspace,
       modelRouteVerified: true,
     });
     const recommendedConfig = recommendationOutcome.config;
