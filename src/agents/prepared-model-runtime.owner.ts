@@ -32,6 +32,7 @@ import {
   loadBundledProviderStaticCatalogContextModels,
 } from "./embedded-agent-runner/model.static-catalog.js";
 import { staticModelIdMatches } from "./embedded-agent-runner/model.static-id.js";
+import { resolveLegacyInheritedAuthDir } from "./legacy-inherited-auth-dir.js";
 import { buildPreparedModelCatalogSnapshot, type ModelCatalogEntry } from "./model-catalog.js";
 import type { ModelCatalogSnapshot } from "./model-catalog.types.js";
 import { ensureOpenClawModelsJson } from "./models-config.js";
@@ -240,7 +241,7 @@ export function normalizePreparedModelRuntimeInput(
     ...rest
   } = input;
   const inheritedAuthDir = normalizeOptionalDir(
-    input.inheritedAuthDir ?? resolveAgentDir(input.config, "main", input.env),
+    input.inheritedAuthDir ?? resolveLegacyInheritedAuthDir(input.config, input.env),
   );
   const workspaceDir = normalizeOptionalDir(input.workspaceDir);
   const env = input.env ? Object.freeze({ ...input.env }) : undefined;
@@ -444,7 +445,7 @@ export function listConfiguredOwnerInputs(
   defaultWorkspaceDir?: string,
 ): PreparedModelRuntimeInput[] {
   const soleAgentId = tryResolveSoleAgentId(config);
-  const inheritedAuthDir = resolveAgentDir(config, "main");
+  const inheritedAuthDir = resolveLegacyInheritedAuthDir(config);
   return listAgentIds(config).map((agentId) => {
     const agentDir = resolveAgentDir(config, agentId);
     const preserveWorkspaceDirOnRefresh = agentId === soleAgentId && defaultWorkspaceDir;
