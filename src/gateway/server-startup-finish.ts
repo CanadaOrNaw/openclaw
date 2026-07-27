@@ -150,6 +150,7 @@ export async function finishGatewayStartup(params: {
     gatewayPluginConfigAtStart,
     startupActivationSourceConfig,
     defaultWorkspaceDir,
+    pluginWorkspaceDir,
     coreGatewayMethodNames,
     pluginHostServices,
     baseMethods,
@@ -318,7 +319,7 @@ export async function finishGatewayStartup(params: {
         reloadDeferredGatewayPlugins({
           cfg: gatewayPluginConfigAtStart,
           activationSourceConfig: startupActivationSourceConfig,
-          workspaceDir: defaultWorkspaceDir,
+          workspaceDir: pluginWorkspaceDir,
           log,
           coreGatewayMethodNames,
           hostServices: pluginHostServices,
@@ -460,7 +461,7 @@ export async function finishGatewayStartup(params: {
                 return loadGatewayStartupPluginRuntime({
                   cfg: gatewayPluginConfigAtStart,
                   activationSourceConfig: startupActivationSourceConfig,
-                  workspaceDir: defaultWorkspaceDir,
+                  workspaceDir: pluginWorkspaceDir,
                   log,
                   baseMethods,
                   coreGatewayMethodNames,
