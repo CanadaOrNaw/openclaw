@@ -811,7 +811,6 @@ describe("runGuidedOnboarding", () => {
     ensureOnboardingAgent.mockResolvedValue({
       config,
       agentId: "ops",
-      bootstrapPending: false,
     });
     const prompter = createWizardPrompter();
     const deps = setupDeps({ prompter });
