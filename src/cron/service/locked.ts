@@ -82,7 +82,7 @@ export async function locked<T>(state: CronServiceState, fn: () => Promise<T>): 
 
 /** Acquires the per-store operation chain until the caller explicitly releases it. */
 export async function acquireCronOperationLock(state: CronServiceState): Promise<() => void> {
-  const storePath = state.deps.storePath;
+  const storePath = getStoreLockPath(state);
   const storeOp = storeLocks.get(storePath) ?? Promise.resolve();
   let release = () => {};
   const held = new Promise<void>((resolve) => {
