@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createConfigIO, resetConfigRuntimeState } from "../../../config/io.js";
 import type { OpenClawConfig } from "../../../config/types.openclaw.js";
+import { readRetainedLegacyDefaultCronOwnerForStore } from "../../../cron/legacy-default-agent-owner-handoff.js";
 import { CronService } from "../../../cron/service.js";
 import {
   loadCronJobsStoreWithConfigJobsReadOnly,
@@ -811,7 +812,7 @@ describe("default role materialization authored writes", () => {
     });
   });
 
-  it("migrates source and destination cron stores during a combined fleet write", async () => {
+  it("refuses a combined fleet and cron.store write without mutating the destination", async () => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-dual-cron-store-owner-"));
     roots.push(root);
     const configPath = path.join(root, "openclaw.json");
@@ -870,26 +871,29 @@ describe("default role materialization authored writes", () => {
       },
       cron: { ...(snapshot.config.cron as object), store: destinationStorePath },
     } as OpenClawConfig;
-
-    await io.writeConfigFile(nextConfig, {
-      baseSnapshot: snapshot,
-      explicitSetPaths: [["agents", "entries"], ["cron"]],
-      explicitSetValueSource: nextConfig,
-      preservedLegacyRootKeys: ["cron"],
-    });
-
-    const owners = Object.fromEntries(
-      await Promise.all(
-        [sourceStorePath, destinationStorePath].map(async (storePath) => {
-          const loaded = await loadCronJobsStoreWithConfigJobsReadOnly(storePath, env);
-          const job = loaded.store.jobs[0];
-          return [job?.id, job?.agentId];
-        }),
-      ),
+    const configBefore = await fs.readFile(configPath, "utf-8");
+    const destinationBefore = JSON.stringify(
+      await loadCronJobsStoreWithConfigJobsReadOnly(destinationStorePath, env),
     );
-    expect(owners).toEqual({
-      "source-ownerless": "ops",
-      "destination-ownerless": "ops",
-    });
+    const receiptBefore = readRetainedLegacyDefaultCronOwnerForStore(destinationStorePath, env);
+
+    await expect(
+      io.writeConfigFile(nextConfig, {
+        baseSnapshot: snapshot,
+        explicitSetPaths: [["agents", "entries"], ["cron"]],
+        explicitSetValueSource: nextConfig,
+        preservedLegacyRootKeys: ["cron"],
+      }),
+    ).rejects.toThrow(
+      "cron ownership migration cannot be committed atomically while cron.store changes",
+    );
+
+    expect(await fs.readFile(configPath, "utf-8")).toBe(configBefore);
+    expect(
+      JSON.stringify(await loadCronJobsStoreWithConfigJobsReadOnly(destinationStorePath, env)),
+    ).toBe(destinationBefore);
+    expect(readRetainedLegacyDefaultCronOwnerForStore(destinationStorePath, env)).toBe(
+      receiptBefore,
+    );
   });
 });

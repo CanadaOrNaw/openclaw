@@ -222,14 +222,14 @@ export async function writeConfigFileFromContext(
   const cronHandoffTargets = new Map<string, OpenClawConfig>();
   if (cronHandoffAgentId) {
     const sourceCronConfig = snapshot.sourceConfigBeforeMigrations ?? snapshot.config;
-    cronHandoffTargets.set(
-      resolveCronJobsStorePathFromConfig(sourceCronConfig, deps.env),
-      sourceCronConfig,
-    );
+    const sourceStorePath = resolveCronJobsStorePathFromConfig(sourceCronConfig, deps.env);
     const destinationStorePath = resolveCronJobsStorePathFromConfig(nextConfig, deps.env);
-    if (!cronHandoffTargets.has(destinationStorePath)) {
-      cronHandoffTargets.set(destinationStorePath, nextConfig);
+    if (sourceStorePath !== destinationStorePath) {
+      throw new Error(
+        `Config write refused: cron ownership migration cannot be committed atomically while cron.store changes from ${sourceStorePath} to ${destinationStorePath}. Apply the agent ownership migration first, then change cron.store in a separate config write.`,
+      );
     }
+    cronHandoffTargets.set(sourceStorePath, sourceCronConfig);
   }
   persistCandidate = nextConfig;
   let explicitSetValueSource: unknown = options.explicitSetValueSource ?? nextConfig;

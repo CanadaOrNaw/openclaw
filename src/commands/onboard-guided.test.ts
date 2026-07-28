@@ -45,7 +45,10 @@ const logPathTracker = createSuiteLogPathTracker("openclaw-guided-onboard-log-")
 
 vi.mock("../config/config.js", () => ({ readConfigFileSnapshot }));
 vi.mock("./onboard-agent.js", () => ({
-  ensureOnboardingAgent: async ({ config }: AgentParams) => ({ config, agentId: "main" }),
+  ensureOnboardingAgent: async ({ config, agentId }: AgentParams) => ({
+    config,
+    agentId: agentId?.trim().toLowerCase() || "main",
+  }),
 }));
 
 vi.mock("./onboard-helpers.js", () => ({
@@ -774,6 +777,31 @@ describe("runGuidedOnboarding", () => {
     });
     expect(deps.launchHatchTui).toHaveBeenCalledWith("/tmp/work");
     expect(runSystemAgentChat).not.toHaveBeenCalled();
+  });
+
+  it("keeps a case-variant selected agent's configured workspace", async () => {
+    const config = {
+      agents: { entries: { Ops: { workspace: "/tmp/ops-workspace" }, research: {} } },
+    } satisfies OpenClawConfig;
+    readConfigFileSnapshot.mockResolvedValue({
+      exists: true,
+      valid: true,
+      path: "/tmp/openclaw.json",
+      issues: [],
+      config,
+    });
+    const deps = setupDeps({ prompter: createWizardPrompter() });
+    const runtime = makeRuntime();
+
+    await runGuidedOnboarding({ acceptRisk: true, agent: "ops" }, runtime, deps);
+
+    expect(deps.applySetup).toHaveBeenCalledWith({
+      workspace: "/tmp/ops-workspace",
+      targetAgentId: "ops",
+      surface: "cli",
+      runtime,
+    });
+    expect(deps.launchHatchTui).toHaveBeenCalledWith("/tmp/ops-workspace");
   });
 
   it("cancels before detection or activation when risk is declined", async () => {

@@ -17,6 +17,7 @@ import {
   materializeCronRowAgentOwners,
   readCronStoreEpoch,
   replaceCronRows,
+  updateCronRuntimeRows,
 } from "./row-codec.js";
 
 const execFileAsync = promisify(execFile);
@@ -105,6 +106,46 @@ describe("cron store epoch", () => {
       const unchangedRow = loadCronRows(database, storeKey)[0];
       expect(unchangedRow?.agent_id).toBeNull();
       expect(JSON.parse(unchangedRow?.job_json ?? "{}")).toHaveProperty("agentId", null);
+    } finally {
+      handle.walMaintenance.close();
+      database.close();
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves newer state-only runtime values across a stale full replacement", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-cron-runtime-revision-"));
+    const handle = openOpenClawStateDatabase({ path: path.join(root, "state.sqlite") });
+    const database = handle.db;
+    const storeKey = "runtime-revision";
+    const job = makeCronJob({ id: "runtime-revision-job" });
+    const staleStore = { version: 1 as const, jobs: [structuredClone(job)] };
+    const runtimeRevision = job.updatedAtMs + 1;
+    try {
+      replaceCronRows(database, storeKey, staleStore, { bumpStoreEpoch: true });
+      const epoch = readCronStoreEpoch(database, storeKey);
+      updateCronRuntimeRows(database, storeKey, {
+        version: 1,
+        jobs: [
+          {
+            ...job,
+            state: { nextRunAtMs: runtimeRevision + 60_000, lastStatus: "ok" },
+          },
+        ],
+      });
+
+      expect(
+        replaceCronRows(database, storeKey, staleStore, {
+          expectedStoreEpoch: epoch,
+          bumpStoreEpoch: true,
+        }),
+      ).toBe(epoch);
+      const loaded = loadedCronStoreFromRows(loadCronRows(database, storeKey), epoch).store.jobs[0];
+      expect(loaded?.updatedAtMs).toBe(runtimeRevision);
+      expect(loaded?.state).toMatchObject({
+        nextRunAtMs: runtimeRevision + 60_000,
+        lastStatus: "ok",
+      });
     } finally {
       handle.walMaintenance.close();
       database.close();

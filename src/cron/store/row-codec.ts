@@ -499,43 +499,59 @@ export class CronStoreEpochMismatchError extends Error {
   }
 }
 
-function cronStoreTopologyMatches(rows: CronJobRow[], store: CronStoreFile): boolean {
-  if (rows.length !== store.jobs.length) {
-    return false;
-  }
-  const loaded = loadedCronStoreFromRows(rows);
-  const currentJobs = loaded.store.jobs;
-  return store.jobs.every((job, index) => {
-    const currentJob = currentJobs[index];
-    const currentConfigJob = loaded.configJobs[index];
-    const normalizedCurrent = currentJob ? normalizeCronJobForSqlite(currentJob) : null;
-    const normalizedCurrentConfig = currentConfigJob
-      ? normalizeCronJobForSqlite(currentConfigJob as CronJob)
-      : null;
-    const normalized = normalizeCronJobForSqlite(job);
-    return Boolean(
-      normalizedCurrent &&
-      normalizedCurrentConfig &&
-      normalized &&
-      normalizedCurrent.id === normalized.id &&
-      isDeepStrictEqual(
-        cronJobTopologyProjection(normalizedCurrent),
-        cronJobTopologyProjection(normalized),
-      ) &&
-      isDeepStrictEqual(
-        cronJobTopologyProjection(normalizedCurrentConfig),
-        cronJobTopologyProjection(normalized),
-      ),
-    );
-  });
-}
-
 function cronJobTopologyProjection(job: CronJob): Record<string, unknown> {
   const projected = stripJobRuntimeFields(job);
   if (job.schedule.kind === "every" && job.schedule.anchorMs === undefined) {
     projected.schedule = { ...job.schedule, anchorMs: job.createdAtMs };
   }
   return projected;
+}
+
+function cronRowTopologyMatches(row: CronJobRow, job: CronJob): boolean {
+  const loaded = loadedCronStoreFromRows([row]);
+  const currentJob = loaded.store.jobs[0];
+  const currentConfigJob = loaded.configJobs[0];
+  const normalizedCurrent = currentJob ? normalizeCronJobForSqlite(currentJob) : null;
+  const normalizedCurrentConfig = currentConfigJob
+    ? normalizeCronJobForSqlite(currentConfigJob as CronJob)
+    : null;
+  return Boolean(
+    normalizedCurrent &&
+    normalizedCurrentConfig &&
+    normalizedCurrent.id === job.id &&
+    isDeepStrictEqual(
+      cronJobTopologyProjection(normalizedCurrent),
+      cronJobTopologyProjection(job),
+    ) &&
+    isDeepStrictEqual(
+      cronJobTopologyProjection(normalizedCurrentConfig),
+      cronJobTopologyProjection(job),
+    ),
+  );
+}
+
+function cronStoreTopologyMatches(rows: CronJobRow[], store: CronStoreFile): boolean {
+  if (rows.length !== store.jobs.length) {
+    return false;
+  }
+  return store.jobs.every((job, index) => {
+    const row = rows[index];
+    const normalized = normalizeCronJobForSqlite(job);
+    return Boolean(row && normalized && cronRowTopologyMatches(row, normalized));
+  });
+}
+
+function preserveNewerCronRuntime(row: CronJobRow | undefined, job: CronJob): CronJob {
+  if (!row || !cronRowTopologyMatches(row, job)) {
+    return job;
+  }
+  const current = rowToCronJob(row);
+  if (!current || current.updatedAtMs <= job.updatedAtMs) {
+    return job;
+  }
+  // runtime_updated_at_ms is the row-local runtime revision. Preserve newer timer state on
+  // unchanged jobs without making hot-path state-only writes churn the topology epoch.
+  return { ...job, updatedAtMs: current.updatedAtMs, state: structuredClone(current.state) };
 }
 
 /** Materializes retired default ownership without rewriting unrelated cron row fields.
@@ -605,6 +621,7 @@ export function replaceCronRows(
   if (nextStoreEpoch === 0) {
     writeCronStoreEpoch(db, storeKey, nextStoreEpoch);
   }
+  const currentRowsByJobId = new Map(currentRows.map((row) => [row.job_id, row]));
   executeSqliteQuerySync(
     db,
     getCronStoreKysely(db).deleteFrom("cron_jobs").where("store_key", "=", storeKey),
@@ -614,11 +631,15 @@ export function replaceCronRows(
     if (!normalized) {
       continue;
     }
+    const persisted =
+      options?.expectedStoreEpoch === undefined
+        ? normalized
+        : preserveNewerCronRuntime(currentRowsByJobId.get(normalized.id), normalized);
     executeSqliteQuerySync(
       db,
       getCronStoreKysely(db)
         .insertInto("cron_jobs")
-        .values(bindCronJobRow(storeKey, normalized, index)),
+        .values(bindCronJobRow(storeKey, persisted, index)),
     );
   }
   return nextStoreEpoch;
@@ -653,7 +674,15 @@ export function updateCronRuntimeRows(
   storeKey: string,
   store: CronStoreFile,
 ): void {
+  const runtimeRevisionByJobId = new Map(
+    loadCronRows(db, storeKey).map((row) => [
+      row.job_id,
+      normalizeNumber(row.runtime_updated_at_ms) ?? normalizeNumber(row.updated_at),
+    ]),
+  );
   for (const job of store.jobs) {
+    const currentRevision = runtimeRevisionByJobId.get(job.id);
+    const nextRevision = Math.max(job.updatedAtMs, (currentRevision ?? job.updatedAtMs - 1) + 1);
     executeSqliteQuerySync(
       db,
       getCronStoreKysely(db)
@@ -661,7 +690,7 @@ export function updateCronRuntimeRows(
         .set({
           ...bindStateColumns(job.state ?? {}),
           state_json: JSON.stringify(job.state ?? {}),
-          runtime_updated_at_ms: job.updatedAtMs,
+          runtime_updated_at_ms: nextRevision,
           schedule_identity: tryCronScheduleIdentity(job as unknown as Record<string, unknown>),
         })
         .where("store_key", "=", storeKey)

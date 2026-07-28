@@ -3,6 +3,7 @@ import { formatCliCommand } from "../cli/command-format.js";
 import { formatConfigIssueLines } from "../config/issue-format.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { withConsoleSubsystemsSuppressed } from "../logging/console.js";
+import { normalizeAgentId } from "../routing/session-key.js";
 import type { RuntimeEnv } from "../runtime.js";
 // Guided onboarding: detect AI access, live-test it, then persist only a working route.
 import type {
@@ -452,7 +453,7 @@ async function runGuidedOnboardingFlow(
       runtime,
     });
     const selectedAgentExists = listAgentEntries(onboardingAgent.config).some(
-      (entry) => entry.id === onboardingAgent.agentId,
+      (entry) => normalizeAgentId(entry.id) === onboardingAgent.agentId,
     );
     if (!opts.workspace?.trim() && selectedAgentExists) {
       appliedWorkspace = resolveOnboardingAgentTarget(
