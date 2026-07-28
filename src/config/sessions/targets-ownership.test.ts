@@ -3,6 +3,7 @@ import { withTempHome } from "openclaw/plugin-sdk/test-env";
 import { describe, expect, it } from "vitest";
 import { retainLegacyDefaultAgentId } from "../legacy.default-agent-owner.js";
 import { migratePersistedImplicitMainRoster } from "../legacy.roster.js";
+import type { OpenClawConfig } from "../types.openclaw.js";
 import { resolveSessionStoreCompatibilityAgentId, resolveSessionStoreTargets } from "./targets.js";
 
 describe("fixed session store ownership", () => {
@@ -29,9 +30,9 @@ describe("fixed session store ownership", () => {
       session: { store: "/tmp/openclaw-sole-ops-sessions.json" },
       agents: { entries: { ops: { default: true } } },
     });
-    const restarted = JSON.parse(JSON.stringify(migrated.config));
+    const restarted = structuredClone(migrated.config) as OpenClawConfig;
 
-    expect(restarted.agents.entries.ops.default).toBeUndefined();
+    expect(restarted.agents?.entries?.ops?.default).toBeUndefined();
     expect(resolveSessionStoreCompatibilityAgentId(restarted)).toBe("ops");
   });
 

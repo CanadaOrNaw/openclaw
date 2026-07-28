@@ -131,9 +131,7 @@ export function listConfiguredSessionStoreAgentIds(cfg: OpenClawConfig): string[
  * Registered and database-recorded owners still take precedence in the durable resolver.
  */
 export function resolveSessionStoreCompatibilityAgentId(cfg: OpenClawConfig): string {
-  return (
-    tryGetLegacyDefaultAgentId(cfg) ?? tryResolveSoleAgentId(cfg) ?? LEGACY_IMPLICIT_AGENT_ID
-  );
+  return tryGetLegacyDefaultAgentId(cfg) ?? tryResolveSoleAgentId(cfg) ?? LEGACY_IMPLICIT_AGENT_ID;
 }
 
 /** Lists configured owners plus persisted owners whose registered DB still matches this store. */
