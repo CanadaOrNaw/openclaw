@@ -65,7 +65,7 @@ import {
 } from "./session-accessor.sqlite-scope.js";
 import { setSessionProjectedTitle } from "./session-accessor.sqlite-session-row.js";
 import {
-  querySqliteSessionEntries,
+  querySqliteSessionEntries as querySqliteSessionEntriesFromDatabase,
   readSqliteSessionEntriesByStatus,
   type SqliteSessionEntryListQueryResult,
 } from "./session-accessor.sqlite-status.js";
@@ -283,13 +283,25 @@ export function querySqliteSessionEntriesReadOnly(
   const resolved = resolveSqliteScope({ ...scope, sessionKey: "" });
   const result = withOpenClawAgentDatabaseReadOnly(
     (database) =>
-      querySqliteSessionEntries(database, scope.query, {
+      querySqliteSessionEntriesFromDatabase(database, scope.query, {
         projection: scope.projection,
         setProjectedTitle: setSessionProjectedTitle,
       }),
     toDatabaseOptions(resolved),
   );
   return result.found ? result.value : { creatorActors: [], entries: [], totalCount: 0 };
+}
+
+/** Queries promoted columns through the live writable handle used by process-held stores. */
+export function querySqliteSessionEntries(
+  scope: SessionEntryListScope & { query: SessionEntryListQuery },
+): SqliteSessionEntryListQueryResult {
+  const resolved = resolveSqliteScope({ ...scope, sessionKey: "" });
+  const database = openOpenClawAgentDatabase(toDatabaseOptions(resolved));
+  return querySqliteSessionEntriesFromDatabase(database, scope.query, {
+    projection: scope.projection,
+    setProjectedTitle: setSessionProjectedTitle,
+  });
 }
 
 function listSqliteSessionEntriesFromDatabase(

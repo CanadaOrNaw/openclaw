@@ -183,6 +183,61 @@ describe("doctor canonical session-key repair", () => {
     });
   });
 
+  it("moves a lone canonical row out of the wrong agent database", async () => {
+    await withStateDirEnv("openclaw-doctor-canonical-wrong-store-", async ({ stateDir }) => {
+      const env = { ...process.env, OPENCLAW_STATE_DIR: stateDir };
+      const storeTemplate = path.join(stateDir, "agents", "{agentId}", "sessions.json");
+      const mainStore = resolveStorePath(storeTemplate, { agentId: "main", env });
+      const opsStore = resolveStorePath(storeTemplate, { agentId: "ops", env });
+      const cfg = {
+        agents: { list: [{ id: "main", default: true }, { id: "ops" }] },
+        session: { store: storeTemplate },
+      } as OpenClawConfig;
+      insertLegacySession({
+        agentId: "ops",
+        entry: { sessionId: "misplaced", updatedAt: 10 },
+        env,
+        eventText: "misplaced history",
+        sessionKey: "agent:main:misplaced",
+        storePath: opsStore,
+      });
+
+      expect(await repairCanonicalSessionKeys({ apply: true, cfg, env })).toMatchObject({
+        foundGroups: 1,
+        repairedGroups: 1,
+      });
+      expect(
+        loadExactSessionEntryReadOnly({
+          agentId: "main",
+          env,
+          sessionKey: "agent:main:misplaced",
+          storePath: mainStore,
+        })?.entry.sessionId,
+      ).toBe("misplaced");
+      expect(
+        loadExactSessionEntryReadOnly({
+          agentId: "ops",
+          env,
+          sessionKey: "agent:main:misplaced",
+          storePath: opsStore,
+        }),
+      ).toBeUndefined();
+      await expect(
+        loadTranscriptEvents({
+          agentId: "main",
+          env,
+          sessionId: "misplaced",
+          sessionKey: "agent:main:misplaced",
+          storePath: mainStore,
+        }),
+      ).resolves.toEqual([
+        expect.objectContaining({
+          message: expect.objectContaining({ content: "misplaced history" }),
+        }),
+      ]);
+    });
+  });
+
   it("archives cross-store loser history before removing the duplicate", async () => {
     await withStateDirEnv("openclaw-doctor-canonical-cross-store-", async ({ stateDir }) => {
       const env = { ...process.env, OPENCLAW_STATE_DIR: stateDir };

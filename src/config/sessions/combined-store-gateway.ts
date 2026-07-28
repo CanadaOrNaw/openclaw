@@ -17,7 +17,10 @@ import { listOpenIncognitoAgentDatabases } from "../../state/openclaw-agent-db.j
 import type { OpenClawConfig } from "../types.openclaw.js";
 import { resolveStorePath } from "./paths.js";
 import { listSessionEntries, listSessionEntriesReadOnly } from "./session-accessor.js";
-import { querySqliteSessionEntriesReadOnly } from "./session-accessor.sqlite-entry.js";
+import {
+  querySqliteSessionEntries,
+  querySqliteSessionEntriesReadOnly,
+} from "./session-accessor.sqlite-entry.js";
 import type {
   SessionEntryListQuery,
   SessionEntryListScope,
@@ -63,8 +66,11 @@ function loadGatewayStoreEntries(params: {
   store: Record<string, SessionEntry>;
   totalCount: number;
 } {
+  const queryEntries = params.incognito
+    ? querySqliteSessionEntries
+    : querySqliteSessionEntriesReadOnly;
   const result = params.query
-    ? querySqliteSessionEntriesReadOnly({
+    ? queryEntries({
         agentId: params.agentId,
         clone: false,
         projection: params.projection,

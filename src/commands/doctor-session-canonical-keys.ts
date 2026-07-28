@@ -67,18 +67,49 @@ function collectCanonicalSessionCandidates(params: {
   return { candidates, scannedStores: seenDatabases.size };
 }
 
-function groupRepairCandidates(candidates: readonly CanonicalSessionCandidate[]) {
+function resolveCanonicalDestination(params: {
+  canonicalKey: string;
+  cfg: OpenClawConfig;
+  env: NodeJS.ProcessEnv;
+}) {
+  const agentId = resolveSessionStoreAgentId(params.cfg, params.canonicalKey);
+  const storePath = resolveStorePath(params.cfg.session?.store, { agentId, env: params.env });
+  return {
+    agentId,
+    storePath,
+    sqlitePath: resolveTargetSqlitePath({ agentId, storePath }),
+  };
+}
+
+function groupRepairCandidates(
+  candidates: readonly CanonicalSessionCandidate[],
+  params: { cfg: OpenClawConfig; env: NodeJS.ProcessEnv },
+) {
   const byCanonicalKey = new Map<string, CanonicalSessionCandidate[]>();
   for (const candidate of candidates) {
     const group = byCanonicalKey.get(candidate.canonicalKey) ?? [];
     group.push(candidate);
     byCanonicalKey.set(candidate.canonicalKey, group);
   }
-  return [...byCanonicalKey.values()].filter(
-    (group) =>
+  return [...byCanonicalKey.values()].filter((group) => {
+    const first = group[0];
+    if (!first) {
+      return false;
+    }
+    const destination = resolveCanonicalDestination({
+      canonicalKey: first.canonicalKey,
+      cfg: params.cfg,
+      env: params.env,
+    });
+    return (
       group.length > 1 ||
-      group.some((candidate) => candidate.sessionKey !== candidate.canonicalKey),
-  );
+      group.some(
+        (candidate) =>
+          candidate.sessionKey !== candidate.canonicalKey ||
+          candidate.sqlitePath !== destination.sqlitePath,
+      )
+    );
+  });
 }
 
 function countRemovedRows(candidates: readonly CanonicalSessionCandidate[]): number {
@@ -107,14 +138,10 @@ async function repairCanonicalSessionGroup(
     return [];
   }
   const winner = selected.winner;
-  const destinationAgentId = resolveSessionStoreAgentId(params.cfg, winner.canonicalKey);
-  const destinationStorePath = resolveStorePath(params.cfg.session?.store, {
-    agentId: destinationAgentId,
+  const destination = resolveCanonicalDestination({
+    canonicalKey: winner.canonicalKey,
+    cfg: params.cfg,
     env: params.env,
-  });
-  const destinationSqlitePath = resolveTargetSqlitePath({
-    agentId: destinationAgentId,
-    storePath: destinationStorePath,
   });
   const byDatabase = new Map<string, CanonicalSessionCandidate[]>();
   for (const candidate of candidates) {
@@ -123,14 +150,14 @@ async function repairCanonicalSessionGroup(
     byDatabase.set(candidate.sqlitePath, group);
   }
 
-  const destinationStore = byDatabase.get(destinationSqlitePath) ?? [];
+  const destinationStore = byDatabase.get(destination.sqlitePath) ?? [];
   const relatedSessionIds = new Set(
     [selected.entry.sessionId, selected.entry.previousSessionId].filter(
       (value): value is string => typeof value === "string" && value.length > 0,
     ),
   );
   const relocatedTranscript =
-    winner.sqlitePath !== destinationSqlitePath && winner.entry.sessionId
+    winner.sqlitePath !== destination.sqlitePath && winner.entry.sessionId
       ? await loadTranscriptEvents({
           agentId: winner.agentId,
           sessionId: winner.entry.sessionId,
@@ -139,7 +166,7 @@ async function repairCanonicalSessionGroup(
         })
       : undefined;
   const winnerResult = await applySessionEntryLifecycleMutation({
-    agentId: destinationAgentId,
+    agentId: destination.agentId,
     removals: destinationStore
       .filter((candidate) => candidate.sessionKey !== winner.canonicalKey)
       .map((candidate) => ({
@@ -148,16 +175,16 @@ async function repairCanonicalSessionGroup(
         sessionKey: candidate.sessionKey,
       })),
     skipMaintenance: true,
-    storePath: destinationStorePath,
+    storePath: destination.storePath,
     upserts: [{ entry: selected.entry, sessionKey: winner.canonicalKey }],
   });
   if (relocatedTranscript && winner.entry.sessionId) {
     await replaceTranscriptEvents(
       {
-        agentId: destinationAgentId,
+        agentId: destination.agentId,
         sessionId: winner.entry.sessionId,
         sessionKey: winner.canonicalKey,
-        storePath: destinationStorePath,
+        storePath: destination.storePath,
       },
       relocatedTranscript,
     );
@@ -165,7 +192,7 @@ async function repairCanonicalSessionGroup(
   const archivedDirectories = new Set(winnerResult.archivedTranscriptDirectories);
 
   for (const [sqlitePath, storeCandidates] of byDatabase) {
-    if (sqlitePath === destinationSqlitePath) {
+    if (sqlitePath === destination.sqlitePath) {
       continue;
     }
     const [storeCandidate] = storeCandidates;
@@ -199,14 +226,15 @@ export async function repairCanonicalSessionKeys(params: {
     cfg: params.cfg,
     env: params.env ?? process.env,
   });
-  const repairGroups = groupRepairCandidates(candidates);
+  const env = params.env ?? process.env;
+  const repairGroups = groupRepairCandidates(candidates, { cfg: params.cfg, env });
   const archivedTranscriptDirectories = new Set<string>();
   let repairedGroups = 0;
   if (params.apply) {
     for (const group of repairGroups) {
       for (const directory of await repairCanonicalSessionGroup(group, {
         cfg: params.cfg,
-        env: params.env ?? process.env,
+        env,
       })) {
         archivedTranscriptDirectories.add(directory);
       }

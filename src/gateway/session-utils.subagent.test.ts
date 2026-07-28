@@ -1552,6 +1552,18 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
       }).store;
       expect(explicitDynamic["agent:dynamic:main"]?.sessionId).toBe("s-dynamic");
 
+      const queriedDynamic = loadCombinedSessionStoreForGateway(cfg, {
+        agentId: "dynamic",
+        projection: "list",
+        query: {
+          archived: false,
+          includeGlobal: false,
+          includeUnknown: false,
+          sortBy: "updatedAt",
+        },
+      }).store;
+      expect(queriedDynamic[dynamicIncognitoKey]?.sessionId).toBe("s-incognito-dynamic");
+
       const mainOnly = loadCombinedSessionStoreForGateway(cfg, { agentId: "main" }).store;
       expect(mainOnly["agent:ops:legacy"]).toBeUndefined();
     });
