@@ -5,13 +5,12 @@ import { buildMainSessionRecoveryClearPatch } from "../../agents/main-session-re
 import {
   evaluateSessionFreshness,
   hasTerminalMainSessionTranscriptNewerThanRegistrySync,
-  resolveStorePath,
   resolveSessionLifecycleTimestamps,
   type SessionEntry,
   type SessionFreshness,
 } from "../../config/sessions.js";
 import { hasProviderOwnedSession } from "../../config/sessions/entry-freshness.js";
-import { loadSessionEntryReadOnly } from "../../config/sessions/session-accessor.js";
+import { resolveSessionEntryAccessTarget } from "../../config/sessions/session-accessor.js";
 import { isRecoverableTerminalSessionStatus } from "../../config/sessions/terminal-status.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import {
@@ -22,7 +21,7 @@ import {
   sessionDeliveryRoute,
   type DeliveryContext,
 } from "../../utils/delivery-context.shared.js";
-import { resolveSessionStoreAgentId, resolveSessionStoreKey } from "../session-store-key.js";
+import { resolveSessionStoreKey } from "../session-store-key.js";
 import {
   normalizeTrustedGroupMetadata,
   requestGroupMatchesTrusted,
@@ -80,13 +79,10 @@ export function buildAgentSessionPatch(params: {
     (!storedGroup.groupId || !storedGroup.groupChannel || !storedGroup.groupSpace)
   ) {
     try {
-      const parentAgentId = resolveSessionStoreAgentId(params.cfg, freshSpawnedBy);
-      const parentEntry = loadSessionEntryReadOnly({
-        agentId: parentAgentId,
-        clone: false,
+      const parentEntry = resolveSessionEntryAccessTarget({
+        cfg: params.cfg,
         sessionKey: freshSpawnedBy,
-        storePath: resolveStorePath(params.cfg.session?.store, { agentId: parentAgentId }),
-      });
+      }).entry;
       inheritedGroup = normalizeTrustedGroupMetadata({
         groupId: parentEntry?.groupId,
         groupChannel: parentEntry?.groupChannel,

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { readSessionArchiveContentSync } from "../config/sessions/archive-compression.js";
 import { resolveStorePath } from "../config/sessions/paths.js";
 import {
+  loadTranscriptEvents,
   loadExactSessionEntryReadOnly,
   replaceSessionEntrySync,
 } from "../config/sessions/session-accessor.js";
@@ -194,11 +195,11 @@ describe("doctor canonical session-key repair", () => {
       } as OpenClawConfig;
       replaceSessionEntrySync(
         { agentId: "main", env, sessionKey: "agent:main:shared", storePath: mainStore },
-        { sessionId: "winner", updatedAt: 20 },
+        { sessionId: "older-main", updatedAt: 10 },
       );
       insertLegacySession({
         agentId: "ops",
-        entry: { sessionId: "loser", subject: "merged subject", updatedAt: 10 },
+        entry: { sessionId: "winner", subject: "merged subject", updatedAt: 20 },
         env,
         eventText: "cross-store history",
         sessionKey: "agent:main:shared",
@@ -214,8 +215,21 @@ describe("doctor canonical session-key repair", () => {
           env,
           sessionKey: "agent:main:shared",
           storePath: mainStore,
-        })?.entry.subject,
-      ).toBe("merged subject");
+        })?.entry,
+      ).toMatchObject({ sessionId: "winner", subject: "merged subject" });
+      await expect(
+        loadTranscriptEvents({
+          agentId: "main",
+          env,
+          sessionId: "winner",
+          sessionKey: "agent:main:shared",
+          storePath: mainStore,
+        }),
+      ).resolves.toEqual([
+        expect.objectContaining({
+          message: expect.objectContaining({ content: "cross-store history" }),
+        }),
+      ]);
       expect(
         loadExactSessionEntryReadOnly({
           agentId: "ops",
@@ -230,7 +244,7 @@ describe("doctor canonical session-key repair", () => {
       }
       const archiveName = fs
         .readdirSync(archiveDirectory)
-        .find((name) => name.startsWith("loser.jsonl"));
+        .find((name) => name.startsWith("winner.jsonl"));
       expect(archiveName).toBeTruthy();
       expect(
         readSessionArchiveContentSync(path.join(archiveDirectory, archiveName ?? "")),
