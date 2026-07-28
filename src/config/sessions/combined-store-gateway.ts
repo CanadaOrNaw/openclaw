@@ -112,12 +112,15 @@ function loadGatewayStoreEntries(params: {
       }).entries,
     );
   }
+  const selectedKeys = new Set(entries.map(({ sessionKey }) => sessionKey));
   return {
     creatorActors: result?.creatorActors ?? [],
     ...(dependencies.length > 0
       ? {
           dependencies: Object.fromEntries(
-            dependencies.map(({ sessionKey, entry }) => [sessionKey, entry]),
+            dependencies
+              .filter(({ sessionKey }) => !selectedKeys.has(sessionKey))
+              .map(({ sessionKey, entry }) => [sessionKey, entry]),
           ),
         }
       : {}),

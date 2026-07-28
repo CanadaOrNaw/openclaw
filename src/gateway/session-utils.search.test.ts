@@ -268,7 +268,7 @@ function registerRunningSubagent(params: {
   });
 }
 
-type ListedSession = ReturnType<typeof listSessionsFromStore>["sessions"][number];
+type ListedSession = Awaited<ReturnType<typeof listSessionsFromStore>>["sessions"][number];
 
 function expectSessionModel(
   session: ListedSession | undefined,

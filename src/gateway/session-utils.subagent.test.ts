@@ -1390,6 +1390,19 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
       });
       expect(result.sessions[0]?.childSessions).toEqual([childKey]);
 
+      const onPage = loadCombinedSessionStoreForGateway(cfg, {
+        agentId: "main",
+        includeRowContext: true,
+        projection: "list",
+        query: {
+          archived: false,
+          includeGlobal: false,
+          includeUnknown: false,
+          sortBy: "updatedAt",
+        },
+      });
+      expect(Object.keys(onPage.store)).toEqual([parentKey, childKey]);
+
       const filtered = loadCombinedSessionStoreForGateway(cfg, {
         agentId: "main",
         includeRowContext: true,
