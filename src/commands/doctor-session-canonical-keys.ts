@@ -2,9 +2,8 @@ import fs from "node:fs";
 import { resolveStorePath } from "../config/sessions/paths.js";
 import {
   applySessionEntryLifecycleMutation,
+  copySessionOwnedStateForCanonicalRepair,
   listSessionEntriesReadOnly,
-  loadTranscriptEvents,
-  replaceTranscriptEvents,
 } from "../config/sessions/session-accessor.js";
 import { mergeCanonicalSessionEntryCandidates } from "../config/sessions/session-canonical-key.js";
 import { resolveAllAgentSessionStoreTargetsSync } from "../config/sessions/targets.js";
@@ -156,21 +155,33 @@ async function repairCanonicalSessionGroup(
       (value): value is string => typeof value === "string" && value.length > 0,
     ),
   );
-  const relocatedTranscript =
-    winner.sqlitePath !== destination.sqlitePath && winner.entry.sessionId
-      ? await loadTranscriptEvents({
-          agentId: winner.agentId,
-          sessionId: winner.entry.sessionId,
-          sessionKey: winner.sessionKey,
-          storePath: winner.storePath,
-        })
-      : undefined;
   const winnerResult = await applySessionEntryLifecycleMutation({
     agentId: destination.agentId,
+    afterUpsertsInTransaction: (destinationDatabase) => {
+      for (const [sqlitePath, storeCandidates] of byDatabase) {
+        if (sqlitePath === destination.sqlitePath) {
+          continue;
+        }
+        const [source] = storeCandidates;
+        if (!source) {
+          continue;
+        }
+        copySessionOwnedStateForCanonicalRepair({
+          canonicalKey: winner.canonicalKey,
+          destinationDatabase,
+          preferSource: sqlitePath === winner.sqlitePath,
+          ...(sqlitePath === winner.sqlitePath ? { preferredEntry: selected.entry } : {}),
+          source,
+          sourceEntries: storeCandidates.map((candidate) => candidate.entry),
+          sourceKeys: storeCandidates.map((candidate) => candidate.sessionKey),
+        });
+      }
+    },
     removals: destinationStore
       .filter((candidate) => candidate.sessionKey !== winner.canonicalKey)
       .map((candidate) => ({
         archiveRemovedTranscript: !relatedSessionIds.has(candidate.entry.sessionId),
+        exactStoredKey: true,
         expectedEntry: candidate.entry,
         sessionKey: candidate.sessionKey,
       })),
@@ -178,17 +189,6 @@ async function repairCanonicalSessionGroup(
     storePath: destination.storePath,
     upserts: [{ entry: selected.entry, sessionKey: winner.canonicalKey }],
   });
-  if (relocatedTranscript && winner.entry.sessionId) {
-    await replaceTranscriptEvents(
-      {
-        agentId: destination.agentId,
-        sessionId: winner.entry.sessionId,
-        sessionKey: winner.canonicalKey,
-        storePath: destination.storePath,
-      },
-      relocatedTranscript,
-    );
-  }
   const archivedDirectories = new Set(winnerResult.archivedTranscriptDirectories);
 
   for (const [sqlitePath, storeCandidates] of byDatabase) {
@@ -203,6 +203,7 @@ async function repairCanonicalSessionGroup(
       agentId: storeCandidate.agentId,
       removals: storeCandidates.map((candidate) => ({
         archiveRemovedTranscript: true,
+        exactStoredKey: true,
         expectedEntry: candidate.entry,
         sessionKey: candidate.sessionKey,
       })),

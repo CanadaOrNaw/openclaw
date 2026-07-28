@@ -296,6 +296,8 @@ export async function applySqliteSessionEntryLifecycleMutation(params: {
     nowMs?: number;
   };
   captureArtifactCleanupError?: boolean;
+  /** Doctor-only synchronous state transfer that commits with the destination entry. */
+  afterUpsertsInTransaction?: (database: OpenClawAgentDatabase) => void;
 }): Promise<SessionEntryLifecycleMutationResult> {
   const resolved = resolveSqliteScope({
     ...(params.agentId ? { agentId: params.agentId } : {}),
@@ -417,6 +419,7 @@ export async function applySqliteSessionEntryLifecycleMutation(params: {
           });
         }
       }
+      params.afterUpsertsInTransaction?.(transactionDb);
       const upsertedKeys = new Set(projected.upsertedEntries.map((upsert) => upsert.sessionKey));
       for (const removal of validatedRemovals) {
         if (upsertedKeys.has(removal.sessionKey)) {

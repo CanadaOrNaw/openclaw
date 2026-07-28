@@ -246,23 +246,108 @@ describe("doctor canonical session-key repair", () => {
       const opsStore = resolveStorePath(storeTemplate, { agentId: "ops", env });
       const cfg = {
         agents: { list: [{ id: "main", default: true }, { id: "ops" }] },
-        session: { store: storeTemplate },
+        session: { mainKey: "shared", store: storeTemplate },
       } as OpenClawConfig;
+      const sourceAlias = "agent:main:main ";
       replaceSessionEntrySync(
         { agentId: "main", env, sessionKey: "agent:main:shared", storePath: mainStore },
-        { sessionId: "older-main", updatedAt: 10 },
+        { sessionId: "destination-only", updatedAt: 10 },
       );
+      const staleDestinationDatabase = openOpenClawAgentDatabase({
+        agentId: "main",
+        env,
+        path: resolveSqliteTargetFromSessionStorePath(mainStore, { agentId: "main", env }).path,
+      });
+      staleDestinationDatabase.db
+        .prepare(
+          "INSERT INTO transcript_events (session_id, seq, event_json, created_at) VALUES ('destination-only', 0, ?, 10)",
+        )
+        .run(
+          JSON.stringify({
+            id: "destination-only-message",
+            message: { content: "destination-only history", role: "user" },
+            parentId: null,
+            type: "message",
+          }),
+        );
+      staleDestinationDatabase.db
+        .prepare(
+          "INSERT INTO session_windows (session_id, session_key, reason, session_scope, created_at, updated_at) VALUES ('winner', 'agent:main:shared', 'recovery', 'conversation', 10, 10)",
+        )
+        .run();
+      staleDestinationDatabase.db
+        .prepare(
+          "INSERT INTO transcript_events (session_id, seq, event_json, created_at) VALUES ('winner', 0, ?, 10)",
+        )
+        .run(
+          JSON.stringify({
+            id: "stale-winner-message",
+            message: { content: "stale destination history", role: "user" },
+            parentId: null,
+            type: "message",
+          }),
+        );
       insertLegacySession({
         agentId: "ops",
-        entry: { sessionId: "winner", subject: "merged subject", updatedAt: 20 },
+        entry: {
+          previousSessionId: "destination-only",
+          sessionId: "winner",
+          subject: "merged subject",
+          updatedAt: 20,
+        },
         env,
         eventText: "cross-store history",
-        sessionKey: "agent:main:shared",
+        sessionKey: sourceAlias,
         storePath: opsStore,
       });
+      const opsDatabase = openOpenClawAgentDatabase({
+        agentId: "ops",
+        env,
+        path: resolveSqliteTargetFromSessionStorePath(opsStore, { agentId: "ops", env }).path,
+      });
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO session_windows (session_id, session_key, previous_session_id, reason, session_scope, created_at, updated_at) VALUES ('winner-previous', ?, NULL, 'reset', 'conversation', 15, 15)",
+        )
+        .run(sourceAlias);
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO transcript_events (session_id, seq, event_json, created_at) VALUES ('winner-previous', 0, ?, 15)",
+        )
+        .run(
+          JSON.stringify({
+            id: "winner-previous-message",
+            message: { content: "previous generation history", role: "user" },
+            parentId: null,
+            type: "message",
+          }),
+        );
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO board_tabs (session_key, tab_id, title, position, created_by, revision) VALUES (?, 'tab-1', 'Board', 0, 'user', 1)",
+        )
+        .run(sourceAlias);
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO board_widgets (session_key, name, tab_id, content_kind, html, sha256, view_generation, revision, size_w, size_h, position, created_by, created_at, updated_at) VALUES (?, 'widget-1', 'tab-1', 'html', X'00', 'sha', 'view-1', 1, 1, 1, 0, 'user', 1, 20)",
+        )
+        .run(sourceAlias);
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO session_members (session_key, identity_id, added_by, added_at) VALUES (?, 'member-1', 'owner-1', 20)",
+        )
+        .run(sourceAlias);
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO heartbeat_outcomes (session_key, run_session_key, outcome, summary, occurred_at, updated_at) VALUES (?, ?, 'done', 'complete', 20, 20)",
+        )
+        .run(sourceAlias, sourceAlias);
+      opsDatabase.db.exec("PRAGMA foreign_keys = OFF;");
+      opsDatabase.db.prepare("DELETE FROM session_windows WHERE session_id = 'winner'").run();
+      opsDatabase.db.exec("PRAGMA foreign_keys = ON;");
 
       const report = await repairCanonicalSessionKeys({ apply: true, cfg, env });
-      expect(report).toMatchObject({ foundGroups: 1, removedRows: 1, repairedGroups: 1 });
+      expect(report).toMatchObject({ foundGroups: 1, removedRows: 2, repairedGroups: 1 });
       expect(report.archivedTranscriptDirectories).toHaveLength(1);
       expect(
         loadExactSessionEntryReadOnly({
@@ -285,11 +370,75 @@ describe("doctor canonical session-key repair", () => {
           message: expect.objectContaining({ content: "cross-store history" }),
         }),
       ]);
+      await expect(
+        loadTranscriptEvents({
+          agentId: "main",
+          env,
+          sessionId: "winner-previous",
+          sessionKey: "agent:main:shared",
+          storePath: mainStore,
+        }),
+      ).resolves.toEqual([
+        expect.objectContaining({
+          message: expect.objectContaining({ content: "previous generation history" }),
+        }),
+      ]);
+      await expect(
+        loadTranscriptEvents({
+          agentId: "main",
+          env,
+          sessionId: "destination-only",
+          sessionKey: "agent:main:shared",
+          storePath: mainStore,
+        }),
+      ).resolves.toEqual([
+        expect.objectContaining({
+          message: expect.objectContaining({ content: "destination-only history" }),
+        }),
+      ]);
+      const mainDatabase = openOpenClawAgentDatabase({
+        agentId: "main",
+        env,
+        path: resolveSqliteTargetFromSessionStorePath(mainStore, { agentId: "main", env }).path,
+      });
+      expect(
+        mainDatabase.db
+          .prepare("SELECT session_key FROM session_windows ORDER BY session_id")
+          .all(),
+      ).toEqual([
+        { session_key: "agent:main:shared" },
+        { session_key: "agent:main:shared" },
+        { session_key: "agent:main:shared" },
+      ]);
+      expect(
+        mainDatabase.db
+          .prepare(
+            "SELECT previous_session_id, updated_at FROM session_windows WHERE session_id = 'winner'",
+          )
+          .get(),
+      ).toEqual({ previous_session_id: "destination-only", updated_at: 20 });
+      expect(mainDatabase.db.prepare("SELECT session_key FROM board_tabs").get()).toEqual({
+        session_key: "agent:main:shared",
+      });
+      expect(mainDatabase.db.prepare("SELECT session_key FROM board_widgets").get()).toEqual({
+        session_key: "agent:main:shared",
+      });
+      expect(mainDatabase.db.prepare("SELECT session_key FROM session_members").get()).toEqual({
+        session_key: "agent:main:shared",
+      });
+      expect(
+        mainDatabase.db
+          .prepare("SELECT session_key, run_session_key FROM heartbeat_outcomes")
+          .get(),
+      ).toEqual({
+        session_key: "agent:main:shared",
+        run_session_key: "agent:main:shared",
+      });
       expect(
         loadExactSessionEntryReadOnly({
           agentId: "ops",
           env,
-          sessionKey: "agent:main:shared",
+          sessionKey: sourceAlias,
           storePath: opsStore,
         }),
       ).toBeUndefined();
@@ -304,6 +453,43 @@ describe("doctor canonical session-key repair", () => {
       expect(
         readSessionArchiveContentSync(path.join(archiveDirectory, archiveName ?? "")),
       ).toContain("cross-store history");
+
+      insertLegacySession({
+        agentId: "ops",
+        entry: { sessionId: "destination-only", updatedAt: 5 },
+        env,
+        eventText: "late stale history",
+        sessionKey: "agent:main:main\t",
+        storePath: opsStore,
+      });
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO session_members (session_key, identity_id, added_by, added_at) VALUES ('agent:main:main' || char(9), 'stale-member', 'owner-2', 5)",
+        )
+        .run();
+      expect(await repairCanonicalSessionKeys({ apply: true, cfg, env })).toMatchObject({
+        foundGroups: 1,
+        removedRows: 1,
+        repairedGroups: 1,
+      });
+      await expect(
+        loadTranscriptEvents({
+          agentId: "main",
+          env,
+          sessionId: "destination-only",
+          sessionKey: "agent:main:shared",
+          storePath: mainStore,
+        }),
+      ).resolves.toEqual([
+        expect.objectContaining({
+          message: expect.objectContaining({ content: "destination-only history" }),
+        }),
+      ]);
+      expect(
+        mainDatabase.db
+          .prepare("SELECT identity_id FROM session_members ORDER BY identity_id")
+          .all(),
+      ).toEqual([{ identity_id: "member-1" }]);
     });
   });
 });

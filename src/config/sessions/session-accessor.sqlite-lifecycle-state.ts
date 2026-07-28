@@ -313,7 +313,7 @@ export async function projectSqliteSessionEntryLifecycleMutation(
   const changedSessionKeys = new Set<string>();
   const projectedRemovals: SqliteProjectedLifecycleMutation["removals"] = [];
   for (const removal of params.removals) {
-    const sessionKey = removal.sessionKey.trim();
+    const sessionKey = removal.exactStoredKey ? removal.sessionKey : removal.sessionKey.trim();
     const entry = sessionKey ? store[sessionKey] : undefined;
     if (!shouldRemoveSqliteSessionEntry(entry, removal)) {
       continue;

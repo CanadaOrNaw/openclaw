@@ -96,6 +96,8 @@ export type DeleteSessionEntryLifecycleParams = {
 
 export type SessionEntryLifecycleRemoval = {
   sessionKey: string;
+  /** Doctor repair only: address a malformed persisted key without normalizing it first. */
+  exactStoredKey?: boolean;
   expectedEntry?: SessionEntry;
   archiveRemovedTranscript?: boolean;
   expectedSessionId?: string;

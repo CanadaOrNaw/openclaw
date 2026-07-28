@@ -38,6 +38,7 @@ import {
   readSqliteLifecycleTargetSnapshot,
   readSqliteSessionEntrySelectionSnapshot,
   readSqliteSessionIdentitySnapshot,
+  copySqliteSessionOwnedStateForRepair,
   rehomeSqliteSessionWindows,
   writeSessionEntry,
 } from "./session-accessor.sqlite-entry-store.js";
@@ -258,6 +259,31 @@ export function listSqliteSessionEntries(scope: SessionEntryListScope = {}): Ses
   const resolved = resolveSqliteScope({ ...scope, sessionKey: "" });
   const database = openOpenClawAgentDatabase(toDatabaseOptions(resolved));
   return listSqliteSessionEntriesFromDatabase(database, resolved, scope);
+}
+
+/** Doctor-only cross-store copy; the source node remains until lifecycle archival succeeds. */
+export function copySqliteSessionOwnedStateForCanonicalRepair(params: {
+  canonicalKey: string;
+  destinationDatabase: OpenClawAgentDatabase;
+  preferSource: boolean;
+  preferredEntry?: SessionEntry;
+  source: { agentId: string; storePath: string };
+  sourceEntries: readonly SessionEntry[];
+  sourceKeys: readonly string[];
+}): void {
+  const source = resolveSqliteStoreScope(params.source.storePath, {
+    agentId: params.source.agentId,
+  });
+  const sourceDatabase = openOpenClawAgentDatabase(toDatabaseOptions(source));
+  copySqliteSessionOwnedStateForRepair({
+    canonicalKey: params.canonicalKey,
+    destination: params.destinationDatabase,
+    preferSource: params.preferSource,
+    ...(params.preferredEntry ? { preferredEntry: params.preferredEntry } : {}),
+    source: sourceDatabase,
+    sourceEntries: params.sourceEntries,
+    sourceKeys: params.sourceKeys,
+  });
 }
 
 /**

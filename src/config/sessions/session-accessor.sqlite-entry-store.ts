@@ -14,6 +14,7 @@ import {
 import { publishSqliteSessionEntryCacheInvalidation } from "./session-accessor.sqlite-entry-cache.js";
 import {
   clearSessionCollaborationForKey,
+  copySessionNodeArtifactsForRepair,
   deleteSessionNodeArtifacts,
   rehomeLegacySessionNodeArtifacts,
 } from "./session-accessor.sqlite-node-artifacts.js";
@@ -37,6 +38,7 @@ import {
   duplicateCanonicalSessionKeyError,
   nonCanonicalSessionKeyRowError,
 } from "./session-canonical-key.js";
+import { deleteSessionTranscriptIndexInTransaction } from "./session-transcript-index.js";
 import {
   foldedSessionKeyAliasCandidates,
   normalizeStoreSessionKey,
@@ -503,6 +505,381 @@ export function rehomeSqliteSessionWindows(
       .updateTable("session_windows")
       .set({ session_key: canonicalKey })
       .where("session_key", "in", legacyKeys),
+  );
+}
+
+/** Copy every durable generation before doctor removes a cross-database duplicate node. */
+export function copySqliteSessionOwnedStateForRepair(params: {
+  canonicalKey: string;
+  destination: OpenClawAgentDatabase;
+  preferSource: boolean;
+  preferredEntry?: SessionEntry;
+  source: OpenClawAgentDatabase;
+  sourceEntries: readonly SessionEntry[];
+  sourceKeys: readonly string[];
+}): void {
+  const storedSourceKeys = uniqueStrings(params.sourceKeys.filter((key) => key.length > 0));
+  if (storedSourceKeys.length === 0) {
+    return;
+  }
+  const sourceKeys = uniqueStrings([
+    params.canonicalKey,
+    ...storedSourceKeys,
+    ...storedSourceKeys.flatMap((key) => {
+      const trimmedKey = key.trim();
+      const normalizedKey = normalizeStoreSessionKey(trimmedKey);
+      return [trimmedKey, normalizedKey, ...foldedSessionKeyAliasCandidates(normalizedKey)];
+    }),
+  ]).filter(Boolean);
+  const sourceDb = getSessionKysely(params.source.db);
+  const destinationDb = getSessionKysely(params.destination.db);
+  const entrySessionIds = uniqueStrings(
+    params.sourceEntries.flatMap((entry) => [...collectSqliteSessionStateIdsForEntry(entry)]),
+  );
+  const windows = executeSqliteQuerySync(
+    params.source.db,
+    sourceDb
+      .selectFrom("session_windows")
+      .selectAll()
+      .where((eb) =>
+        entrySessionIds.length === 0
+          ? eb("session_key", "in", sourceKeys)
+          : eb.or([eb("session_key", "in", sourceKeys), eb("session_id", "in", entrySessionIds)]),
+      ),
+  ).rows;
+  const sessionIds = uniqueStrings([...windows.map((row) => row.session_id), ...entrySessionIds]);
+  const existingDestinationSessionIds = new Set(
+    sessionIds.length === 0
+      ? []
+      : executeSqliteQuerySync(
+          params.destination.db,
+          destinationDb
+            .selectFrom("session_windows")
+            .select("session_id")
+            .where("session_id", "in", sessionIds),
+        ).rows.map((row) => row.session_id),
+  );
+  const authoritativeSourceSessionIds = new Set([
+    ...windows.map((row) => row.session_id),
+    ...(params.preferredEntry?.sessionId ? [params.preferredEntry.sessionId] : []),
+  ]);
+  const sessionLinks =
+    sessionIds.length === 0
+      ? []
+      : executeSqliteQuerySync(
+          params.source.db,
+          sourceDb
+            .selectFrom("session_conversations")
+            .selectAll()
+            .where("session_id", "in", sessionIds),
+        ).rows;
+  const conversationIds = uniqueStrings([
+    ...windows.flatMap((row) => (row.primary_conversation_id ? [row.primary_conversation_id] : [])),
+    ...sessionLinks.map((row) => row.conversation_id),
+  ]);
+  if (conversationIds.length > 0) {
+    const conversations = executeSqliteQuerySync(
+      params.source.db,
+      sourceDb
+        .selectFrom("conversations")
+        .selectAll()
+        .where("conversation_id", "in", conversationIds),
+    ).rows;
+    for (const conversation of conversations) {
+      const { conversation_id: _conversationId, ...replacement } = conversation;
+      executeSqliteQuerySync(
+        params.destination.db,
+        destinationDb
+          .insertInto("conversations")
+          .values(conversation)
+          // conversation_id hashes the same fields as the natural unique identity.
+          .onConflict((conflict) =>
+            params.preferSource
+              ? conflict.column("conversation_id").doUpdateSet(replacement)
+              : conflict.column("conversation_id").doNothing(),
+          ),
+      );
+    }
+  }
+  const sourceKeyReferences = new Set(sourceKeys.flatMap((key) => [key, key.trim()]));
+  for (const window of windows) {
+    const canonicalWindow = {
+      ...window,
+      session_key: params.canonicalKey,
+      parent_session_key:
+        window.parent_session_key && sourceKeyReferences.has(window.parent_session_key)
+          ? params.canonicalKey
+          : window.parent_session_key,
+      spawned_by:
+        window.spawned_by && sourceKeyReferences.has(window.spawned_by)
+          ? params.canonicalKey
+          : window.spawned_by,
+    };
+    const { session_id: _sessionId, ...replacement } = {
+      ...canonicalWindow,
+    };
+    executeSqliteQuerySync(
+      params.destination.db,
+      destinationDb
+        .insertInto("session_windows")
+        .values(canonicalWindow)
+        .onConflict((conflict) =>
+          params.preferSource
+            ? conflict.column("session_id").doUpdateSet(replacement)
+            : conflict.column("session_id").doNothing(),
+        ),
+    );
+  }
+  const copiedWindowIds = new Set(windows.map((row) => row.session_id));
+  for (const sessionId of entrySessionIds) {
+    if (copiedWindowIds.has(sessionId)) {
+      continue;
+    }
+    const entry =
+      (params.preferredEntry?.sessionId === sessionId ? params.preferredEntry : undefined) ??
+      params.sourceEntries.find((candidate) => candidate.sessionId === sessionId) ??
+      params.sourceEntries.find((candidate) =>
+        new Set(collectSqliteSessionStateIdsForEntry(candidate)).has(sessionId),
+      );
+    const updatedAt = entry?.updatedAt ?? Date.now();
+    const recoveryWindow = {
+      session_key: params.canonicalKey,
+      previous_session_id:
+        entry?.sessionId === sessionId ? (entry.previousSessionId ?? null) : null,
+      reason: "recovery",
+      session_scope: "conversation",
+      created_at: updatedAt,
+      updated_at: updatedAt,
+    } as const;
+    executeSqliteQuerySync(
+      params.destination.db,
+      destinationDb
+        .insertInto("session_windows")
+        .values({
+          session_id: sessionId,
+          ...recoveryWindow,
+        })
+        .onConflict((conflict) =>
+          params.preferSource && entry?.sessionId === sessionId
+            ? conflict.column("session_id").doUpdateSet(recoveryWindow)
+            : conflict.column("session_id").doNothing(),
+        ),
+    );
+  }
+  const sourceConversationSessionIds = uniqueStrings([
+    ...windows.map((row) => row.session_id),
+    ...sessionLinks.map((row) => row.session_id),
+  ]).filter((sessionId) => authoritativeSourceSessionIds.has(sessionId));
+  if (params.preferSource && sourceConversationSessionIds.length > 0) {
+    executeSqliteQuerySync(
+      params.destination.db,
+      destinationDb
+        .deleteFrom("session_conversations")
+        .where("session_id", "in", sourceConversationSessionIds),
+    );
+  }
+  for (const link of sessionLinks) {
+    if (
+      existingDestinationSessionIds.has(link.session_id) &&
+      (!params.preferSource || !authoritativeSourceSessionIds.has(link.session_id))
+    ) {
+      continue;
+    }
+    executeSqliteQuerySync(
+      params.destination.db,
+      destinationDb
+        .insertInto("session_conversations")
+        .values(link)
+        .onConflict((conflict) => conflict.doNothing()),
+    );
+  }
+  const sourceWindowIds = new Set(windows.map((row) => row.session_id));
+  for (const sessionId of sessionIds) {
+    const sourceIsAuthoritative = authoritativeSourceSessionIds.has(sessionId);
+    if (
+      existingDestinationSessionIds.has(sessionId) &&
+      (!params.preferSource || !sourceIsAuthoritative) &&
+      hasSqliteSessionGenerationContent(params.destination, sessionId)
+    ) {
+      continue;
+    }
+    copySqliteSessionGenerationRows({
+      destination: params.destination,
+      preferSource: params.preferSource,
+      sessionId,
+      source: params.source,
+      sourceIsAuthoritative,
+      sourceHasWindow: sourceWindowIds.has(sessionId),
+    });
+    // Search and active-event tables are derived from transcript_events; force their canonical rebuild.
+    deleteSessionTranscriptIndexInTransaction(params.destination.db, sessionId);
+  }
+  if (params.preferSource) {
+    deleteSessionNodeArtifacts(params.destination, params.canonicalKey);
+    copySessionNodeArtifactsForRepair(
+      params.source,
+      params.destination,
+      sourceKeys,
+      params.canonicalKey,
+    );
+  }
+}
+
+function copySqliteSessionGenerationRows(params: {
+  destination: OpenClawAgentDatabase;
+  preferSource: boolean;
+  sessionId: string;
+  source: OpenClawAgentDatabase;
+  sourceIsAuthoritative: boolean;
+  sourceHasWindow: boolean;
+}): void {
+  const sourceDb = getSessionKysely(params.source.db);
+  const destinationDb = getSessionKysely(params.destination.db);
+  const transcriptEvents = executeSqliteQuerySync(
+    params.source.db,
+    sourceDb.selectFrom("transcript_events").selectAll().where("session_id", "=", params.sessionId),
+  ).rows;
+  const transcriptIdentities = executeSqliteQuerySync(
+    params.source.db,
+    sourceDb
+      .selectFrom("transcript_event_identities")
+      .selectAll()
+      .where("session_id", "=", params.sessionId),
+  ).rows;
+  const rewriteWatermarks = executeSqliteQuerySync(
+    params.source.db,
+    sourceDb
+      .selectFrom("transcript_rewrite_watermarks")
+      .selectAll()
+      .where("session_id", "=", params.sessionId),
+  ).rows;
+  const trajectoryEvents = executeSqliteQuerySync(
+    params.source.db,
+    sourceDb
+      .selectFrom("trajectory_runtime_events")
+      .selectAll()
+      .where("session_id", "=", params.sessionId),
+  ).rows;
+  const parentStreamEvents = executeSqliteQuerySync(
+    params.source.db,
+    sourceDb
+      .selectFrom("acp_parent_stream_events")
+      .selectAll()
+      .where("session_id", "=", params.sessionId),
+  ).rows;
+  const sourceHasState =
+    transcriptEvents.length > 0 ||
+    transcriptIdentities.length > 0 ||
+    rewriteWatermarks.length > 0 ||
+    trajectoryEvents.length > 0 ||
+    parentStreamEvents.length > 0;
+  if (
+    params.preferSource &&
+    params.sourceIsAuthoritative &&
+    (params.sourceHasWindow || sourceHasState)
+  ) {
+    executeSqliteQuerySync(
+      params.destination.db,
+      destinationDb
+        .deleteFrom("transcript_event_identities")
+        .where("session_id", "=", params.sessionId),
+    );
+    executeSqliteQuerySync(
+      params.destination.db,
+      destinationDb.deleteFrom("transcript_events").where("session_id", "=", params.sessionId),
+    );
+    executeSqliteQuerySync(
+      params.destination.db,
+      destinationDb
+        .deleteFrom("transcript_rewrite_watermarks")
+        .where("session_id", "=", params.sessionId),
+    );
+    executeSqliteQuerySync(
+      params.destination.db,
+      destinationDb
+        .deleteFrom("trajectory_runtime_events")
+        .where("session_id", "=", params.sessionId),
+    );
+    executeSqliteQuerySync(
+      params.destination.db,
+      destinationDb
+        .deleteFrom("acp_parent_stream_events")
+        .where("session_id", "=", params.sessionId),
+    );
+  }
+  for (const row of transcriptEvents) {
+    executeSqliteQuerySync(
+      params.destination.db,
+      destinationDb
+        .insertInto("transcript_events")
+        .values(row)
+        .onConflict((conflict) => conflict.doNothing()),
+    );
+  }
+  for (const row of transcriptIdentities) {
+    executeSqliteQuerySync(
+      params.destination.db,
+      destinationDb
+        .insertInto("transcript_event_identities")
+        .values(row)
+        .onConflict((conflict) => conflict.doNothing()),
+    );
+  }
+  for (const row of rewriteWatermarks) {
+    executeSqliteQuerySync(
+      params.destination.db,
+      destinationDb
+        .insertInto("transcript_rewrite_watermarks")
+        .values(row)
+        .onConflict((conflict) => conflict.doNothing()),
+    );
+  }
+  for (const row of trajectoryEvents) {
+    executeSqliteQuerySync(
+      params.destination.db,
+      destinationDb
+        .insertInto("trajectory_runtime_events")
+        .values(row)
+        .onConflict((conflict) => conflict.doNothing()),
+    );
+  }
+  for (const row of parentStreamEvents) {
+    executeSqliteQuerySync(
+      params.destination.db,
+      destinationDb
+        .insertInto("acp_parent_stream_events")
+        .values(row)
+        .onConflict((conflict) => conflict.doNothing()),
+    );
+  }
+}
+
+function hasSqliteSessionGenerationContent(
+  database: OpenClawAgentDatabase,
+  sessionId: string,
+): boolean {
+  const db = getSessionKysely(database.db);
+  return (
+    executeSqliteQueryTakeFirstSync(
+      database.db,
+      db.selectFrom("transcript_events").select("seq").where("session_id", "=", sessionId).limit(1),
+    ) !== undefined ||
+    executeSqliteQueryTakeFirstSync(
+      database.db,
+      db
+        .selectFrom("trajectory_runtime_events")
+        .select("seq")
+        .where("session_id", "=", sessionId)
+        .limit(1),
+    ) !== undefined ||
+    executeSqliteQueryTakeFirstSync(
+      database.db,
+      db
+        .selectFrom("acp_parent_stream_events")
+        .select("seq")
+        .where("session_id", "=", sessionId)
+        .limit(1),
+    ) !== undefined
   );
 }
 
