@@ -1,3 +1,6 @@
+import { tryResolveSoleAgentId } from "../agents/agent-scope.js";
+import { tryGetLegacyDefaultAgentId } from "../config/legacy.default-agent-owner.js";
+import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { normalizeAgentId } from "../routing/session-key.js";
 import type {
   SessionEventSubscriberRegistry,
@@ -9,13 +12,14 @@ export function createSessionObserverAudience(params: {
   subscribers: SessionMessageSubscriberRegistry;
   sessionEventSubscribers?: SessionEventSubscriberRegistry;
   isVisible: (connId: string) => boolean;
-  getCompatibilityAgentId: () => string | undefined;
+  getConfig: () => OpenClawConfig;
 }) {
   const messageSubscriberKeys = (sessionKey: string, agentId: string): string[] => {
     // sessions.messages.subscribe canonicalizes selected-agent global aliases
     // to this same qualified key before registering the connection.
     const scopedKey = sessionObserverScopeKey(sessionKey, agentId);
-    const compatibilityAgentId = params.getCompatibilityAgentId();
+    const cfg = params.getConfig();
+    const compatibilityAgentId = tryGetLegacyDefaultAgentId(cfg) ?? tryResolveSoleAgentId(cfg);
     if (
       sessionKey === "global" &&
       compatibilityAgentId !== undefined &&
