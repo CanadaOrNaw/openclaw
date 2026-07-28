@@ -334,7 +334,7 @@ function mergeAction(
     message,
     wakeMode,
     name: override.name ?? baseAgent?.name,
-    agentId: override.agentId ?? baseAgent?.agentId,
+    agentId: override.agentId ?? base.agentId,
     sessionKey: override.sessionKey ?? baseAgent?.sessionKey,
     sessionKeySource: resolveMergedSessionKeySource(baseAgent, override),
     sessionMode: override.sessionMode ?? baseAgent?.sessionMode ?? "isolated",
