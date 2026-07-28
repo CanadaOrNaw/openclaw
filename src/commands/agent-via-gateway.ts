@@ -540,10 +540,13 @@ async function normalizeSessionKeyOptsForDispatch(
     const implicitCompatibilityDefault = Boolean(
       remoteGatewayRoster && usesImplicitRemoteCompatibilityDefault(remoteGatewayRoster),
     );
-    const implicitRemoteGlobalSession =
-      !explicitAgentIdRaw && remoteGatewayRoster?.scope === "global" && rawSessionKey === undefined;
-    const unscopedSession =
-      isUnscopedSessionKeySentinel(rawSessionKey) || implicitRemoteGlobalSession;
+    const implicitGlobalSession =
+      !explicitAgentIdRaw &&
+      rawSessionKey === undefined &&
+      (remoteGatewayRoster
+        ? remoteGatewayRoster.scope === "global"
+        : !usesRemoteGateway(cfg) && cfg.session?.scope === "global");
+    const unscopedSession = isUnscopedSessionKeySentinel(rawSessionKey) || implicitGlobalSession;
     const implicitAgentSelection = implicitSoleAgent || implicitCompatibilityDefault;
     agentIdRaw = implicitAgentSelection && unscopedSession ? undefined : selectedAgentId;
     if (!implicitAgentSelection || !unscopedSession) {
@@ -849,22 +852,31 @@ async function agentViaGatewayCommand(
 ) {
   const body = opts.message;
   const explicitSessionKey = opts.sessionKey?.trim();
+  // The effective contract may come from the local config or a projected remote roster.
+  // Resolve it before target validation so implicit global turns stay unscoped on both paths.
+  let cfg: OpenClawConfig = opts.gatewayDispatchConfig ?? readGatewayDispatchConfig();
+  if (opts.remoteGatewayRoster) {
+    cfg = applyRemoteGatewayRoster(cfg, opts.remoteGatewayRoster);
+  }
+  const remoteGateway = usesRemoteGateway(cfg);
   const remoteRosterIsSole =
     opts.remoteGatewayRoster?.ownership === "sole" ||
     (!opts.remoteGatewayRoster?.ownership && opts.remoteGatewayRoster?.agentIds.length === 1);
   const remoteRosterUsesCompatibilityDefault = Boolean(
     opts.remoteGatewayRoster && usesImplicitRemoteCompatibilityDefault(opts.remoteGatewayRoster),
   );
-  const hasImplicitRemoteGlobalTarget =
-    opts.remoteGatewayRoster?.scope === "global" &&
-    !opts.remoteGatewayRoster.selectionRequired &&
-    (remoteRosterIsSole || remoteRosterUsesCompatibilityDefault);
+  const hasImplicitGlobalTarget =
+    cfg.session?.scope === "global" &&
+    (opts.remoteGatewayRoster
+      ? !opts.remoteGatewayRoster.selectionRequired &&
+        (remoteRosterIsSole || remoteRosterUsesCompatibilityDefault)
+      : !remoteGateway && tryResolveSoleAgentId(cfg) !== undefined);
   if (
     !opts.to &&
     !opts.sessionId &&
     !opts.agent &&
     !explicitSessionKey &&
-    !hasImplicitRemoteGlobalTarget
+    !hasImplicitGlobalTarget
   ) {
     throw new Error(
       `No target session selected. Use --agent <id>, --session-key <key>, --session-id <id>, or --to <E.164>. Run ${formatCliCommand("openclaw agents list")} to see agents.`,
@@ -873,11 +885,6 @@ async function agentViaGatewayCommand(
 
   // Scoped gateway turns need core agent/session/gateway fields only. The
   // running gateway owns plugin validation and plugin metadata freshness.
-  let cfg: OpenClawConfig = opts.gatewayDispatchConfig ?? readGatewayDispatchConfig();
-  if (opts.remoteGatewayRoster) {
-    cfg = applyRemoteGatewayRoster(cfg, opts.remoteGatewayRoster);
-  }
-  const remoteGateway = usesRemoteGateway(cfg);
   const agentIdRaw = opts.agent?.trim();
   let agentId = agentIdRaw ? normalizeAgentId(agentIdRaw) : undefined;
   if (agentId) {
@@ -920,7 +927,7 @@ async function agentViaGatewayCommand(
   const preserveImplicitCompatibilitySession =
     remoteRosterUsesCompatibilityDefault &&
     !agentId &&
-    (isUnscopedSessionKeySentinel(explicitSessionKey) || hasImplicitRemoteGlobalTarget);
+    (isUnscopedSessionKeySentinel(explicitSessionKey) || hasImplicitGlobalTarget);
 
   const locallyResolvedSession =
     !remoteGateway && opts.sessionId?.trim() && !explicitSessionKey

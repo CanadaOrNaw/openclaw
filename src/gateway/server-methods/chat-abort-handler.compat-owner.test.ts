@@ -29,3 +29,30 @@ it("does not attribute an ownerless default global run to the selected agent", a
   ]);
   expect(active.controller.signal.aborted).toBe(false);
 });
+
+it("rejects an ownerless bare-global run abort on an explicit fleet", async () => {
+  const active = createActiveRun("global", { agentId: "research" });
+  const context = createChatAbortContext({
+    chatAbortControllers: new Map([["run-research", active]]),
+    getRuntimeConfig: () => ({
+      agents: { ownership: "explicit", entries: { ops: {}, research: {} } },
+      session: { scope: "global" },
+    }),
+  });
+
+  const respond = await invokeChatAbortHandler({
+    handler: handleChatAbortRequestWithLifecycle,
+    context,
+    request: { sessionKey: "global", runId: "run-research" },
+  });
+
+  expect(respond.mock.calls.at(-1)).toMatchObject([
+    false,
+    undefined,
+    {
+      code: "INVALID_REQUEST",
+      message: "agentId is required for global chat.abort when no compatibility owner exists",
+    },
+  ]);
+  expect(active.controller.signal.aborted).toBe(false);
+});

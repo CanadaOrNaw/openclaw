@@ -75,6 +75,17 @@ export async function handleChatAbortRequestWithLifecycle(
     agentIdOverride ??
     inferredGlobalAgentId ??
     (abortSessionResolvesGlobal ? compatibilityDefaultAgentId : undefined);
+  if (abortSessionResolvesGlobal && !abortAgentId) {
+    respond(
+      false,
+      undefined,
+      errorShape(
+        ErrorCodes.INVALID_REQUEST,
+        "agentId is required for global chat.abort when no compatibility owner exists",
+      ),
+    );
+    return;
+  }
   if (
     agentIdOverride &&
     parsedAbortSessionKey &&

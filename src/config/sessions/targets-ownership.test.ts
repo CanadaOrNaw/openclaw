@@ -2,10 +2,11 @@ import path from "node:path";
 import { withTempHome } from "openclaw/plugin-sdk/test-env";
 import { describe, expect, it } from "vitest";
 import { retainLegacyDefaultAgentId } from "../legacy.default-agent-owner.js";
+import { migratePersistedImplicitMainRoster } from "../legacy.roster.js";
 import { resolveSessionStoreCompatibilityAgentId, resolveSessionStoreTargets } from "./targets.js";
 
 describe("fixed session store ownership", () => {
-  it("does not derive the compatibility anchor from roster shape", () => {
+  it("uses sole ownership without changing ambiguous or main compatibility anchors", () => {
     expect(
       resolveSessionStoreCompatibilityAgentId({
         agents: { entries: { ops: {}, main: {} } },
@@ -15,7 +16,23 @@ describe("fixed session store ownership", () => {
       resolveSessionStoreCompatibilityAgentId({
         agents: { entries: { ops: {} } },
       }),
+    ).toBe("ops");
+    expect(
+      resolveSessionStoreCompatibilityAgentId({
+        agents: { entries: { main: {} } },
+      }),
     ).toBe("main");
+  });
+
+  it("keeps a shipped sole non-main fixed-store owner after marker migration and restart", () => {
+    const migrated = migratePersistedImplicitMainRoster({
+      session: { store: "/tmp/openclaw-sole-ops-sessions.json" },
+      agents: { entries: { ops: { default: true } } },
+    });
+    const restarted = JSON.parse(JSON.stringify(migrated.config));
+
+    expect(restarted.agents.entries.ops.default).toBeUndefined();
+    expect(resolveSessionStoreCompatibilityAgentId(restarted)).toBe("ops");
   });
 
   it("keeps a colliding target on the retained legacy owner", async () => {

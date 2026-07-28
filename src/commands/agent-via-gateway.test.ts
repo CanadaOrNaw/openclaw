@@ -1110,17 +1110,32 @@ describe("agentCliCommand", () => {
     );
   });
 
-  it("dispatches a plain sole-agent invocation through the local gateway", async () => {
-    await withTempStore(async () => {
-      mockGatewaySuccessReply();
+  it.each([
+    {
+      scope: "per-sender" as const,
+      expectedAgentId: "main",
+      expectedSessionKey: "agent:main:main",
+    },
+    { scope: "global" as const, expectedAgentId: undefined, expectedSessionKey: undefined },
+  ])("dispatches a plain sole-agent $scope invocation through the local gateway", async (test) => {
+    await withTempStore(
+      async () => {
+        mockGatewaySuccessReply();
 
-      await agentCliCommand({ message: "hi" }, runtime);
+        await agentCliCommand({ message: "hi" }, runtime);
 
-      expect(callGateway).toHaveBeenCalledOnce();
-      const request = requireRecord(requireFirstCallArg(callGateway, "gateway"), "gateway request");
-      expect(request.method).toBe("agent");
-      expect(requireRecord(request.params, "agent params").agentId).toBe("main");
-    });
+        expect(callGateway).toHaveBeenCalledOnce();
+        const request = requireRecord(
+          requireFirstCallArg(callGateway, "gateway"),
+          "gateway request",
+        );
+        expect(request.method).toBe("agent");
+        const params = requireRecord(request.params, "agent params");
+        expect(params.agentId).toBe(test.expectedAgentId);
+        expect(params.sessionKey).toBe(test.expectedSessionKey);
+      },
+      { session: { scope: test.scope } },
+    );
   });
 
   it("keeps a remote sole-agent global sentinel unscoped", async () => {

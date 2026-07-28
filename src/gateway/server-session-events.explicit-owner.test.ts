@@ -12,10 +12,16 @@ const {
   resolveVisibleActiveSessionRunStateMock: vi.fn(() => ({ active: false, runIds: [] })),
 }));
 
-vi.mock("../agents/agent-scope.js", () => ({
-  resolveDefaultAgentId: vi.fn(() => "main"),
-  tryResolveDefaultAgentId: vi.fn(() => undefined),
-}));
+vi.mock("../agents/agent-scope.js", async () => {
+  const actual = await vi.importActual<typeof import("../agents/agent-scope.js")>(
+    "../agents/agent-scope.js",
+  );
+  return {
+    ...actual,
+    resolveDefaultAgentId: vi.fn(() => "main"),
+    tryResolveDefaultAgentId: vi.fn(() => undefined),
+  };
+});
 
 vi.mock("../config/io.js", () => ({
   getRuntimeConfig: vi.fn(() => ({

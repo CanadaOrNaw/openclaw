@@ -1,7 +1,12 @@
 // Session store target discovery maps configured and on-disk agent stores to canonical targets.
 import fsSync from "node:fs";
 import path from "node:path";
-import { listAgentEntries, listAgentIds, resolveDefaultAgentId } from "../../agents/agent-scope.js";
+import {
+  listAgentEntries,
+  listAgentIds,
+  resolveDefaultAgentId,
+  tryResolveSoleAgentId,
+} from "../../agents/agent-scope.js";
 import { resolveAgentSessionDirsFromAgentsDirSync } from "../../agents/session-dirs.js";
 import {
   isValidAgentId,
@@ -121,12 +126,14 @@ export function listConfiguredSessionStoreAgentIds(cfg: OpenClawConfig): string[
 }
 
 /**
- * Stable physical anchor for fixed-store collision projection. Markerless configurations use
- * the legacy `main` slot so roster edits cannot move an unclaimed database. Registered and
- * database-recorded owners still take precedence in `resolveSqliteTargetFromSessionStorePath`.
+ * Stable physical anchor for fixed-store collision projection. Shipped default markers win,
+ * followed by a sole configured owner; ambiguous marker-free fleets stay on legacy `main`.
+ * Registered and database-recorded owners still take precedence in the durable resolver.
  */
 export function resolveSessionStoreCompatibilityAgentId(cfg: OpenClawConfig): string {
-  return tryGetLegacyDefaultAgentId(cfg) ?? LEGACY_IMPLICIT_AGENT_ID;
+  return (
+    tryGetLegacyDefaultAgentId(cfg) ?? tryResolveSoleAgentId(cfg) ?? LEGACY_IMPLICIT_AGENT_ID
+  );
 }
 
 /** Lists configured owners plus persisted owners whose registered DB still matches this store. */
