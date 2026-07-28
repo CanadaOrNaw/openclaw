@@ -539,8 +539,6 @@ export async function listSessionsFromStoreAsync(
         transcriptUsageMaxBytes: 64 * 1024,
         storeChildSessionsByKey,
         rowContext: prepared.sharedRowContext,
-        skipTranscriptUsageFallback: true,
-        lightweightListRow: true,
       });
       if (entry?.sessionId && includeTranscriptFields && includeLastMessage) {
         const parsed = parseAgentSessionKey(key);

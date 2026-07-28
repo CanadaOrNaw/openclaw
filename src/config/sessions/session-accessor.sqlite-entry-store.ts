@@ -37,7 +37,11 @@ import {
   duplicateCanonicalSessionKeyError,
   nonCanonicalSessionKeyRowError,
 } from "./session-canonical-key.js";
-import { foldedSessionKeyAliasCandidates, normalizeStoreSessionKey } from "./store-entry.js";
+import {
+  foldedSessionKeyAliasCandidates,
+  normalizeStoreSessionKey,
+  resolveSessionEntryCandidates,
+} from "./store-entry.js";
 import type { SessionEntry } from "./types.js";
 
 // Canonical owner for session_nodes row selection, alias snapshots, and writes.
@@ -110,20 +114,18 @@ export function readSessionEntryRow(
     }
     entries.set(row.session_key, { entry, legacyKeys: [], row });
   }
-  if (entries.size === 0) {
+  const resolved = resolveSessionEntryCandidates({
+    entries: [...entries].map(([candidateKey, value]) => ({
+      entry: value.entry,
+      sessionKey: candidateKey,
+    })),
+    sessionKey,
+  });
+  if (!resolved.existing) {
     return undefined;
   }
-  if (entries.size > 1) {
-    throw duplicateCanonicalSessionKeyError(sessionKey);
-  }
-  const [selectedKey, selected] = entries.entries().next().value ?? [];
-  if (!selectedKey || !selected) {
-    return undefined;
-  }
-  if (selectedKey !== sessionKey) {
-    throw nonCanonicalSessionKeyRowError(sessionKey);
-  }
-  return selected;
+  const selected = entries.get(resolved.existing.sessionKey);
+  return selected ? { ...selected, legacyKeys: resolved.legacyKeys } : undefined;
 }
 
 // Async updaters prepare against this complete selection. Capturing alias rows
@@ -171,8 +173,8 @@ export function collectSessionEntryLookupKeys(
     return [];
   }
   const normalizedKey = normalizeStoreSessionKey(trimmedKey);
-  // Runtime probes only canonical keys plus contracted folded opaque-id aliases. Arbitrary
-  // legacy structural spellings belong to doctor migration, not a full session_nodes scan.
+  // Folded opaque-id candidates retain the shipped case-preservation repair contract. Exact
+  // case-sensitive rows still win in resolveSessionEntryCandidates; arbitrary aliases use doctor.
   return uniqueStrings([
     trimmedKey,
     normalizedKey,

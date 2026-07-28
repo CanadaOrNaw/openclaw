@@ -588,7 +588,7 @@ describe.each([publicAccessorAdapter, sqliteAdapter])(
       );
       const scope = {
         env: { ...process.env, OPENCLAW_STATE_DIR: paths.stateDir },
-        sessionKey: "voice:123",
+        sessionKey: "agent:voice:voice:123",
         storePath: legacyStorePath,
       };
 
@@ -614,7 +614,7 @@ describe.each([publicAccessorAdapter, sqliteAdapter])(
       ).toEqual([
         expect.objectContaining({
           entry: expect.objectContaining({ sessionId: "session-1" }),
-          sessionKey: "voice:123",
+          sessionKey: "agent:voice:voice:123",
         }),
       ]);
       expect(() =>

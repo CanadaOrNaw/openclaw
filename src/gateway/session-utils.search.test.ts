@@ -699,6 +699,24 @@ describe("listSessionsFromStore search", () => {
     expect(missing?.totalTokensFresh).toBe(false);
   });
 
+  test("backfills usage for the bounded async list page", async () => {
+    await withAnthropicTranscriptFixture({
+      prefix: "openclaw-session-utils-list-usage-",
+      run: async ({ storePath, now }) => {
+        const result = await listMainSession({
+          cfg: createAnthropicContext1mConfig(),
+          storePath,
+          entry: zeroUsageTranscriptEntry(now, {
+            modelProvider: "anthropic",
+            model: ANTHROPIC_MODEL,
+          }),
+        });
+
+        expectAnthropicBackfill(result.sessions[0]);
+      },
+    });
+  });
+
   test("chat history session metadata keeps model context and projects a catalog-pinned harness", async () => {
     await withAnthropicTranscriptFixture({
       prefix: "openclaw-session-info-context-",

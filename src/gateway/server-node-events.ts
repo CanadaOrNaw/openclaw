@@ -579,7 +579,7 @@ export const handleNodeEvent = async (
       const cfg = getRuntimeConfig();
       const rawMainKey = normalizeMainKey(cfg.session?.mainKey);
       const sessionKey = sessionKeyRaw.length > 0 ? sessionKeyRaw : rawMainKey;
-      const { storePath, entry, canonicalKey, storeKeys } = loadSessionEntry(sessionKey);
+      const { storePath, entry, canonicalKey } = loadSessionEntry(sessionKey);
       if (resolveAgentHarnessSessionContextError(canonicalKey, entry)) {
         return undefined;
       }
@@ -667,7 +667,7 @@ export const handleNodeEvent = async (
       const sessionKeyRaw = (link?.sessionKey ?? "").trim();
       const sessionKey = sessionKeyRaw.length > 0 ? sessionKeyRaw : `node-${nodeId}`;
       const cfg = getRuntimeConfig();
-      const { storePath, entry, canonicalKey, storeKeys } = loadSessionEntry(sessionKey);
+      const { storePath, entry, canonicalKey } = loadSessionEntry(sessionKey);
       if (resolveAgentHarnessSessionContextError(canonicalKey, entry)) {
         return undefined;
       }

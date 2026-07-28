@@ -817,7 +817,7 @@ describe("session accessor seam", () => {
 
   it("keeps case-distinct Matrix sessions separate under nested agent ownership", async () => {
     const mixedKey = "agent:voice:agent:other:matrix:channel:!RoomAbC:example.org";
-    const lowerKey = "agent:voice:agent:other:matrix:channel:!Roomabc:example.org";
+    const lowerKey = mixedKey.toLowerCase();
 
     await upsertSessionEntry(
       { sessionKey: mixedKey, storePath },
