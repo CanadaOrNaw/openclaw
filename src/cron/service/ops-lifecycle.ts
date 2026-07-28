@@ -75,6 +75,11 @@ async function materializeLoadedLegacyDefaultAgentOwners(
           { bumpStoreEpoch: true, expectedStoreEpoch, env: state.deps.env },
         );
         if (transformRan) {
+          for (const record of candidateRecords) {
+            if (typeof record.id === "string") {
+              state.legacyImportedJobIds.delete(record.id);
+            }
+          }
           return rewritten;
         }
         if (attempt === 1) {
