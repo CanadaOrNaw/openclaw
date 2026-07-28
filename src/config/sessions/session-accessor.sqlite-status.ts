@@ -281,11 +281,13 @@ export function querySqliteSessionEntries(
       .where("created_actor_id", "is not", null),
   ).rows;
   return {
-    creatorActors: creatorRows.flatMap((row) =>
-      row.created_actor_id && row.created_actor_type
-        ? [{ id: row.created_actor_id, type: row.created_actor_type }]
-        : [],
-    ),
+    creatorActors: creatorRows.flatMap((row) => {
+      const actorType = row.created_actor_type;
+      return row.created_actor_id &&
+        (actorType === "agent" || actorType === "human" || actorType === "system")
+        ? [{ id: row.created_actor_id, type: actorType }]
+        : [];
+    }),
     entries,
     totalCount: count ?? 0,
   };
