@@ -185,9 +185,13 @@ export function resolveRequestedSessionAgentId(
   key: string,
   explicitAgentId?: string,
 ): RequestedSessionAgentIdResolution {
-  const canonicalKey = resolveSessionStoreKey({ cfg, sessionKey: key });
   const parsed = parseAgentSessionKey(key);
   const requestedAgentId = normalizeOptionalString(explicitAgentId);
+  const canonicalKey = resolveSessionStoreKey({
+    cfg,
+    sessionKey: key,
+    ...(requestedAgentId ? { storeAgentId: requestedAgentId } : {}),
+  });
   if (requestedAgentId) {
     const agentId = normalizeAgentId(requestedAgentId);
     if (!listAgentIds(cfg).includes(agentId)) {

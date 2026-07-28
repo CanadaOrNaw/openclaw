@@ -315,7 +315,9 @@ async function resolveSessionKeyFromKey(params: {
     if (!key) {
       return null;
     }
+    const agentId = normalizeOptionalString(result?.agentId);
     return buildResolvedSessionReference({
+      agentId,
       key,
       alias: params.alias,
       mainKey: params.mainKey,

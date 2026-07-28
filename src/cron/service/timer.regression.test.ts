@@ -1737,6 +1737,7 @@ describe("cron service timer regressions", () => {
       payload: { kind: "systemEvent", text: "tick" },
       state: { nextRunAtMs: 1 },
     };
+    await saveCronStore(store.storePath, { version: 1, jobs: [job] });
     const state = createCronServiceState({
       cronEnabled: true,
       storePath: store.storePath,
@@ -1749,8 +1750,6 @@ describe("cron service timer regressions", () => {
       wakeNowHeartbeatBusyRetryDelayMs: 1,
       runIsolatedAgentJob: createDefaultIsolatedRunner(),
     });
-    state.store = { version: 1, jobs: [job] };
-    await saveCronStore(store.storePath, { version: 1, jobs: [job] });
 
     const runPromise = runMissedJobs(state);
     await vi.advanceTimersByTimeAsync(1);

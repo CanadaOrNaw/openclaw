@@ -1,0 +1,125 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const {
+  broadcastToConnIds,
+  legacyDefaultAgentIdMock,
+  loadGatewaySessionRowMock,
+  resolveVisibleActiveSessionRunStateMock,
+} = vi.hoisted(() => ({
+  broadcastToConnIds: vi.fn(),
+  legacyDefaultAgentIdMock: vi.fn(() => undefined as string | undefined),
+  loadGatewaySessionRowMock: vi.fn(),
+  resolveVisibleActiveSessionRunStateMock: vi.fn(() => ({ active: false, runIds: [] })),
+}));
+
+vi.mock("../agents/agent-scope.js", () => ({
+  tryResolveDefaultAgentId: vi.fn(() => undefined),
+}));
+
+vi.mock("../config/io.js", () => ({
+  getRuntimeConfig: vi.fn(() => ({
+    agents: { ownership: "explicit", entries: { ops: {}, research: {} } },
+  })),
+}));
+
+vi.mock("../config/legacy.default-agent-owner.js", () => ({
+  tryGetLegacyDefaultAgentId: legacyDefaultAgentIdMock,
+}));
+
+vi.mock("../plugins/gateway-events.js", () => ({
+  hasPluginSessionsChangedSubscribers: vi.fn(() => false),
+}));
+
+vi.mock("./server-methods/session-active-runs.js", () => ({
+  resolveVisibleActiveSessionRunState: resolveVisibleActiveSessionRunStateMock,
+}));
+
+vi.mock("./session-utils.js", async () => {
+  const actual = await vi.importActual<typeof import("./session-utils.js")>("./session-utils.js");
+  return { ...actual, loadGatewaySessionRow: loadGatewaySessionRowMock };
+});
+
+import {
+  createLifecycleEventBroadcastHandler,
+  createTranscriptUpdateBroadcastHandler,
+} from "./server-session-events.js";
+
+const globalRow = {
+  key: "global",
+  kind: "global",
+  sessionId: "session-global",
+  updatedAt: 1,
+} as const;
+
+describe("server session events without a compatibility owner", () => {
+  beforeEach(() => {
+    broadcastToConnIds.mockReset();
+    legacyDefaultAgentIdMock.mockReset().mockReturnValue(undefined);
+    loadGatewaySessionRowMock.mockReset().mockReturnValue(globalRow);
+    resolveVisibleActiveSessionRunStateMock
+      .mockReset()
+      .mockReturnValue({ active: false, runIds: [] });
+  });
+
+  it("keeps ownerless lifecycle snapshots ownerless", () => {
+    const handler = createLifecycleEventBroadcastHandler({
+      broadcastToConnIds,
+      sessionEventSubscribers: { getAll: () => new Set(["conn-1"]) },
+      chatAbortControllers: new Map(),
+    });
+
+    handler({ sessionKey: "global", reason: "updated" } as never);
+
+    expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ defaultAgentId: undefined }),
+    );
+  });
+
+  it("keeps ownerless transcript snapshots ownerless", async () => {
+    const handler = createTranscriptUpdateBroadcastHandler({
+      broadcastToConnIds,
+      sessionEventSubscribers: { getAll: () => new Set(["conn-1"]) },
+      sessionMessageSubscribers: { get: () => new Set(["conn-1"]) },
+      chatAbortControllers: new Map(),
+    });
+
+    handler({
+      sessionFile: "/tmp/session-global.jsonl",
+      sessionKey: "global",
+      message: { role: "assistant", content: [{ type: "text", text: "done" }] },
+      messageSeq: 1,
+    } as never);
+
+    await vi.waitFor(() => expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalled());
+    expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ defaultAgentId: undefined }),
+    );
+  });
+
+  it("keeps the compatibility owner separate from an explicit transcript owner", async () => {
+    legacyDefaultAgentIdMock.mockReturnValue("main");
+    const handler = createTranscriptUpdateBroadcastHandler({
+      broadcastToConnIds,
+      sessionEventSubscribers: { getAll: () => new Set(["conn-1"]) },
+      sessionMessageSubscribers: { get: () => new Set(["conn-1"]) },
+      chatAbortControllers: new Map(),
+    });
+
+    handler({
+      sessionFile: "/tmp/session-work-global.jsonl",
+      target: {
+        agentId: "work",
+        sessionId: "session-global",
+        sessionKey: "global",
+        storePath: "/tmp/work-sessions.json",
+      },
+      message: { role: "assistant", content: [{ type: "text", text: "done" }] },
+      messageSeq: 1,
+    } as never);
+
+    await vi.waitFor(() => expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalled());
+    expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: "work", defaultAgentId: "main" }),
+    );
+  });
+});

@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useAutoCleanupTempDirTracker } from "../../test/helpers/temp-dir.js";
 import type { AuthProfileStore } from "../agents/auth-profiles.js";
 import { resolveLegacyOAuthPath } from "../agents/auth-profiles/legacy-source-diagnostic.js";
 import { saveAuthProfileStore } from "../agents/auth-profiles/store.js";
@@ -12,6 +13,8 @@ import { setActivePluginRegistry } from "../plugins/runtime.js";
 import { closeOpenClawAgentDatabasesForTest } from "../state/openclaw-agent-db.js";
 import { clearSecretsRuntimeSnapshot } from "./runtime.js";
 import { asConfig } from "./runtime.test-support.js";
+
+const tempDirs = useAutoCleanupTempDirTracker(afterEach);
 
 const { resolveRuntimeWebToolsMock, runtimePrepareImportMock } = vi.hoisted(() => ({
   resolveRuntimeWebToolsMock: vi.fn(async () => ({
@@ -254,7 +257,7 @@ describe("secrets runtime fast path", () => {
 
   it("collects the physical main inheritance store for an explicit fleet", async () => {
     const { collectCandidateAgentDirs } = await import("./runtime-fast-path.js");
-    const root = mkdtempSync(path.join(tmpdir(), "openclaw-runtime-explicit-fleet-"));
+    const root = tempDirs.make("openclaw-runtime-explicit-fleet-");
     const env: NodeJS.ProcessEnv = { HOME: root, OPENCLAW_STATE_DIR: root };
 
     try {
@@ -268,6 +271,58 @@ describe("secrets runtime fast path", () => {
         path.join(root, "agents", "ops", "agent"),
         path.join(root, "agents", "research", "agent"),
       ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("collects a non-roster auth inheritance owner directory", async () => {
+    const { collectCandidateAgentDirs } = await import("./runtime-fast-path.js");
+    const root = tempDirs.make("openclaw-runtime-retired-auth-owner-");
+    const env: NodeJS.ProcessEnv = { HOME: root, OPENCLAW_STATE_DIR: root };
+
+    try {
+      expect(
+        collectCandidateAgentDirs(
+          asConfig({
+            agents: {
+              ownership: "explicit",
+              defaults: { authInheritance: { agentId: "retired" } },
+              entries: { ops: {}, research: {} },
+            },
+          }),
+          env,
+        ),
+      ).toEqual([
+        path.join(root, "agents", "main", "agent"),
+        path.join(root, "agents", "retired", "agent"),
+        path.join(root, "agents", "ops", "agent"),
+        path.join(root, "agents", "research", "agent"),
+      ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("deduplicates an auth inheritance owner still present in the roster", async () => {
+    const { collectCandidateAgentDirs } = await import("./runtime-fast-path.js");
+    const root = tempDirs.make("openclaw-runtime-roster-auth-owner-");
+    const env: NodeJS.ProcessEnv = { HOME: root, OPENCLAW_STATE_DIR: root };
+
+    try {
+      const opsDir = path.join(root, "agents", "ops", "agent");
+      const dirs = collectCandidateAgentDirs(
+        asConfig({
+          agents: {
+            ownership: "explicit",
+            defaults: { authInheritance: { agentId: "ops" } },
+            entries: { ops: {}, research: {} },
+          },
+        }),
+        env,
+      );
+
+      expect(dirs.filter((dir) => dir === opsDir)).toHaveLength(1);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

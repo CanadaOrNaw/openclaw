@@ -7,9 +7,10 @@ import {
   validateSessionsPluginPatchParams,
   validateSessionsResetParams,
 } from "../../../packages/gateway-protocol/src/index.js";
-import { resolveDefaultAgentId } from "../../agents/agent-scope.js";
+import { resolveDefaultAgentId, tryResolveDefaultAgentId } from "../../agents/agent-scope.js";
 import { persistStickyModelSelectionBestEffort } from "../../agents/sticky-model-selection.js";
 import { replyRunRegistry } from "../../auto-reply/reply/reply-run-registry.js";
+import { tryGetLegacyDefaultAgentId } from "../../config/legacy.default-agent-owner.js";
 import {
   applySessionPatchProjection,
   type SessionPatchProjectionSnapshot,
@@ -74,6 +75,8 @@ export const sessionMutationHandlers: GatewayRequestHandlers = {
       return;
     }
     const requestedAgentId = requestedAgent.agentId;
+    const compatibilityDefaultAgentId =
+      tryGetLegacyDefaultAgentId(cfg) ?? tryResolveDefaultAgentId(cfg);
     const { target, storePath } = resolveGatewaySessionTargetFromKey(key, cfg, {
       agentId: requestedAgentId,
     });
@@ -199,7 +202,8 @@ export const sessionMutationHandlers: GatewayRequestHandlers = {
             requestedKey: key,
             canonicalKey,
             sessionId: entry?.sessionId,
-            defaultAgentId: resolveDefaultAgentId(cfg),
+            agentId: requestedAgentId,
+            defaultAgentId: compatibilityDefaultAgentId,
           })
         ) {
           respond(
@@ -346,7 +350,7 @@ export const sessionMutationHandlers: GatewayRequestHandlers = {
     const agentId = normalizeAgentId(
       target.canonicalKey === "global"
         ? target.agentId
-        : (parsed?.agentId ?? resolveDefaultAgentId(cfg)),
+        : (parsed?.agentId ?? target.agentId ?? resolveDefaultAgentId(cfg)),
     );
     const resolved = resolveSessionModelRef(cfg, applied.entry, agentId);
     if (

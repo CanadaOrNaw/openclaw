@@ -9,6 +9,7 @@ function runPreflight(
   options?: {
     enabled?: boolean;
     requesterOnlyEnabled?: boolean;
+    selectedOnlyEnabled?: boolean;
     backend?: boolean;
     register?: boolean;
     requesterAgentId?: string;
@@ -19,9 +20,11 @@ function runPreflight(
     cached?: boolean;
     completed?: boolean;
     ended?: boolean;
+    requestAgentId?: string;
+    sessionKey?: string;
   },
 ) {
-  const sessionKey = "agent:worker:subagent:collector";
+  const sessionKey = options?.sessionKey ?? "agent:worker:subagent:collector";
   if (options?.register) {
     subagentRuns.set("collector-run", {
       runId: "collector-run",
@@ -45,6 +48,7 @@ function runPreflight(
   const result = prepareAgentRequestPreflight({
     params: {
       message: "collect",
+      agentId: options?.requestAgentId,
       sessionKey,
       idempotencyKey: options?.idempotencyKey ?? "collector-run",
       lane: "subagent",
@@ -53,15 +57,21 @@ function runPreflight(
     respond,
     context: {
       getRuntimeConfig: () =>
-        options?.requesterOnlyEnabled
+        options?.selectedOnlyEnabled
           ? {
               agents: {
-                list: [{ id: "main", tools: { swarm: true } }, { id: "worker" }],
+                list: [{ id: "main" }, { id: "work", tools: { swarm: true } }],
               },
             }
-          : options?.enabled
-            ? { tools: { swarm: true } }
-            : {},
+          : options?.requesterOnlyEnabled
+            ? {
+                agents: {
+                  list: [{ id: "main", tools: { swarm: true } }, { id: "worker" }],
+                },
+              }
+            : options?.enabled
+              ? { tools: { swarm: true } }
+              : {},
       dedupe: options?.cached
         ? new Map([
             [
@@ -198,6 +208,70 @@ describe("agent request Swarm preflight", () => {
       undefined,
       expect.objectContaining({ code: "INVALID_REQUEST" }),
     );
+  });
+
+  it("loads a bare retained collector key from the explicitly selected agent store", () => {
+    vi.mocked(sessionAccessor.loadSessionEntry).mockReturnValue({
+      sessionId: "collector-session",
+      updatedAt: 1,
+      swarmCollector: true,
+    });
+
+    runPreflight({ type: "object" }, true, {
+      enabled: true,
+      backend: true,
+      includeCollectorFields: false,
+      requestAgentId: "work",
+      sessionKey: "subagent:collector",
+    });
+
+    expect(sessionAccessor.loadSessionEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionKey: "subagent:collector",
+        storePath: expect.stringContaining("/agents/work/"),
+      }),
+    );
+  });
+
+  it("loads a bare retained collector key from the sole-agent store", () => {
+    vi.mocked(sessionAccessor.loadSessionEntry).mockReturnValue({
+      sessionId: "collector-session",
+      updatedAt: 1,
+      swarmCollector: true,
+    });
+
+    runPreflight({ type: "object" }, true, {
+      backend: true,
+      includeCollectorFields: false,
+      sessionKey: "subagent:collector",
+    });
+
+    expect(sessionAccessor.loadSessionEntry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sessionKey: "subagent:collector",
+        storePath: expect.stringContaining("/agents/main/"),
+      }),
+    );
+  });
+
+  it("uses the selected owner for a retained collector with a bare requester key", () => {
+    vi.mocked(sessionAccessor.loadSessionEntry).mockReturnValue({
+      sessionId: "collector-session",
+      updatedAt: 1,
+      swarmCollector: true,
+    });
+
+    const { respond, result } = runPreflight({ type: "object" }, true, {
+      backend: true,
+      register: true,
+      requestAgentId: "work",
+      requesterSessionKey: "main",
+      selectedOnlyEnabled: true,
+      sessionKey: "subagent:collector",
+    });
+
+    expect(result).toBeDefined();
+    expect(respond).not.toHaveBeenCalled();
   });
 
   it("keeps a provisionally ended collector session reserved until completion", () => {

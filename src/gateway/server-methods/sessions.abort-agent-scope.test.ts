@@ -203,6 +203,10 @@ async function expectListedGlobalSessionActiveRun(params: {
   listSessionsFromStoreAsyncMock.mockResolvedValue({
     sessions: [{ key: "global", hasActiveRun: false }],
   });
+  loadCombinedSessionStoreForGatewayMock.mockReturnValue({
+    storePath: "/tmp/openclaw-sessions.json",
+    store: { global: { sessionId: "sess-global" } },
+  });
   const respond = await callSessions(
     "sessions.list",
     { includeGlobal: true, agentId: params.agentId },
@@ -259,6 +263,12 @@ describe("sessions.abort agent scope", () => {
     });
     listSessionsFromStoreAsyncMock.mockResolvedValue({
       sessions: [{ key: "agent:main:openclaw-weixin:direct:user", sessionId: "sess-weixin" }],
+    });
+    loadCombinedSessionStoreForGatewayMock.mockReturnValue({
+      storePath: "/tmp/openclaw-sessions.json",
+      store: {
+        "agent:main:openclaw-weixin:direct:user": { sessionId: "sess-weixin" },
+      },
     });
     isEmbeddedAgentRunInProgressMock.mockImplementation(
       (sessionId: string) => sessionId === "sess-weixin",

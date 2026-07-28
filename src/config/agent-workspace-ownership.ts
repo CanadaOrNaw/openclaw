@@ -85,7 +85,9 @@ export function pinSoleAgentWorkspaceForFleetExpansion(params: {
         : {}),
     },
     workspace,
-    ...(preservePluginPath && !pluginPaths.includes(pluginPath) ? { pluginPath } : {}),
+    // The path may already have been projected into the runtime config. It is
+    // still write-managed here and must exist before plugin validation runs.
+    ...(preservePluginPath ? { pluginPath } : {}),
     insertedPaths: [
       ...(workspaceIsResolved ? [] : [["agents", "entries", entryKey!, "workspace"]]),
       ...(preservePluginPath && !pluginPaths.includes(pluginPath)

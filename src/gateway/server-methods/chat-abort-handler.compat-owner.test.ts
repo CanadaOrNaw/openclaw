@@ -1,0 +1,31 @@
+import { expect, it } from "vitest";
+import { handleChatAbortRequestWithLifecycle } from "./chat-abort-handler.js";
+import {
+  createActiveRun,
+  createChatAbortContext,
+  invokeChatAbortHandler,
+} from "./chat.abort.test-helpers.js";
+
+it("does not attribute an ownerless default global run to the selected agent", async () => {
+  const active = createActiveRun("global");
+  const context = createChatAbortContext({
+    chatAbortControllers: new Map([["run-main", active]]),
+    getRuntimeConfig: () => ({
+      agents: { list: [{ id: "main", default: true }, { id: "work" }] },
+      session: { scope: "global" },
+    }),
+  });
+
+  const respond = await invokeChatAbortHandler({
+    handler: handleChatAbortRequestWithLifecycle,
+    context,
+    request: { sessionKey: "global", agentId: "work", runId: "run-main" },
+  });
+
+  expect(respond.mock.calls.at(-1)).toMatchObject([
+    false,
+    undefined,
+    { code: "INVALID_REQUEST", message: "runId does not match agentId" },
+  ]);
+  expect(active.controller.signal.aborted).toBe(false);
+});

@@ -1,6 +1,6 @@
 /** Store binding for ACP session metadata: resolves which session-store row owns a key. */
 import { normalizeLowercaseStringOrEmpty } from "@openclaw/normalization-core/string-coerce";
-import { resolveDefaultAgentId } from "../../agents/agent-scope-config.js";
+import { tryResolveSoleAgentId } from "../../agents/agent-scope-config.js";
 import { getRuntimeConfig } from "../../config/config.js";
 import { resolveStorePath } from "../../config/sessions/paths.js";
 import {
@@ -67,7 +67,7 @@ export function resolveSessionStorePathForAcp(params: {
 }): { cfg: OpenClawConfig; agentId?: string; storePath: string } {
   const cfg = params.cfg ?? getRuntimeConfig();
   const parsed = parseAgentSessionKey(params.sessionKey);
-  const agentId = params.agentId ?? parsed?.agentId ?? resolveDefaultAgentId(cfg);
+  const agentId = params.agentId ?? parsed?.agentId ?? tryResolveSoleAgentId(cfg);
   return {
     cfg,
     agentId,

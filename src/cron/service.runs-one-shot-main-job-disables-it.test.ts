@@ -244,7 +244,7 @@ function expectMainSystemEventPosted(
   }
   const options = matchingCall[1] as Record<string, unknown>;
   expect(options).toMatchObject({
-    agentId: undefined,
+    agentId: "main",
     contextKey: `cron:${params.jobId}`,
   });
   expectCronRunSessionKey(options.sessionKey, params.jobId);
@@ -259,7 +259,7 @@ function expectQueuedCronHeartbeat(
     source: "cron",
     intent: "immediate",
     reason: `cron:${params.jobId}`,
-    agentId: undefined,
+    agentId: "main",
     heartbeat: { target: "last" },
   });
   expectCronRunSessionKey(request?.sessionKey, params.jobId);

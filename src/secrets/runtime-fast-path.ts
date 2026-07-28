@@ -6,6 +6,7 @@ import { listAgentIds, resolveAgentDir } from "../agents/agent-scope-config.js";
 import { getRuntimeAuthProfileStoreCredentialsRevision } from "../agents/auth-profiles/runtime-snapshots.js";
 import { resolveAuthProfileDatabasePath } from "../agents/auth-profiles/sqlite.js";
 import type { AuthProfileStore } from "../agents/auth-profiles/types.js";
+import { resolveLegacyInheritedAuthDir } from "../agents/legacy-inherited-auth-dir.js";
 import { resolveStateDir } from "../config/paths.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import type { PluginManifestRegistry } from "../plugins/manifest-registry.js";
@@ -59,6 +60,7 @@ export function collectCandidateAgentDirs(
 ): string[] {
   const dirs = new Set<string>();
   dirs.add(resolveUserPath(resolveAgentDir(config, "main", env), env));
+  dirs.add(resolveUserPath(resolveLegacyInheritedAuthDir(config, env), env));
   for (const agentId of listAgentIds(config)) {
     dirs.add(resolveUserPath(resolveAgentDir(config, agentId, env), env));
   }
