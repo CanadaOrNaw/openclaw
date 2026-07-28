@@ -213,8 +213,8 @@ describe("createLazyGatewayCronState", () => {
     await lazy.cron.reloadForConfigAdoption(incomingConfig);
     lazy.cron.completeConfigAdoption();
 
-    expect(cron.reloadForConfigAdoption).toHaveBeenCalledWith(incomingConfig);
-    expect(cron.completeConfigAdoption).toHaveBeenCalledOnce();
+    expect(cron["reloadForConfigAdoption"]).toHaveBeenCalledWith(incomingConfig);
+    expect(cron["completeConfigAdoption"]).toHaveBeenCalledOnce();
   });
 
   it("applies config-adoption completion when the service loads later", async () => {
@@ -226,7 +226,7 @@ describe("createLazyGatewayCronState", () => {
     expect(hoisted.buildGatewayCronService).not.toHaveBeenCalled();
     await lazy.cron.status();
 
-    expect(cron.completeConfigAdoption).toHaveBeenCalledOnce();
+    expect(cron["completeConfigAdoption"]).toHaveBeenCalledOnce();
   });
 
   it("waits to start while scheduling is paused", async () => {

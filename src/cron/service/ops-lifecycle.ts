@@ -1,3 +1,6 @@
+import { listAgentIds } from "../../agents/agent-scope-config.js";
+import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import { normalizeAgentId } from "../../routing/session-key.js";
 import { materializeLegacyDefaultCronJobOwners } from "../legacy-default-agent-owner-migration.js";
 import { materializeLegacyDefaultCronJobOwnersInRecords } from "../legacy-default-agent-owner-records.js";
 import { transformCronJobsStore } from "../store.js";
@@ -314,6 +317,3 @@ export function resumeScheduling(state: CronServiceState) {
     throw err;
   }
 }
-import { listAgentIds } from "../../agents/agent-scope-config.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
-import { normalizeAgentId } from "../../routing/session-key.js";
