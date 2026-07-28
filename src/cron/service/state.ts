@@ -258,6 +258,8 @@ export type CronServiceState = {
   /** Last known durable wake for each persisted job. Map presence distinguishes
    * a durably unscheduled job from one that is not part of durable topology. */
   durableNextRunAtMsByJobId: Map<string, number | undefined>;
+  /** Loaded records proven to originate outside SQLite from the legacy JSON import. */
+  legacyImportedJobIds: Set<string>;
   timer: NodeJS.Timeout | null;
   running: boolean;
   stopped: boolean;
@@ -301,6 +303,7 @@ export function createCronServiceState(deps: CronServiceDeps): CronServiceState 
     store: null,
     storeEpoch: 0,
     durableNextRunAtMsByJobId: new Map<string, number | undefined>(),
+    legacyImportedJobIds: new Set<string>(),
     timer: null,
     running: false,
     stopped: false,

@@ -32,6 +32,8 @@ export type LoadedCronStore = {
   storeEpoch: number;
   configJobs: Array<Record<string, unknown>>;
   configJobIndexes: number[];
+  /** Runtime-job indexes whose records came from the legacy JSON import source. */
+  legacyImportedJobIndexes: number[];
   configJobRuntimeEntries: CronConfigJobRuntimeEntry[];
   invalidConfigRows: QuarantinedCronConfigJob[];
 };

@@ -295,7 +295,7 @@ export function startManagedGatewayConfigReloader(
       transactionOwnership.commitRuntimeEnv();
       restartLifecycle.settle("committed");
       if (reloadPlanChangesAgentResolution(plan)) {
-        params.getState().cronState.cron.completeConfigAdoption();
+        params.getState().cronState.cron.completeConfigAdoption(nextConfig);
       }
     } catch (error) {
       restartTransaction?.settle("rejected");

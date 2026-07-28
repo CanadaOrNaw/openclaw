@@ -11,7 +11,7 @@ import {
   validateSessionsResolveParams,
   validateSessionsSearchParams,
 } from "../../../packages/gateway-protocol/src/index.js";
-import { resolveDefaultAgentId } from "../../agents/agent-scope.js";
+import { resolveDefaultAgentId, tryResolveDefaultAgentId } from "../../agents/agent-scope.js";
 import {
   isConfiguredSessionStoreAgentId,
   isPerAgentSessionStoreConfig,
@@ -414,7 +414,9 @@ export const sessionReadHandlers: GatewayRequestHandlers = {
           );
           const trackedActiveRuns = collectTrackedActiveSessionRuns(context);
           const projectedAgentRunIndex = buildProjectedAgentRunIndex();
-          const defaultAgentId = resolveDefaultAgentId(cfg);
+          const defaultAgentId = p.agentId
+            ? normalizeAgentId(p.agentId)
+            : tryResolveDefaultAgentId(cfg);
           const sessions = measureDiagnosticsTimelineSpanSync(
             "gateway.sessions.list.active_run_flags",
             () => {

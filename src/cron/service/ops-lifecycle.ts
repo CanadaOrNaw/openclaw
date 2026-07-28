@@ -1,5 +1,6 @@
 import path from "node:path";
 import { listAgentIds } from "../../agents/agent-scope-config.js";
+import { tryGetLegacyDefaultAgentId } from "../../config/legacy.default-agent-owner.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
 import {
@@ -53,15 +54,20 @@ async function materializeLoadedLegacyDefaultAgentOwners(
                 typeof record.id === "string" ? [record.id] : [],
               ),
             );
-            const missingRecords = candidateRecords.filter(
-              (record) => typeof record.id === "string" && !currentIds.has(record.id),
+            // Only legacy-JSON imports may be absent from SQLite at load time.
+            // A disappeared SQLite row can be a pre-upgrade writer's concurrent deletion.
+            const missingImportedRecords = candidateRecords.filter(
+              (record) =>
+                typeof record.id === "string" &&
+                state.legacyImportedJobIds.has(record.id) &&
+                !currentIds.has(record.id),
             );
-            const merged = [...currentRecords, ...missingRecords];
+            const merged = [...currentRecords, ...missingImportedRecords];
             rewritten = materializeLegacyDefaultCronJobOwnersInRecords(
               merged,
               legacyDefaultAgentId,
             );
-            if (missingRecords.length === 0 && rewritten === 0) {
+            if (missingImportedRecords.length === 0 && rewritten === 0) {
               return null;
             }
             return { version: 1, jobs: merged as unknown as CronJob[] };
@@ -184,9 +190,9 @@ export async function reloadForConfigAdoption(
   }
 }
 
-/** Retires the retained handoff owner only after the caller publishes the incoming config. */
-export function completeConfigAdoption(state: CronServiceState) {
-  state.deps.legacyDefaultAgentId = undefined;
+/** Publishes the retained owner from the config only after the caller adopts it. */
+export function completeConfigAdoption(state: CronServiceState, incomingConfig: OpenClawConfig) {
+  state.deps.legacyDefaultAgentId = tryGetLegacyDefaultAgentId(incomingConfig);
 }
 
 /** Starts the cron service, recovers interrupted runs, catches up missed jobs, and arms the timer. */

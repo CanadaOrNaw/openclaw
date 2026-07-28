@@ -120,8 +120,8 @@ export class CronService implements CronServiceContract {
     await lifecycleOps.reloadForConfigAdoption(this.state, incomingConfig);
   }
 
-  completeConfigAdoption() {
-    lifecycleOps.completeConfigAdoption(this.state);
+  completeConfigAdoption(incomingConfig: OpenClawConfig) {
+    lifecycleOps.completeConfigAdoption(this.state, incomingConfig);
   }
 
   pauseScheduling() {

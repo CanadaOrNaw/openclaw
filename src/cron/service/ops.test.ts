@@ -3,6 +3,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AgentSelectionRequiredError } from "../../agents/agent-scope-config.js";
+import { executeSqliteQuerySync } from "../../infra/kysely-sync.js";
 import { runOpenClawStateWriteTransaction } from "../../state/openclaw-state-db.js";
 import * as taskExecutor from "../../tasks/task-executor.js";
 import { findTaskByRunId, listTaskRecordsUnsorted } from "../../tasks/task-registry.js";
@@ -15,6 +16,7 @@ import { setupCronServiceSuite, writeCronStoreSnapshot } from "../service.test-h
 import * as cronStoreModule from "../store.js";
 import { loadCronJobsStoreWithConfigJobs, loadCronStore, saveCronJobsStore } from "../store.js";
 import { cronStoreKey } from "../store/key.js";
+import { getCronStoreKysely } from "../store/schema.js";
 import type { CronJob } from "../types.js";
 import { start, stop } from "./ops-lifecycle.js";
 import { add, remove, removeStaleJobFamily, update } from "./ops-mutations.js";
@@ -540,6 +542,7 @@ describe("cron service ops seam coverage", () => {
         storeEpoch: 0,
         configJobs: [structuredClone(importedJob) as unknown as Record<string, unknown>],
         configJobIndexes: [0],
+        legacyImportedJobIndexes: [0],
         configJobRuntimeEntries: [],
         invalidConfigRows: [],
       });
@@ -566,7 +569,7 @@ describe("cron service ops seam coverage", () => {
     }
   });
 
-  it("does not resurrect a loaded record deleted by a newer topology write", async () => {
+  it("does not resurrect a loaded SQLite record deleted by a pre-upgrade writer", async () => {
     const { storePath } = await makeStorePath();
     const now = Date.parse("2026-07-25T12:30:00.000Z");
     const deletedJob: CronJob = {
@@ -583,10 +586,14 @@ describe("cron service ops seam coverage", () => {
     };
     await saveCronJobsStore(storePath, { version: 1, jobs: [deletedJob] });
     const loadedBeforeDelete = await loadCronJobsStoreWithConfigJobs(storePath);
-    await saveCronJobsStore(
-      storePath,
-      { version: 1, jobs: [] },
-      { expectedStoreEpoch: loadedBeforeDelete.storeEpoch },
+    runOpenClawStateWriteTransaction(({ db }) =>
+      executeSqliteQuerySync(
+        db,
+        getCronStoreKysely(db)
+          .deleteFrom("cron_jobs")
+          .where("store_key", "=", cronStoreKey(storePath))
+          .where("job_id", "=", deletedJob.id),
+      ),
     );
     const loadSpy = vi
       .spyOn(cronStoreModule, "loadCronJobsStoreWithConfigJobs")
@@ -634,6 +641,7 @@ describe("cron service ops seam coverage", () => {
         storeEpoch: 0,
         configJobs: [importedJob as unknown as Record<string, unknown>],
         configJobIndexes: [0],
+        legacyImportedJobIndexes: [0],
         configJobRuntimeEntries: [],
         invalidConfigRows: [],
       });

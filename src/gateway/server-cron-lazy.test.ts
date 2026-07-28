@@ -211,22 +211,23 @@ describe("createLazyGatewayCronState", () => {
     const incomingConfig = { agents: { entries: { ops: {} } } };
 
     await lazy.cron.reloadForConfigAdoption(incomingConfig);
-    lazy.cron.completeConfigAdoption();
+    lazy.cron.completeConfigAdoption(incomingConfig);
 
     expect(cron["reloadForConfigAdoption"]).toHaveBeenCalledWith(incomingConfig);
-    expect(cron["completeConfigAdoption"]).toHaveBeenCalledOnce();
+    expect(cron["completeConfigAdoption"]).toHaveBeenCalledWith(incomingConfig);
   });
 
   it("applies config-adoption completion when the service loads later", async () => {
     const cron = createCronService();
     hoisted.setState(createCronState(cron));
     const lazy = createLazyGatewayCronState(createParams());
+    const incomingConfig = { agents: { ownership: "explicit" as const, entries: { ops: {} } } };
 
-    lazy.cron.completeConfigAdoption();
+    lazy.cron.completeConfigAdoption(incomingConfig);
     expect(hoisted.buildGatewayCronService).not.toHaveBeenCalled();
     await lazy.cron.status();
 
-    expect(cron["completeConfigAdoption"]).toHaveBeenCalledOnce();
+    expect(cron["completeConfigAdoption"]).toHaveBeenCalledWith(incomingConfig);
   });
 
   it("waits to start while scheduling is paused", async () => {

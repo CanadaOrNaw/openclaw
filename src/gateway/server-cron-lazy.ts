@@ -30,7 +30,7 @@ export function createLazyGatewayCronState(params: LazyGatewayCronParams): Gatew
   const storePath = resolveCronJobsStorePathFromConfig(params.cfg, env);
   const cronEnabled = env.OPENCLAW_SKIP_CRON !== "1" && params.cfg.cron?.enabled !== false;
   let loaded: LoadedGatewayCronState | null = null;
-  let configAdoptionCompletionPending = false;
+  let pendingConfigAdoptionCompletion: OpenClawConfig | undefined;
   let stopped = false;
   let lifecycleGeneration = 0;
   let schedulingPaused = false;
@@ -78,9 +78,9 @@ export function createLazyGatewayCronState(params: LazyGatewayCronParams): Gatew
     // Share the same import promise across concurrent API calls so only one
     // scheduler instance is built for a Gateway process.
     const resolved = await cronStateLoader.load();
-    if (configAdoptionCompletionPending) {
-      resolved.state.cron.completeConfigAdoption();
-      configAdoptionCompletionPending = false;
+    if (pendingConfigAdoptionCompletion) {
+      resolved.state.cron.completeConfigAdoption(pendingConfigAdoptionCompletion);
+      pendingConfigAdoptionCompletion = undefined;
     }
     return resolved;
   };
@@ -250,11 +250,11 @@ export function createLazyGatewayCronState(params: LazyGatewayCronParams): Gatew
     async reloadForConfigAdoption(incomingConfig) {
       await (await load()).state.cron.reloadForConfigAdoption(incomingConfig);
     },
-    completeConfigAdoption() {
+    completeConfigAdoption(incomingConfig) {
       if (loaded) {
-        loaded.state.cron.completeConfigAdoption();
+        loaded.state.cron.completeConfigAdoption(incomingConfig);
       } else {
-        configAdoptionCompletionPending = true;
+        pendingConfigAdoptionCompletion = incomingConfig;
       }
     },
     async status() {

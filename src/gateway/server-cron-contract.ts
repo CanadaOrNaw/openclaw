@@ -23,8 +23,8 @@ export type GatewayCronServiceContract = CronServiceContract & {
   resumeScheduling(): void;
   /** Reload durable rows before publishing a config with new agent resolution. */
   reloadForConfigAdoption(incomingConfig: OpenClawConfig): Promise<void>;
-  /** Retire the handoff owner after the incoming config is durably published. */
-  completeConfigAdoption(): void;
+  /** Publish the incoming config's retained owner after durable config adoption. */
+  completeConfigAdoption(incomingConfig: OpenClawConfig): void;
   /** Scheduler-owned work not represented by active cron run markers. */
   getSuspensionBlockerCount?(): number;
   /** Stop cron and await scheduler-owned child process teardown. */

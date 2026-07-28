@@ -172,6 +172,7 @@ export async function ensureLoaded(
   // store boundary and only trust the CronJob shape after validation below.
   const loadedJobs = (loaded.store.jobs ?? []) as unknown as Record<string, unknown>[];
   const jobs: CronJob[] = [];
+  const legacyImportedJobIds = new Set<string>();
   const durableNextRunAtMsByJobId = new Map<string, number | undefined>();
   const quarantinedConfigJobs: QuarantinedCronConfigJob[] = [...loaded.invalidConfigRows];
   for (const [index, raw] of loadedJobs.entries()) {
@@ -222,6 +223,9 @@ export async function ensureLoaded(
     // Validated above, so the raw record is now a trusted CronJob.
     const hydrated = hydratedRaw as unknown as CronJob;
     jobs.push(hydrated);
+    if (loaded.legacyImportedJobIndexes.includes(index)) {
+      legacyImportedJobIds.add(hydrated.id);
+    }
     // Capture the value SQLite actually held before schedule-identity repair
     // mutates the runtime view. A later save can then publish that transition.
     durableNextRunAtMsByJobId.set(hydrated.id, hydrated.state.nextRunAtMs);
@@ -232,6 +236,7 @@ export async function ensureLoaded(
     jobs,
   };
   state.storeEpoch = loaded.storeEpoch;
+  state.legacyImportedJobIds = legacyImportedJobIds;
   state.durableNextRunAtMsByJobId = durableNextRunAtMsByJobId;
   state.storeLoadedAtMs = state.deps.nowMs();
 

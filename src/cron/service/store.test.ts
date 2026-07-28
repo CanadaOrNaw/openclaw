@@ -1,6 +1,7 @@
 // Cron service store tests cover persisted service state loading and writes.
 import fs from "node:fs/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { retainLegacyDefaultAgentId } from "../../config/legacy.default-agent-owner.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { materializeLegacyDefaultCronJobOwners } from "../legacy-default-agent-owner-migration.js";
 import * as legacyOwnerMigrationModule from "../legacy-default-agent-owner-migration.js";
@@ -298,8 +299,30 @@ describe("cron service store seam coverage", () => {
       agentId: "ops",
     });
     expect(state.deps.legacyDefaultAgentId).toBe("ops");
-    completeConfigAdoption(state);
+    completeConfigAdoption(state, incomingRoster("ops", "research"));
     expect(state.deps.legacyDefaultAgentId).toBeUndefined();
+  });
+
+  it("keeps the retained owner after adopting a leaf edit on a legacy fleet", async () => {
+    const { storePath } = await makeStorePath();
+    const state = createStoreTestState(storePath);
+    state.deps.legacyDefaultAgentId = "ops";
+    const incomingConfig = retainLegacyDefaultAgentId(
+      {
+        agents: {
+          entries: {
+            ops: { model: "openai/gpt-5.4" },
+            research: {},
+          },
+        },
+      },
+      "ops",
+    );
+
+    await reloadForConfigAdoption(state, incomingConfig);
+    completeConfigAdoption(state, incomingConfig);
+
+    expect(state.deps.legacyDefaultAgentId).toBe("ops");
   });
 
   it("reloads but does not migrate rows when the incoming roster removes the old owner", async () => {
