@@ -17,7 +17,7 @@ export function collectAgentOwnershipWarnings(cfg: OpenClawConfig): ConfigValida
     });
   }
   const hasPerAgentHeartbeat = agents.some((entry) => Boolean(entry.heartbeat));
-  if (!hasPerAgentHeartbeat && cfg.agents?.defaults?.heartbeat === undefined) {
+  if (!hasPerAgentHeartbeat && !normalizeOptionalString(cfg.agents?.defaults?.heartbeat?.agentId)) {
     warnings.push({
       path: "agents.defaults.heartbeat.agentId",
       message:

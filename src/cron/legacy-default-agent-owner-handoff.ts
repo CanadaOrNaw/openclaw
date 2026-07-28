@@ -51,7 +51,7 @@ function readAgentIdFromReport(value: string): string | undefined {
 }
 
 /** Persists the owner needed by the next new-code startup after a cross-process config write. */
-export function retainLegacyDefaultCronOwnerHandoff(
+function retainLegacyDefaultCronOwnerHandoff(
   db: DatabaseSync,
   storePath: string,
   legacyDefaultAgentId: string,
@@ -151,7 +151,7 @@ function readLegacyDefaultCronOwnerHandoff(
 }
 
 /** Completed receipts remain readable because pre-upgrade writers cannot be fenced. */
-export function readRetainedLegacyDefaultCronOwner(
+function readRetainedLegacyDefaultCronOwner(
   db: DatabaseSync,
   storePath: string,
 ): string | undefined {

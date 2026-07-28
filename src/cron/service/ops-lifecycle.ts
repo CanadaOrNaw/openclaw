@@ -156,7 +156,10 @@ export async function reloadForConfigAdoption(
       incomingStoreOwner &&
       incomingAgentIds.has(normalizeAgentId(incomingStoreOwner))
     ) {
-      const incomingMigration = await materializeLegacyDefaultCronJobOwners({
+      const { materializeLegacyDefaultCronJobOwners: repairLegacyDefaultCronJobOwners } =
+        await import("../../commands/doctor/cron/legacy-repair.js");
+      const incomingMigration = await repairLegacyDefaultCronJobOwners({
+        cfg: incomingConfig,
         storePath: incomingStorePath,
         legacyDefaultAgentId: incomingStoreOwner,
         env: state.deps.env,

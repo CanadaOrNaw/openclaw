@@ -1,3 +1,5 @@
+import fs from "node:fs/promises";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { prepareLegacyCronOwnerHandoffs } from "../../config/io.cron-owner-handoff.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
@@ -175,6 +177,27 @@ describe("cron legacy owner handoff persistence", () => {
     });
     expect((await loadCronStore(incomingStorePath)).jobs[0]).toMatchObject({
       id: "incoming-ownerless",
+      agentId: "ops",
+    });
+  });
+
+  it("materializes destination legacy JSON owners during store-changing adoption", async () => {
+    const { storePath: currentStorePath } = await makeStorePath();
+    const { storePath: incomingStorePath } = await makeStorePath();
+    await writeJobs(currentStorePath, [createOwnerlessJob("current-sqlite")]);
+    await fs.mkdir(path.dirname(incomingStorePath), { recursive: true });
+    await fs.writeFile(
+      incomingStorePath,
+      `${JSON.stringify({ version: 1, jobs: [createOwnerlessJob("incoming-json")] })}\n`,
+      "utf8",
+    );
+    const state = createState(currentStorePath);
+    state.deps.legacyDefaultAgentId = "ops";
+
+    await reloadForConfigAdoption(state, incomingRoster(incomingStorePath));
+
+    expect((await loadCronStore(incomingStorePath)).jobs[0]).toMatchObject({
+      id: "incoming-json",
       agentId: "ops",
     });
   });

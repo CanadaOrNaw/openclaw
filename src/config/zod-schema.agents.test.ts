@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { tryResolveDefaultAgentId } from "../agents/agent-scope-config.js";
+import { collectAgentOwnershipWarnings } from "./agent-ownership-warnings.js";
 import { tryGetLegacyDefaultAgentId } from "./legacy.default-agent-owner.js";
+import type { OpenClawConfig } from "./types.openclaw.js";
 import { validateConfigObjectWithPlugins } from "./validation.js";
 import { AgentsSchema } from "./zod-schema.agents.js";
 import { OpenClawSchema } from "./zod-schema.js";
@@ -110,6 +112,24 @@ describe("explicit ambient agent targets", () => {
 });
 
 describe("multi-agent ambient ownership warnings", () => {
+  it("warns for interval-only heartbeat defaults but not an explicit heartbeat owner", () => {
+    const config = (heartbeat: { every: string; agentId?: string }): OpenClawConfig => ({
+      agents: {
+        ownership: "explicit",
+        defaults: { heartbeat, systemAgent: { agentId: "ops" } },
+        entries: { ops: {}, research: {} },
+      },
+      talk: { agentId: "ops" },
+    });
+
+    expect(collectAgentOwnershipWarnings(config({ every: "15m" }))).toContainEqual(
+      expect.objectContaining({ path: "agents.defaults.heartbeat.agentId" }),
+    );
+    expect(
+      collectAgentOwnershipWarnings(config({ every: "15m", agentId: "ops" })),
+    ).not.toContainEqual(expect.objectContaining({ path: "agents.defaults.heartbeat.agentId" }));
+  });
+
   it("fails closed for a fresh explicitly owned fleet with no ambient targets", () => {
     const result = validateConfigObjectWithPlugins(
       { agents: { ownership: "explicit", entries: { ops: {}, research: {} } } },

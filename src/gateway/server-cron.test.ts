@@ -2873,7 +2873,7 @@ describe("buildGatewayCronService", () => {
     const storePath = path.join(tmpDir, "cron.json");
     const cfg = {
       cron: { store: storePath },
-      agents: { entries: { yinze: {}, other: {} } },
+      agents: { ownership: "explicit", entries: { yinze: {}, other: {} } },
     } as OpenClawConfig;
     loadConfigMock.mockReturnValue(cfg);
     const seed = buildGatewayCronService({ cfg, deps: {} as CliDeps, broadcast: () => {} });
@@ -2881,27 +2881,37 @@ describe("buildGatewayCronService", () => {
       name: "explicit",
       enabled: true,
       schedule: { kind: "at", at: new Date(Date.now() + 3_600_000).toISOString() },
-      sessionTarget: "isolated",
+      sessionTarget: "main",
       wakeMode: "next-heartbeat",
       agentId: "yinze",
-      payload: { kind: "agentTurn", message: "explicit" },
+      payload: { kind: "systemEvent", text: "explicit" },
     });
     seed.cron.stop();
     const { agentId: _agentId, ...ownerlessLegacy } = explicit;
-    await saveCronStore(storePath, {
-      version: 1,
-      jobs: [
-        explicit,
-        {
-          ...ownerlessLegacy,
-          id: "ownerless-legacy",
-          name: "ownerless-legacy",
-        },
-      ],
-    });
-
+    await saveCronStore(
+      storePath,
+      {
+        version: 1,
+        jobs: [
+          explicit,
+          {
+            ...ownerlessLegacy,
+            id: "ownerless-legacy",
+            name: "ownerless-legacy",
+          },
+        ],
+      },
+      { env: { ...process.env, OPENCLAW_STATE_DIR: tmpDir } },
+    );
     const state = buildGatewayCronService({ cfg, deps: {} as CliDeps, broadcast: () => {} });
     try {
+      const ownerlessBeforeCleanup = (await state.cron.list({ includeDisabled: true })).find(
+        (job) => job.id === "ownerless-legacy",
+      );
+      expect(ownerlessBeforeCleanup).toBeDefined();
+      expect(ownerlessBeforeCleanup?.agentId).toBeUndefined();
+      expect(ownerlessBeforeCleanup?.sessionKey).toBeUndefined();
+      expect(state.cron.getDefaultAgentId()).toBeUndefined();
       await expect(
         state.cron.removeAgentJobsTransactional("yinze", async () => "committed"),
       ).resolves.toBe("committed");
