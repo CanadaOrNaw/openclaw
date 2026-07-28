@@ -33,10 +33,11 @@ import {
 import { parseSqliteSessionEntryJson as parseSessionEntryRow } from "./session-accessor.sqlite-status.js";
 import { readTranscriptMutationStateInTransaction } from "./session-accessor.sqlite-transcript-state.js";
 import {
-  foldedSessionKeyAliasCandidates,
-  normalizeStoreSessionKey,
-  resolveSessionEntryCandidates,
-} from "./store-entry.js";
+  assertCanonicalSessionKeyWrite,
+  duplicateCanonicalSessionKeyError,
+  nonCanonicalSessionKeyRowError,
+} from "./session-canonical-key.js";
+import { foldedSessionKeyAliasCandidates, normalizeStoreSessionKey } from "./store-entry.js";
 import type { SessionEntry } from "./types.js";
 
 // Canonical owner for session_nodes row selection, alias snapshots, and writes.
@@ -109,18 +110,20 @@ export function readSessionEntryRow(
     }
     entries.set(row.session_key, { entry, legacyKeys: [], row });
   }
-  const resolved = resolveSessionEntryCandidates({
-    entries: [...entries].map(([candidateKey, value]) => ({
-      entry: value.entry,
-      sessionKey: candidateKey,
-    })),
-    sessionKey,
-  });
-  if (!resolved.existing) {
+  if (entries.size === 0) {
     return undefined;
   }
-  const selected = entries.get(resolved.existing.sessionKey);
-  return selected ? { ...selected, legacyKeys: resolved.legacyKeys } : undefined;
+  if (entries.size > 1) {
+    throw duplicateCanonicalSessionKeyError(sessionKey);
+  }
+  const [selectedKey, selected] = entries.entries().next().value ?? [];
+  if (!selectedKey || !selected) {
+    return undefined;
+  }
+  if (selectedKey !== sessionKey) {
+    throw nonCanonicalSessionKeyRowError(sessionKey);
+  }
+  return selected;
 }
 
 // Async updaters prepare against this complete selection. Capturing alias rows
@@ -236,17 +239,19 @@ export function resolveSqliteLifecyclePrimaryEntry(
   database: OpenClawAgentDatabase,
   target: { canonicalKey: string; storeKeys: string[] },
 ): { key: string; entry: SessionEntry } | undefined {
-  let freshest: { key: string; entry: SessionEntry } | undefined;
-  for (const key of target.storeKeys) {
-    const row = readExactSessionEntryRow(database, key.trim());
-    if (!row) {
-      continue;
-    }
-    if (!freshest || (row.entry.updatedAt ?? 0) > (freshest.entry.updatedAt ?? 0)) {
-      freshest = { key, entry: row.entry };
-    }
+  const rows = target.storeKeys.flatMap((key) => {
+    const sessionKey = key.trim();
+    const row = readExactSessionEntryRow(database, sessionKey);
+    return row ? [{ key: sessionKey, entry: row.entry }] : [];
+  });
+  if (rows.length > 1) {
+    throw duplicateCanonicalSessionKeyError(target.canonicalKey);
   }
-  return freshest ?? undefined;
+  const [row] = rows;
+  if (row && row.key !== target.canonicalKey) {
+    throw nonCanonicalSessionKeyRowError(target.canonicalKey);
+  }
+  return row;
 }
 
 export function readSqliteLifecycleTargetSnapshot(
@@ -505,6 +510,7 @@ export function writeSessionEntry(
   entry: SessionEntry,
   options: { previousEntry?: SessionEntry | null } = {},
 ): void {
+  assertCanonicalSessionKeyWrite(sessionKey);
   const db = getSessionKysely(database.db);
   const normalizedEntry = normalizeSqliteSessionEntryTimestamp(entry);
   const updatedAt = normalizedEntry.updatedAt;

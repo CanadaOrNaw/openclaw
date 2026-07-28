@@ -15,6 +15,10 @@ import {
   loadExactSessionEntryReadOnly,
 } from "../config/sessions/session-accessor.js";
 import type { SessionEntryListScope } from "../config/sessions/session-accessor.types.js";
+import {
+  duplicateCanonicalSessionKeyError,
+  nonCanonicalSessionKeyRowError,
+} from "../config/sessions/session-canonical-key.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import {
   DEFAULT_AGENT_ID,
@@ -33,7 +37,7 @@ import type {
   GatewaySessionStoreTargetWithStore,
 } from "./session-utils-contracts.js";
 
-function findFreshestStoreMatch(
+function findCanonicalStoreMatch(
   store: Record<string, SessionEntry>,
   ...candidates: string[]
 ): { entry: SessionEntry; key: string } | undefined {
@@ -51,13 +55,17 @@ function findFreshestStoreMatch(
   if (matches.size === 0) {
     return undefined;
   }
-  let freshest: { entry: SessionEntry; key: string } | undefined;
+  let selected: { entry: SessionEntry; key: string } | undefined;
   for (const match of matches.values()) {
-    if (!freshest || (match.entry.updatedAt ?? 0) > (freshest.entry.updatedAt ?? 0)) {
-      freshest = match;
+    if (selected) {
+      throw duplicateCanonicalSessionKeyError(candidates[0] ?? match.key);
     }
+    selected = match;
   }
-  return freshest;
+  if (selected && selected.key !== candidates[0]) {
+    throw nonCanonicalSessionKeyRowError(candidates[0] ?? selected.key);
+  }
+  return selected;
 }
 
 function buildGatewaySessionStoreScanTargets(params: {
@@ -243,8 +251,7 @@ function resolveGatewaySessionStoreLookup(params: {
     params.initialStore && firstCandidate.storePath === fallback.storePath
       ? params.initialStore
       : loadStore(firstCandidate);
-  let selectedMatch = findFreshestStoreMatch(selectedStore, ...scanTargets);
-  let selectedUpdatedAt = selectedMatch?.entry.updatedAt ?? Number.NEGATIVE_INFINITY;
+  let selectedMatch = findCanonicalStoreMatch(selectedStore, ...scanTargets);
 
   for (let index = 1; index < candidates.length; index += 1) {
     const candidate = candidates[index];
@@ -252,19 +259,16 @@ function resolveGatewaySessionStoreLookup(params: {
       continue;
     }
     const store = loadStore(candidate);
-    const match = findFreshestStoreMatch(store, ...scanTargets);
+    const match = findCanonicalStoreMatch(store, ...scanTargets);
     if (!match) {
       continue;
     }
-    const updatedAt = match.entry.updatedAt ?? 0;
-    // Mirror combined-store merge behavior so follow-up mutations target the
-    // same backing store that won the listing merge when ids collide.
-    if (!selectedMatch || updatedAt >= selectedUpdatedAt) {
-      selectedStorePath = candidate.storePath;
-      selectedStore = store;
-      selectedMatch = match;
-      selectedUpdatedAt = updatedAt;
+    if (selectedMatch) {
+      throw duplicateCanonicalSessionKeyError(params.canonicalKey);
     }
+    selectedStorePath = candidate.storePath;
+    selectedStore = store;
+    selectedMatch = match;
   }
 
   return {
@@ -332,7 +336,7 @@ function resolveExplicitDeletedLegacyMainStoreTarget(params: {
       ...(params.projection ? { projection: params.projection } : {}),
       ...(params.storeCache ? { cache: params.storeCache } : {}),
     });
-    const match = findFreshestStoreMatch(store, ...lookupSeeds);
+    const match = findCanonicalStoreMatch(store, ...lookupSeeds);
     if (!match) {
       continue;
     }

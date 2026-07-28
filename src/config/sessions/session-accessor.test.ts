@@ -50,7 +50,6 @@ import {
   resolveSessionTranscriptReadTarget,
   resolveSessionTranscriptRuntimeReadTarget,
   resolveSessionTranscriptRuntimeTarget,
-  rollbackPluginOwnedSessionEntryLifecycle,
   trimSessionTranscriptForManualCompact,
   updateSessionEntry,
   updateSessionLastRoute,
@@ -962,196 +961,47 @@ describe("session accessor seam", () => {
     expect(loadSessionEntry({ sessionKey, storePath })).toBeUndefined();
   });
 
-  it("patches the freshest target alias and rewrites it to the canonical key", async () => {
-    const canonicalKey = "agent:main:work";
-    const aliasKey = "agent:main:main";
+  it("rejects alias targets and keeps canonical lifecycle mutations explicit", async () => {
     await replaceSessionEntry(
-      {
-        sessionKey: "agent:main:work",
-        storePath,
-      },
-      {
-        sessionId: "canonical-session",
-        updatedAt: 10,
-      },
+      { sessionKey: "agent:main:work", storePath },
+      { sessionId: "canonical-session", updatedAt: 10 },
     );
     await replaceSessionEntry(
-      {
-        sessionKey: "agent:main:main",
-        storePath,
-      },
-      {
-        sessionId: "legacy-session",
-        updatedAt: 20,
-        visibility: "read-only",
-      },
+      { sessionKey: "agent:main:main", storePath },
+      { sessionId: "legacy-session", updatedAt: 20 },
     );
-    await replaceSqliteTranscriptEvents(
-      { agentId: "main", sessionId: "legacy-history", sessionKey: aliasKey, storePath },
-      [{ id: "legacy-history-event", type: "message" }],
-    );
-    const aliasDatabasePath = expectDefined(
-      resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "main" }).path,
-      "alias database path",
-    );
-    const aliasDatabase = openOpenClawAgentDatabase({ agentId: "main", path: aliasDatabasePath });
-    aliasDatabase.db
-      .prepare(
-        `INSERT INTO session_nodes (
-           session_key, current_session_id, entry_json, updated_at
-         ) VALUES (?, 'canonical-session', ?, 10)`,
-      )
-      .run(canonicalKey, JSON.stringify({ sessionId: "canonical-session", updatedAt: 10 }));
-    aliasDatabase.db
-      .prepare(
-        `INSERT INTO session_windows (
-           session_id, session_key, session_scope, created_at, updated_at
-         ) VALUES ('canonical-session', ?, 'conversation', 10, 10)`,
-      )
-      .run(canonicalKey);
-    aliasDatabase.db
-      .prepare(
-        `INSERT INTO board_tabs (
-           session_key, tab_id, title, position, chat_dock, created_by, revision
-         ) VALUES ('agent:main:main', 'main', 'Alias board', 0, 'right', 'user', 2)`,
-      )
-      .run();
-    aliasDatabase.db
-      .prepare(
-        `INSERT INTO board_widgets (
-           session_key, name, tab_id, content_kind, html, sha256, view_generation,
-           revision, size_w, size_h, position, created_by, created_at, updated_at
-         ) VALUES (
-           'agent:main:main', 'status', 'main', 'html', X'3C703E6F6B3C2F703E',
-           'alias-hash', 'view-1', 2, 4, 4, 0, 'user', 20, 20
-         )`,
-      )
-      .run();
-    aliasDatabase.db
-      .prepare(
-        `INSERT INTO board_tabs (
-           session_key, tab_id, title, position, chat_dock, created_by, revision
-         ) VALUES ('agent:main:work', 'main', 'Stale canonical board', 0, 'right', 'user', 1)`,
-      )
-      .run();
-    aliasDatabase.db
-      .prepare(
-        `INSERT INTO board_widgets (
-           session_key, name, tab_id, content_kind, html, sha256, view_generation,
-           revision, size_w, size_h, position, created_by, created_at, updated_at
-         ) VALUES (
-           'agent:main:work', 'status', 'main', 'html', X'3C703E7374616C653C2F703E',
-           'stale-canonical-hash', 'view-stale', 1, 4, 4, 0, 'user', 10, 10
-         )`,
-      )
-      .run();
-    aliasDatabase.db
-      .prepare(
-        `INSERT INTO heartbeat_outcomes (
-           session_key, run_session_key, outcome, summary, occurred_at, updated_at
-         ) VALUES (
-           'agent:main:work', 'agent:main:work', 'progress', 'stale canonical heartbeat', 10, 10
-         )`,
-      )
-      .run();
-    aliasDatabase.db
-      .prepare(
-        `INSERT INTO heartbeat_outcomes (
-           session_key, run_session_key, outcome, summary, occurred_at, updated_at
-         ) VALUES ('agent:main:main', 'agent:main:main', 'done', 'alias heartbeat', 20, 20)`,
-      )
-      .run();
-    aliasDatabase.db
-      .prepare(
-        `INSERT INTO session_members (session_key, identity_id, added_by, added_at)
-         VALUES (?, ?, ?, ?)`,
-      )
-      .run("agent:main:main", "member-1", "owner-1", 20);
-    expect(
-      aliasDatabase.db.prepare("SELECT session_key FROM session_nodes ORDER BY session_key").all(),
-    ).toEqual([{ session_key: "agent:main:main" }, { session_key: "agent:main:work" }]);
-    aliasDatabase.db
-      .prepare(
-        `INSERT INTO session_members (session_key, identity_id, added_by, added_at)
-         VALUES (?, ?, ?, ?)`,
-      )
-      .run("agent:main:work", "stale-canonical-member", "stale-owner", 10);
-
     const notify = vi.fn();
     const unsubscribe = onSessionIdentityMutation(notify);
-    const patched = await patchSessionEntryTarget(
+    await expect(
+      patchSessionEntryTarget(
+        {
+          storePath,
+          target: {
+            canonicalKey: "agent:main:work",
+            storeKeys: ["agent:main:work", "agent:main:main"],
+          },
+        },
+        () => ({ label: "patched" }),
+      ),
+    ).rejects.toThrow("openclaw doctor --fix");
+    await deleteSessionEntryLifecycle({
+      archiveTranscript: false,
+      storePath,
+      target: {
+        canonicalKey: "agent:main:main",
+        storeKeys: ["agent:main:main"],
+      },
+    });
+    await patchSessionEntryTarget(
       {
         storePath,
         target: {
           canonicalKey: "agent:main:work",
-          storeKeys: ["agent:main:work", "agent:main:main"],
+          storeKeys: ["agent:main:work"],
         },
       },
-      (entry, context) => {
-        expect(entry.sessionId).toBe("legacy-session");
-        expect(context.existingEntry?.sessionId).toBe("legacy-session");
-        return {
-          label: "patched",
-        };
-      },
+      () => ({ label: "patched" }),
     );
-    expect(patched).toMatchObject({
-      label: "patched",
-      sessionId: "legacy-session",
-      visibility: "read-only",
-    });
-    expect(listSessionEntries({ storePath })).toEqual([
-      {
-        sessionKey: "agent:main:work",
-        entry: expect.objectContaining({
-          label: "patched",
-          sessionId: "legacy-session",
-        }),
-      },
-    ]);
-    expect(
-      aliasDatabase.db
-        .prepare("SELECT session_key, title, revision FROM board_tabs ORDER BY session_key")
-        .all(),
-    ).toEqual([{ session_key: "agent:main:work", title: "Alias board", revision: 2 }]);
-    expect(
-      aliasDatabase.db
-        .prepare(
-          "SELECT session_key, name, sha256, revision, updated_at FROM board_widgets ORDER BY session_key",
-        )
-        .all(),
-    ).toEqual([
-      {
-        session_key: "agent:main:work",
-        name: "status",
-        sha256: "alias-hash",
-        revision: 2,
-        updated_at: 20,
-      },
-    ]);
-    expect(
-      aliasDatabase.db
-        .prepare("SELECT session_key, summary FROM heartbeat_outcomes ORDER BY session_key")
-        .all(),
-    ).toEqual([{ session_key: "agent:main:work", summary: "alias heartbeat" }]);
-    expect(
-      aliasDatabase.db
-        .prepare("SELECT session_key, identity_id FROM session_members ORDER BY session_key")
-        .all(),
-    ).toEqual([{ session_key: "agent:main:work", identity_id: "member-1" }]);
-    expect(
-      aliasDatabase.db
-        .prepare("SELECT session_key FROM session_windows WHERE session_id = 'legacy-history'")
-        .get(),
-    ).toEqual({ session_key: canonicalKey });
-    await expect(
-      loadTranscriptEvents({
-        agentId: "main",
-        sessionId: "legacy-history",
-        sessionKey: canonicalKey,
-        storePath,
-      }),
-    ).resolves.toEqual([{ id: "legacy-history-event", type: "message" }]);
     const sessionKey = "agent:main:other";
     const scope = { sessionKey, storePath };
     await replaceSessionEntry(scope, { sessionId: "created", updatedAt: 10 });
@@ -1167,8 +1017,7 @@ describe("session accessor seam", () => {
     unsubscribe();
 
     expect(notify.mock.calls.map(([event]) => event.kind)).toEqual([
-      "move",
-      "replace",
+      "delete",
       "create",
       "replace",
       "reset",
@@ -1776,19 +1625,16 @@ describe("session accessor seam", () => {
     }
   });
 
-  it("allows an unscoped legacy alias with an explicit agent owner", async () => {
-    await upsertSessionEntry(
-      { agentId: "ops", sessionKey: "main", storePath },
-      { sessionId: "legacy-ops-session", updatedAt: 10 },
-    );
-
-    const snapshot = loadReplySessionInitializationSnapshot({
-      agentId: "ops",
-      sessionKey: "main",
-      storePath,
+  it("rejects unscoped alias writes even with an explicit agent owner", async () => {
+    await expect(
+      upsertSessionEntry(
+        { agentId: "ops", sessionKey: "main", storePath },
+        { sessionId: "legacy-ops-session", updatedAt: 10 },
+      ),
+    ).rejects.toMatchObject({
+      code: "SESSION_CANONICAL_KEY_MIGRATION_REQUIRED",
+      message: expect.stringContaining("openclaw doctor --fix"),
     });
-
-    expect(snapshot.currentEntry?.sessionId).toBe("legacy-ops-session");
   });
 
   it("rejects reply session initialization when the entry is deleted during prepare", async () => {
@@ -2402,43 +2248,6 @@ describe("session accessor seam", () => {
       });
     },
   );
-
-  it("archives shared SQLite transcript state once when plugin rollback removes aliases", async () => {
-    const sessionId = "plugin-alias-session";
-    const canonicalKey = "agent:main:plugin-alias";
-    const aliasKey = "plugin-alias";
-    const entry = {
-      modelSelectionLocked: true,
-      pluginOwnerId: "anthropic",
-      sessionId,
-      updatedAt: 10,
-    } satisfies SessionEntry;
-    await upsertSessionEntry({ sessionKey: aliasKey, storePath }, entry);
-    await upsertSessionEntry({ sessionKey: canonicalKey, storePath }, entry);
-    await replaceSqliteTranscriptEvents(
-      { agentId: "main", sessionId, sessionKey: canonicalKey, storePath },
-      [{ id: "plugin-alias-event", type: "message" }],
-    );
-    const expectedEntry = expectDefined(
-      loadSessionEntry({ sessionKey: canonicalKey, storePath }),
-      "canonical plugin alias entry",
-    );
-
-    const result = await rollbackPluginOwnedSessionEntryLifecycle({
-      archiveTranscript: true,
-      expectedEntry,
-      expectedPluginOwnerId: "anthropic",
-      storePath,
-      target: { canonicalKey, storeKeys: [canonicalKey, aliasKey] },
-    });
-
-    expect(result).toMatchObject({ deleted: true });
-    expect(result.archivedTranscripts).toHaveLength(1);
-    expect(listSessionEntries({ storePath })).toEqual([]);
-    await expect(
-      loadTranscriptEvents({ agentId: "main", sessionId, sessionKey: canonicalKey, storePath }),
-    ).resolves.toEqual([]);
-  });
 
   it("trims a manual compact transcript and clears stale token metadata", async () => {
     const sessionId = "11111111-1111-4111-8111-111111111111";

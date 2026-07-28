@@ -7,7 +7,8 @@ import {
   errorShape,
   type SessionsResolveParams,
 } from "../../packages/gateway-protocol/src/index.js";
-import { canonicalizeSessionEntryAliases, type SessionEntry } from "../config/sessions.js";
+import type { SessionEntry } from "../config/sessions.js";
+import { nonCanonicalSessionKeyRowError } from "../config/sessions/session-canonical-key.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { normalizeAgentId, parseAgentSessionKey } from "../routing/session-key.js";
 import { resolveSessionIdMatchSelection } from "../sessions/session-id-resolution.js";
@@ -132,8 +133,6 @@ export async function resolveSessionKeyFromResolveParams(params: {
   }
 
   if (hasKey) {
-    // Key lookups may hit legacy store aliases. Migrate/prune before returning
-    // the canonical key so later calls operate on one store identity.
     const target = resolveGatewaySessionStoreTargetWithStore({ cfg, key, clone: false });
     const store = target.store;
     if (store[target.canonicalKey]) {
@@ -153,40 +152,16 @@ export async function resolveSessionKeyFromResolveParams(params: {
         }) ?? { ok: true, key: target.canonicalKey }
       );
     }
-    const legacyKey = target.storeKeys.find((candidate) => store[candidate]);
-    if (!legacyKey) {
-      return noSessionFoundResult({ p, message: `No session found: ${key}` });
-    }
-    await canonicalizeSessionEntryAliases({
-      storePath: target.storePath,
-      target: {
-        canonicalKey: target.canonicalKey,
-        storeKeys: target.storeKeys,
-      },
-    });
-    const refreshedTarget = resolveGatewaySessionStoreTargetWithStore({
-      cfg,
-      key: target.canonicalKey,
-      clone: false,
-    });
-    if (
-      !isResolvedSessionKeyVisible({
-        cfg,
-        p,
-        store: refreshedTarget.store,
-        key: refreshedTarget.canonicalKey,
-      })
-    ) {
-      return noSessionFoundResult({ p, message: `No session found: ${key}` });
-    }
-    return (
-      validateSessionAgentExists(
-        cfg,
-        refreshedTarget.canonicalKey,
-        refreshedTarget.store[refreshedTarget.canonicalKey],
-        { acpMetadataSessionKey: refreshedTarget.canonicalKey },
-      ) ?? { ok: true, key: refreshedTarget.canonicalKey }
+    const legacyKey = target.storeKeys.find(
+      (candidate) => candidate !== target.canonicalKey && store[candidate],
     );
+    if (legacyKey) {
+      throw nonCanonicalSessionKeyRowError(target.canonicalKey);
+    }
+    if (!store[target.canonicalKey]) {
+      return noSessionFoundResult({ p, message: `No session found: ${key}` });
+    }
+    return noSessionFoundResult({ p, message: `No session found: ${key}` });
   }
 
   if (hasSessionId) {

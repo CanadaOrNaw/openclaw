@@ -23,6 +23,7 @@ import type {
   SessionEntryListScope,
   SessionEntrySummary,
 } from "./session-accessor.types.js";
+import { duplicateCanonicalSessionKeyError } from "./session-canonical-key.js";
 import { foldedSessionKeyAliasCandidates, normalizeStoreSessionKey } from "./store-entry.js";
 import {
   dedupeSessionStoreTargetsBySqliteTarget,
@@ -132,16 +133,10 @@ function mergeSessionEntryIntoCombined(params: {
 }) {
   const { combined, entry, canonicalKey } = params;
   const existing = combined[canonicalKey];
-  if (!existing) {
-    combined[canonicalKey] = entry;
-    return;
+  if (existing) {
+    throw duplicateCanonicalSessionKeyError(canonicalKey);
   }
-  const incomingWins =
-    entry.updatedAt > existing.updatedAt ||
-    (entry.updatedAt === existing.updatedAt &&
-      JSON.stringify(entry).localeCompare(JSON.stringify(existing)) > 0);
-  const merged = incomingWins ? { ...existing, ...entry } : { ...entry, ...existing };
-  combined[canonicalKey] = merged;
+  combined[canonicalKey] = entry;
 }
 
 function projectCombinedSessionEntry(params: {

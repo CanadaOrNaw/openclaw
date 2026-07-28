@@ -79,7 +79,7 @@ import {
   loadCombinedSessionStoreForGateway,
   loadSessionEntry,
   loadSessionEntryReadOnly,
-  migrateAndPruneGatewaySessionStoreKey,
+  resolveCanonicalGatewaySessionStoreKey,
   resolveGatewaySessionStoreTarget,
   resolveSessionModelRef,
 } from "../gateway/session-utils.js";
@@ -741,13 +741,13 @@ export class EmbeddedTuiBackend implements TuiBackend {
         const store = Object.fromEntries(
           entries.map(({ sessionKey, entry }) => [sessionKey, entry]),
         );
-        const { target: migratedTarget, primaryKey } = migrateAndPruneGatewaySessionStoreKey({
+        const { target: canonicalTarget, primaryKey } = resolveCanonicalGatewaySessionStoreKey({
           cfg,
           key: opts.key,
           store,
           agentId: opts.agentId,
         });
-        return { primaryKey, candidateKeys: migratedTarget.storeKeys };
+        return { primaryKey, candidateKeys: canonicalTarget.storeKeys };
       },
       project: async ({ primaryKey, existingEntry, entries }) =>
         await projectSessionsPatchEntry({

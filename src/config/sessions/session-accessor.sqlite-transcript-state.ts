@@ -7,6 +7,7 @@ import type { OpenClawAgentDatabase } from "../../state/openclaw-agent-db.js";
 import { publishSqliteSessionEntryCacheInvalidation } from "./session-accessor.sqlite-entry-cache.js";
 import { normalizeSqliteNumber } from "./session-accessor.sqlite-normalize.js";
 import { getSessionKysely, type ResolvedTranscriptScope } from "./session-accessor.sqlite-scope.js";
+import { assertCanonicalSessionKeyWrite } from "./session-canonical-key.js";
 import { deleteSessionTranscriptIndexInTransaction } from "./session-transcript-index.js";
 
 function createTranscriptGeneration(): string {
@@ -69,6 +70,7 @@ export function ensureTranscriptSessionRoot(
   scope: ResolvedTranscriptScope,
   updatedAt: number,
 ): void {
+  assertCanonicalSessionKeyWrite(scope.sessionKey);
   const db = getSessionKysely(database.db);
   const insertedNode = executeSqliteQuerySync(
     database.db,

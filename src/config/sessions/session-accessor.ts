@@ -7,7 +7,6 @@
 export * from "./session-history.js";
 export type {
   BranchSessionFromCompactionCheckpointParams,
-  CanonicalizeSessionEntryAliasesResult,
   DeleteSessionEntryLifecycleParams,
   DeleteSessionEntryLifecycleResult,
   DeletedAgentSessionEntryPurgeParams,
@@ -143,7 +142,6 @@ export {
   upsertSessionEntry,
 } from "./session-accessor.entry.js";
 export {
-  canonicalizeSessionEntryAliases,
   createSessionEntryWithTranscript,
   forkSessionEntryFromParentTarget,
   forkSessionFromParentTranscript,

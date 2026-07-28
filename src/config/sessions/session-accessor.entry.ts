@@ -42,6 +42,10 @@ import type {
   SessionEntryPatchContext,
   SessionEntryPatchResult,
 } from "./session-accessor.types.js";
+import {
+  duplicateCanonicalSessionKeyError,
+  nonCanonicalSessionKeyRowError,
+} from "./session-canonical-key.js";
 import { resolveSessionStorePathForScope } from "./session-store-path.js";
 import { normalizeStoreSessionKey, resolveSessionStoreEntry } from "./store-entry.js";
 import { resolveAllAgentSessionStoreTargetsSync, type SessionStoreTarget } from "./targets.js";
@@ -140,28 +144,33 @@ function buildLogicalSessionEntryCandidateKeys(params: {
   return [...targets];
 }
 
-function findFreshestSessionEntryMatch(
+function findCanonicalSessionEntryMatch(
   scope: Omit<SessionAccessScope, "sessionKey">,
+  canonicalKey: string,
   candidateKeys: readonly string[],
 ): SessionEntrySummary | undefined {
-  let freshest: SessionEntrySummary | undefined;
+  let selected: SessionEntrySummary | undefined;
   for (const candidate of candidateKeys) {
     const trimmed = candidate.trim();
     if (!trimmed) {
       continue;
     }
     const match = loadExactSessionEntryReadOnly({ ...scope, sessionKey: trimmed });
-    if (match && (!freshest || (match.entry.updatedAt ?? 0) >= (freshest.entry.updatedAt ?? 0))) {
-      freshest = match;
+    if (!match) {
+      continue;
     }
+    if (selected) {
+      throw duplicateCanonicalSessionKeyError(canonicalKey);
+    }
+    if (match.sessionKey !== canonicalKey) {
+      throw nonCanonicalSessionKeyRowError(canonicalKey);
+    }
+    selected = match;
   }
-  return freshest;
+  return selected;
 }
 
-/**
- * Resolves a logical session key to the freshest matching entry across the
- * configured store and discovered same-agent stores.
- */
+/** Resolves one canonical row across the prepared configured and discovered store targets. */
 export function resolveSessionEntryAccessTarget(
   scope: LogicalSessionAccessScope,
 ): ResolvedSessionEntryAccessTarget {
@@ -244,8 +253,9 @@ function resolveSessionEntryStoreTarget(
       agentId: incognitoAgentId,
       env: scope.env,
     });
-    const selectedMatch = findFreshestSessionEntryMatch(
+    const selectedMatch = findCanonicalSessionEntryMatch(
       { agentId: incognitoAgentId, ...(scope.env ? { env: scope.env } : {}), storePath },
+      canonicalKey,
       scanTargets,
     );
     return {
@@ -267,8 +277,9 @@ function resolveSessionEntryStoreTarget(
     storePath: resolveStorePath(scope.cfg.session?.store, { agentId, env: scope.env }),
   };
   let selectedStorePath = fallback.storePath;
-  let selectedMatch = findFreshestSessionEntryMatch(
+  let selectedMatch = findCanonicalSessionEntryMatch(
     { agentId, ...(scope.env ? { env: scope.env } : {}), storePath: fallback.storePath },
+    canonicalKey,
     scanTargets,
   );
   for (let index = 1; index < candidates.length; index += 1) {
@@ -276,14 +287,15 @@ function resolveSessionEntryStoreTarget(
     if (!candidate) {
       continue;
     }
-    const match = findFreshestSessionEntryMatch(
+    const match = findCanonicalSessionEntryMatch(
       { agentId, ...(scope.env ? { env: scope.env } : {}), storePath: candidate.storePath },
+      canonicalKey,
       scanTargets,
     );
-    if (
-      match &&
-      (!selectedMatch || (match.entry.updatedAt ?? 0) >= (selectedMatch.entry.updatedAt ?? 0))
-    ) {
+    if (match && selectedMatch) {
+      throw duplicateCanonicalSessionKeyError(canonicalKey);
+    }
+    if (match) {
       selectedStorePath = candidate.storePath;
       selectedMatch = match;
     }
@@ -299,7 +311,7 @@ function resolveSessionEntryStoreTarget(
 }
 
 /**
- * Mutates the freshest matching logical session entry without exposing the
+ * Mutates the canonical logical session entry without exposing the
  * backing store map to callers.
  */
 export async function updateResolvedSessionEntry<T>(
