@@ -120,7 +120,7 @@ type SessionEntryCandidate = {
   sessionKey: string;
 };
 
-export function resolveSessionEntryCandidates(params: {
+function resolveSessionEntryCandidates(params: {
   entries: readonly SessionEntryCandidate[];
   sessionKey: string;
 }): {

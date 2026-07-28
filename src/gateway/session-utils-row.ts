@@ -314,15 +314,13 @@ export function buildGatewaySessionRow(params: {
   );
   const selectedOrRuntimeModelProvider = selectedModel?.provider ?? modelProvider;
   const selectedOrRuntimeModel = selectedModel?.model ?? model;
-  const rowModelIdentity = lightweight
-    ? { provider: selectedOrRuntimeModelProvider, model: selectedOrRuntimeModel }
-    : resolveSessionDisplayModelIdentityRefCached({
-        cfg,
-        agentId: sessionAgentId,
-        provider: selectedOrRuntimeModelProvider,
-        model: selectedOrRuntimeModel,
-        rowContext: params.rowContext,
-      });
+  const rowModelIdentity = resolveSessionDisplayModelIdentityRefCached({
+    cfg,
+    agentId: sessionAgentId,
+    provider: selectedOrRuntimeModelProvider,
+    model: selectedOrRuntimeModel,
+    rowContext: params.rowContext,
+  });
   const rowModelProvider = rowModelIdentity.provider;
   const rowModel = rowModelIdentity.model;
   const acpSessionKey = resolveStoredSessionKeyForAgentStore({

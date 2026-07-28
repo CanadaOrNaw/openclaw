@@ -20,7 +20,7 @@ import { listSessionsFromStoreForTest as listSessionsFromStore } from "./session
 
 afterEach(() => vi.restoreAllMocks());
 
-it("returns the complete deterministic creator facet independently of pagination", () => {
+it("returns the complete deterministic creator facet independently of pagination", async () => {
   const store: Record<string, SessionEntry> = {
     "agent:main:ada": {
       archivedAt: 3,
@@ -36,7 +36,7 @@ it("returns the complete deterministic creator facet independently of pagination
     },
   };
 
-  const result = listSessionsFromStore({
+  const result = await listSessionsFromStore({
     cfg: {} as OpenClawConfig,
     storePath: "/tmp/openclaw-session-creators",
     store,
@@ -66,7 +66,7 @@ it("returns the complete deterministic creator facet independently of pagination
   });
   expect(getUserProfileListItem).toHaveBeenCalledTimes(2);
 
-  const filtered = listSessionsFromStore({
+  const filtered = await listSessionsFromStore({
     cfg: {} as OpenClawConfig,
     storePath: "/tmp/openclaw-session-creators",
     store,
@@ -170,7 +170,7 @@ it("preserves legacy list output across visibility, scope, creator, and search f
   const configuredStore = filterSessionStoreToConfiguredAgents(cfg, store);
 
   const project = async (opts: Parameters<typeof listSessionsFromStore>[0]["opts"]) => {
-    const result = await listSessionsFromStoreAsync({
+    const result = await listSessionsFromStore({
       cfg,
       ...(entryFilter ? { entryFilter } : {}),
       opts,
@@ -237,9 +237,9 @@ it("preserves legacy list output across visibility, scope, creator, and search f
   );
 });
 
-it("keeps the serialized list response byte-identical to the legacy filter path", () => {
+it("keeps the serialized list response byte-identical to the legacy filter path", async () => {
   vi.spyOn(Date, "now").mockReturnValue(1_000_000);
-  const result = listSessionsFromStore({
+  const result = await listSessionsFromStore({
     cfg: {
       agents: {
         defaults: { model: { primary: "openai/gpt-5.4" } },

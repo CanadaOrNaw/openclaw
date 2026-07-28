@@ -40,7 +40,7 @@ describe("listSessionsFromStore resolver cache", () => {
       } as OpenClawConfig;
       resetConfigRuntimeState();
       setRuntimeConfigSnapshot(cfg);
-      listSessionsFromStore({
+      await listSessionsFromStore({
         cfg,
         storePath: path.join(stateDir, "sessions.json"),
         store: {
@@ -114,7 +114,7 @@ describe("listSessionsFromStore resolver cache", () => {
       const thinkingSpy = vi.spyOn(thinking, "listThinkingLevelOptions");
       const costSpy = vi.spyOn(usageFormat, "resolveModelCostConfig");
       try {
-        const result = listSessionsFromStore({
+        const result = await listSessionsFromStore({
           cfg,
           storePath: path.join(stateDir, "sessions.json"),
           store,
@@ -246,7 +246,7 @@ describe("listSessionsFromStore resolver cache", () => {
         return originalPrepare(sql);
       });
       try {
-        const result = listSessionsFromStore({
+        const result = await listSessionsFromStore({
           cfg,
           storePath: path.join(stateDir, "agents", "default", "sessions", "sessions.json"),
           store: {

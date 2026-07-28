@@ -106,7 +106,7 @@ type SessionListBuildParams = {
   sqlSelection: SqlSessionEntrySelection;
 };
 
-export type SessionListLineageSqlQuery = {
+type SessionListLineageSqlQuery = {
   excludeLineageSessionKeys?: string[];
   includeLineageSessionKeys?: string[];
   lineageKeys?: string[];
@@ -488,48 +488,8 @@ function buildSessionsListResult(
   };
 }
 
-export function listSessionsFromStore(params: SessionListBuildParams): SessionsListResult {
-  const { cfg, storePath, opts } = params;
-  const prepared = prepareSessionList(params);
-  const includeDerivedTitles = opts.includeDerivedTitles === true;
-  const includeLastMessage = opts.includeLastMessage === true;
-  const sessions = prepared.entries.map(([key, entry], index) => {
-    const includeTranscriptFields = index < 100;
-    const rowAgentId =
-      key === "global" && typeof opts.agentId === "string"
-        ? normalizeAgentId(opts.agentId)
-        : undefined;
-    const storeChildSessionsByKey =
-      prepared.fullRowContext?.storeChildSessionsByKey ??
-      buildSingleRowStoreChildSessionsByKey({
-        store: prepared.contextStore,
-        storePath,
-        key,
-        now: prepared.now,
-      });
-    return buildGatewaySessionRow({
-      cfg,
-      storePath,
-      store: prepared.contextStore,
-      key,
-      entry,
-      agentId: rowAgentId,
-      modelCatalog: params.modelCatalog,
-      now: prepared.now,
-      includeDerivedTitles: includeTranscriptFields && includeDerivedTitles,
-      includeLastMessage: includeTranscriptFields && includeLastMessage,
-      transcriptUsageMaxBytes: 64 * 1024,
-      storeChildSessionsByKey,
-      rowContext: prepared.sharedRowContext,
-    });
-  });
-  return buildSessionsListResult(params, prepared, sessions);
-}
-
 /**
- * Async version of listSessionsFromStore that yields to the event loop between
- * batches of session row builds. This prevents large session stores from
- * blocking the event loop during sessions.list requests.
+ * Builds session rows while yielding to the event loop between batches.
  *
  * Transcript reads for last-message previews remain the dominant blocker.
  * By yielding every SESSIONS_LIST_YIELD_BATCH_SIZE rows, we keep the event

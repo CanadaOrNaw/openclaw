@@ -1,9 +1,9 @@
 import { parseAgentSessionKey } from "../../routing/session-key.js";
 import type { SessionEntry } from "./types.js";
 
-export const SESSION_CANONICAL_KEY_REPAIR_COMMAND = "openclaw doctor --fix";
+const SESSION_CANONICAL_KEY_REPAIR_COMMAND = "openclaw doctor --fix";
 
-export class SessionCanonicalKeyMigrationRequiredError extends Error {
+class SessionCanonicalKeyMigrationRequiredError extends Error {
   readonly code = "SESSION_CANONICAL_KEY_MIGRATION_REQUIRED";
 
   constructor(
@@ -21,7 +21,7 @@ export class SessionCanonicalKeyMigrationRequiredError extends Error {
   }
 }
 
-export function isCanonicalSessionKey(sessionKey: string): boolean {
+function isCanonicalSessionKey(sessionKey: string): boolean {
   const trimmed = sessionKey.trim();
   return trimmed === "global" || trimmed === "unknown" || parseAgentSessionKey(trimmed) !== null;
 }

@@ -191,7 +191,7 @@ const STALE_STORE_ONLY_CHILD_LINK_MS = 60 * 60 * 1_000;
 
 const SINGLE_ROW_CONTEXT_CACHE_MAX_ENTRIES = 64;
 
-export function isFinitePositiveTimestamp(value: unknown): value is number {
+function isFinitePositiveTimestamp(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 

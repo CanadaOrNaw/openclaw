@@ -107,7 +107,7 @@ describe("Telegram direct session recreation after delete", () => {
       session: { ...cfg.session, store: storePath },
     } satisfies OpenClawConfig;
     const loaded = loadCombinedSessionStoreForGateway(runtimeCfg, { agentId: "main" });
-    const listed = listSessionsFromStore({
+    const listed = await listSessionsFromStore({
       cfg: runtimeCfg,
       storePath: loaded.storePath,
       store: loaded.store,

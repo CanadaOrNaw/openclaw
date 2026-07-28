@@ -40,9 +40,7 @@ export function inheritSessionSelection(
   };
 }
 
-export function cloneOptionalSessionEntry(
-  entry: SessionEntry | undefined,
-): SessionEntry | undefined {
+function cloneOptionalSessionEntry(entry: SessionEntry | undefined): SessionEntry | undefined {
   return entry ? structuredClone(entry) : undefined;
 }
 

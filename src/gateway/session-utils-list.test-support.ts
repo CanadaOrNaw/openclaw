@@ -3,11 +3,14 @@ import type { SessionEntry } from "../config/sessions.js";
 import { normalizeAgentId, parseAgentSessionKey } from "../routing/session-key.js";
 import { isCronRunSessionKey } from "../sessions/session-key-utils.js";
 import { shouldKeepStoreOnlyChildLink } from "./session-utils-core.js";
-import { listSessionsFromStore, resolveSessionListLineageSqlQuery } from "./session-utils-list.js";
+import {
+  listSessionsFromStoreAsync,
+  resolveSessionListLineageSqlQuery,
+} from "./session-utils-list.js";
 
 /** Mirrors the promoted-column preselection for focused in-memory projection tests. */
-export function listSessionsFromStoreForTest(
-  params: Omit<Parameters<typeof listSessionsFromStore>[0], "sqlSelection">,
+export async function listSessionsFromStoreForTest(
+  params: Omit<Parameters<typeof listSessionsFromStoreAsync>[0], "sqlSelection">,
 ) {
   const now = Date.now();
   const agentId = normalizeOptionalString(params.opts.agentId);
@@ -71,7 +74,7 @@ export function listSessionsFromStoreForTest(
   const selected = creatorId
     ? beforeCreator.filter(([, entry]) => entry.createdActor?.id === creatorId)
     : beforeCreator;
-  return listSessionsFromStore({
+  return await listSessionsFromStoreAsync({
     ...params,
     store: Object.fromEntries(selected),
     sqlSelection: { creatorActors: [...creatorActors.values()], lineage },

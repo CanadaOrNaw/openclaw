@@ -26,8 +26,8 @@ import {
 } from "../state/openclaw-agent-db.js";
 import { closeOpenClawStateDatabaseForTest } from "../state/openclaw-state-db.js";
 import { withStateDirEnv } from "../test-helpers/state-dir-env.js";
-import { withEnv } from "../test-utils/env.js";
-import { listSessionsFromStore as listSqlSelectedSessions } from "./session-utils-list.js";
+import { withEnvAsync } from "../test-utils/env.js";
+import { listSessionsFromStoreAsync as listSqlSelectedSessions } from "./session-utils-list.js";
 import { listSessionsFromStoreForTest as listSessionsFromStore } from "./session-utils-list.test-support.js";
 import {
   loadCombinedSessionStoreForGateway,
@@ -64,7 +64,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     agents: { list: [{ id: "main", default: true }] },
   } as OpenClawConfig;
 
-  test("projects folded opaque child aliases into SQL lineage sets", () => {
+  test("projects folded opaque child aliases into SQL lineage sets", async () => {
     const now = Date.now();
     const parentKey = "agent:main:main";
     const childKey = "agent:main:matrix:group:!Room:Server";
@@ -89,8 +89,8 @@ describe("listSessionsFromStore subagent metadata", () => {
     );
   });
 
-  test("searches channel-derived display names before row enrichment", () => {
-    const result = listSessionsFromStore({
+  test("searches channel-derived display names before row enrichment", async () => {
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store: {
@@ -114,7 +114,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(result.sessions[0]?.displayName).toBe("slack:g-general");
   });
 
-  test("applies limit before transcript enrichment", () => {
+  test("applies limit before transcript enrichment", async () => {
     const store: Record<string, SessionEntry> = {
       "agent:main:newest": {
         sessionId: "newest-session",
@@ -134,7 +134,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     };
     const existsSpy = vi.spyOn(fs, "existsSync").mockReturnValue(false);
     try {
-      const result = listSessionsFromStore({
+      const result = await listSessionsFromStore({
         cfg,
         storePath: "/tmp/sessions.json",
         store,
@@ -151,7 +151,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     }
   });
 
-  test("keeps persisted navigation lineage separate from live registry control", () => {
+  test("keeps persisted navigation lineage separate from live registry control", async () => {
     const now = Date.now();
     const childSessionKey = "agent:main:subagent:controlled-child";
     const entry = {
@@ -182,7 +182,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       startedAt: now - 4_000,
     });
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store: { [childSessionKey]: entry },
@@ -204,7 +204,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(row.previousSessionId).toBe("sess-previous");
   });
 
-  test("includes subagent status timing and direct child session keys", () => {
+  test("includes subagent status timing and direct child session keys", async () => {
     const now = Date.now();
     const store: Record<string, SessionEntry> = {
       "agent:main:main": {
@@ -278,7 +278,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       model: "openai/gpt-5.4",
     });
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -317,7 +317,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(failed?.runtimeMs).toBe(5_000);
   });
 
-  test("does not show stale registry-only subagent runs as actively running", () => {
+  test("does not show stale registry-only subagent runs as actively running", async () => {
     const now = Date.now();
     const childSessionKey = "agent:main:subagent:stale-display";
     const store: Record<string, SessionEntry> = {
@@ -345,7 +345,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       model: "openai/gpt-5.4",
     });
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -360,7 +360,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(row?.runtimeMs).toBe(3_500);
   });
 
-  test("does not keep childSessions attached to a stale older controller row", () => {
+  test("does not keep childSessions attached to a stale older controller row", async () => {
     const now = Date.now();
     const store: Record<string, SessionEntry> = {
       "agent:main:main": {
@@ -431,7 +431,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       startedAt: now - 1_500,
     });
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -449,7 +449,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(newParent?.childSessions).toEqual(["agent:main:subagent:shared-child"]);
   });
 
-  test("does not reattach moved children through stale spawnedBy store metadata", () => {
+  test("does not reattach moved children through stale spawnedBy store metadata", async () => {
     const now = Date.now();
     const store: Record<string, SessionEntry> = {
       "agent:main:main": {
@@ -520,7 +520,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       startedAt: now - 1_500,
     });
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -538,7 +538,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(newParent?.childSessions).toEqual(["agent:main:subagent:shared-child-store"]);
   });
 
-  test("does not return moved child sessions from stale spawnedBy filters", () => {
+  test("does not return moved child sessions from stale spawnedBy filters", async () => {
     const now = Date.now();
     const store: Record<string, SessionEntry> = {
       "agent:main:main": {
@@ -609,7 +609,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       startedAt: now - 1_500,
     });
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -621,7 +621,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(result.sessions.map((session) => session.key)).toStrictEqual([]);
   });
 
-  test("reports the newest run owner for moved child session rows", () => {
+  test("reports the newest run owner for moved child session rows", async () => {
     const now = Date.now();
     const childSessionKey = "agent:main:subagent:shared-child-owner";
     const store: Record<string, SessionEntry> = {
@@ -657,7 +657,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       startedAt: now - 1_500,
     });
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -669,7 +669,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(result.sessions[0]?.spawnedBy).toBe("agent:main:subagent:new-parent-owner");
   });
 
-  test("keeps the persisted parentSessionKey while reporting the newest runtime controller", () => {
+  test("keeps the persisted parentSessionKey while reporting the newest runtime controller", async () => {
     const now = Date.now();
     const childSessionKey = "agent:main:subagent:shared-child-parent";
     const store: Record<string, SessionEntry> = {
@@ -705,7 +705,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       startedAt: now - 1_500,
     });
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -721,7 +721,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     );
   });
 
-  test("preserves original session timing across follow-up replacement runs", () => {
+  test("preserves original session timing across follow-up replacement runs", async () => {
     const now = Date.now();
     const store: Record<string, SessionEntry> = {
       "agent:main:subagent:followup": {
@@ -749,7 +749,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       sessionKey: "agent:main:subagent:followup",
     });
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -764,7 +764,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(followup?.runtimeMs).toBeGreaterThanOrEqual(150_000);
   });
 
-  test("uses the newest child-session row for stale/current replacement pairs", () => {
+  test("uses the newest child-session row for stale/current replacement pairs", async () => {
     const now = Date.now();
     const childSessionKey = "agent:main:subagent:stale-current";
     const store: Record<string, SessionEntry> = {
@@ -802,7 +802,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       model: "openai/gpt-5.4",
     });
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -816,7 +816,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(result.sessions[0]?.endedAt).toBe(now - 200);
   });
 
-  test("prefers persisted terminal session state when only stale active subagent snapshots remain", () => {
+  test("prefers persisted terminal session state when only stale active subagent snapshots remain", async () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-session-utils-subagent-"));
     const stateDir = path.join(tempRoot, "state");
     fs.mkdirSync(stateDir, { recursive: true });
@@ -854,14 +854,14 @@ describe("listSessionsFromStore subagent metadata", () => {
         ],
       ]);
 
-      const row = withEnv(
+      const row = await withEnvAsync(
         {
           OPENCLAW_STATE_DIR: stateDir,
           OPENCLAW_TEST_READ_SUBAGENT_RUNS_FROM_SQLITE: "1",
         },
-        () => {
+        async () => {
           saveSubagentRegistryToSqlite(canonicalSubagentRunFixtures(persistedRuns));
-          const result = listSessionsFromStore({
+          const result = await listSessionsFromStore({
             cfg,
             storePath: "/tmp/sessions.json",
             store: {
@@ -892,7 +892,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     }
   });
 
-  test("reuses one SQLite registry snapshot across sessions.list filtering and row enrichment", () => {
+  test("reuses one SQLite registry snapshot across sessions.list filtering and row enrichment", async () => {
     const tempRoot = fs.mkdtempSync(
       path.join(os.tmpdir(), "openclaw-session-utils-subagent-cache-"),
     );
@@ -945,14 +945,14 @@ describe("listSessionsFromStore subagent metadata", () => {
 
     const statSpy = vi.spyOn(fs, "statSync");
     try {
-      const result = withEnv(
+      const result = await withEnvAsync(
         {
           OPENCLAW_STATE_DIR: stateDir,
           OPENCLAW_TEST_READ_SUBAGENT_RUNS_FROM_SQLITE: "1",
         },
-        () => {
+        async () => {
           saveSubagentRegistryToSqlite(canonicalSubagentRunFixtures(persistedRuns));
-          return listSessionsFromStore({
+          return await listSessionsFromStore({
             cfg,
             storePath: "/tmp/sessions.json",
             store,
@@ -973,7 +973,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     }
   });
 
-  test("does not read the subagent registry when raw filters drop every session", () => {
+  test("does not read the subagent registry when raw filters drop every session", async () => {
     const tempRoot = fs.mkdtempSync(
       path.join(os.tmpdir(), "openclaw-session-utils-subagent-cache-empty-"),
     );
@@ -982,13 +982,13 @@ describe("listSessionsFromStore subagent metadata", () => {
 
     const statSpy = vi.spyOn(fs, "statSync");
     try {
-      const result = withEnv(
+      const result = await withEnvAsync(
         {
           OPENCLAW_STATE_DIR: stateDir,
           OPENCLAW_TEST_READ_SUBAGENT_RUNS_FROM_SQLITE: "1",
         },
-        () =>
-          listSessionsFromStore({
+        async () =>
+          await listSessionsFromStore({
             cfg,
             storePath: "/tmp/sessions.json",
             store: {
@@ -1013,7 +1013,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     }
   });
 
-  test("includes explicit parentSessionKey relationships for dashboard child sessions", () => {
+  test("includes explicit parentSessionKey relationships for dashboard child sessions", async () => {
     resetSubagentRegistryForTests({ persist: false });
     const now = Date.now();
     const store: Record<string, SessionEntry> = {
@@ -1028,7 +1028,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       } as SessionEntry,
     };
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -1041,7 +1041,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(child?.parentSessionKey).toBe("agent:main:main");
   });
 
-  test("returns dashboard child sessions when filtering by parentSessionKey owner", () => {
+  test("returns dashboard child sessions when filtering by parentSessionKey owner", async () => {
     resetSubagentRegistryForTests({ persist: false });
     const now = Date.now();
     const store: Record<string, SessionEntry> = {
@@ -1056,7 +1056,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       } as SessionEntry,
     };
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -1068,7 +1068,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(result.sessions.map((session) => session.key)).toEqual(["agent:main:dashboard:child"]);
   });
 
-  test("does not reattach stale terminal store-only child links", () => {
+  test("does not reattach stale terminal store-only child links", async () => {
     resetSubagentRegistryForTests({ persist: false });
     const now = Date.now();
     const staleAt = now - 2 * 60 * 60_000;
@@ -1086,7 +1086,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       } as SessionEntry,
     };
 
-    const all = listSessionsFromStore({
+    const all = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -1095,7 +1095,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     const main = all.sessions.find((session) => session.key === "agent:main:main");
     expect(main?.childSessions).toBeUndefined();
 
-    const filtered = listSessionsFromStore({
+    const filtered = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -1106,7 +1106,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(filtered.sessions.map((session) => session.key)).toStrictEqual([]);
   });
 
-  test("does not reattach stale orphan store-only child links without lifecycle fields", () => {
+  test("does not reattach stale orphan store-only child links without lifecycle fields", async () => {
     resetSubagentRegistryForTests({ persist: false });
     const now = Date.now();
     const staleAt = now - 2 * 60 * 60_000;
@@ -1122,7 +1122,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       } as SessionEntry,
     };
 
-    const all = listSessionsFromStore({
+    const all = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -1131,7 +1131,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     const main = all.sessions.find((session) => session.key === "agent:main:main");
     expect(main?.childSessions).toBeUndefined();
 
-    const filtered = listSessionsFromStore({
+    const filtered = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -1142,7 +1142,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(filtered.sessions.map((session) => session.key)).toStrictEqual([]);
   });
 
-  test("does not keep old ended registry runs attached as child sessions", () => {
+  test("does not keep old ended registry runs attached as child sessions", async () => {
     const now = Date.now();
     const store: Record<string, SessionEntry> = {
       "agent:main:main": {
@@ -1170,7 +1170,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       outcome: { status: "ok" },
     });
 
-    const all = listSessionsFromStore({
+    const all = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -1179,7 +1179,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     const main = all.sessions.find((session) => session.key === "agent:main:main");
     expect(main?.childSessions).toBeUndefined();
 
-    const filtered = listSessionsFromStore({
+    const filtered = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -1190,7 +1190,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(filtered.sessions.map((session) => session.key)).toStrictEqual([]);
   });
 
-  test("keeps ended parents attached while live descendants are still running", () => {
+  test("keeps ended parents attached while live descendants are still running", async () => {
     const now = Date.now();
     const parentKey = "agent:main:subagent:ended-parent";
     const childKey = "agent:main:subagent:ended-parent:subagent:live-child";
@@ -1236,7 +1236,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       startedAt: now - 900,
     });
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -1246,7 +1246,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(main?.childSessions).toEqual([parentKey]);
   });
 
-  test("falls back to persisted subagent timing after run archival", () => {
+  test("falls back to persisted subagent timing after run archival", async () => {
     const now = Date.now();
     const store: Record<string, SessionEntry> = {
       "agent:main:subagent:archived": {
@@ -1260,7 +1260,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       } as SessionEntry,
     };
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -1276,7 +1276,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(archived?.runtimeMs).toBe(15_000);
   });
 
-  test("maps timeout outcomes to timeout status and clamps negative runtime", () => {
+  test("maps timeout outcomes to timeout status and clamps negative runtime", async () => {
     const now = Date.now();
     const store: Record<string, SessionEntry> = {
       "agent:main:subagent:timeout": {
@@ -1301,7 +1301,7 @@ describe("listSessionsFromStore subagent metadata", () => {
       model: "openai/gpt-5.4",
     });
 
-    const result = listSessionsFromStore({
+    const result = await listSessionsFromStore({
       cfg,
       storePath: "/tmp/sessions.json",
       store,
@@ -1380,7 +1380,7 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
       expect(Object.keys(loaded.store)).toEqual([parentKey]);
       expect(loaded.rowContextStore?.[childKey]).toBeDefined();
 
-      const result = listSqlSelectedSessions({
+      const result = await listSqlSelectedSessions({
         cfg,
         storePath: loaded.storePath,
         store: loaded.store,
@@ -1422,7 +1422,7 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
 
       await seedSessionEntry(
         storePath,
-        "main",
+        "agent:main:main",
         { sessionId: "s-main-unscoped", updatedAt: 100 },
         "main",
       );
@@ -1453,7 +1453,7 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
 
       await seedSessionEntry(
         storePath,
-        "main",
+        "agent:ops:main",
         { sessionId: "s-ops-registered", updatedAt: 100 },
         "ops",
       );
@@ -1506,7 +1506,7 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
         { sessionId: "s-legacy-ops", spawnedBy: "main", updatedAt: 400 },
         "main",
       );
-      const dynamicIncognitoKey = "dashboard:incognito-dynamic";
+      const dynamicIncognitoKey = "agent:dynamic:dashboard:incognito-dynamic";
       await seedSessionEntry(
         resolveIncognitoOpenClawAgentSqlitePath({ agentId: "dynamic" }),
         dynamicIncognitoKey,
