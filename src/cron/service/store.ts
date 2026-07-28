@@ -167,7 +167,7 @@ export async function ensureLoaded(
   for (const job of state.store?.jobs ?? []) {
     previousJobsById.set(job.id, job);
   }
-  const loaded = await loadCronJobsStoreWithConfigJobs(state.deps.storePath);
+  const loaded = await loadCronJobsStoreWithConfigJobs(state.deps.storePath, state.deps.env);
   // Persisted cron rows are validated lazily, so treat them as raw records at the
   // store boundary and only trust the CronJob shape after validation below.
   const loadedJobs = (loaded.store.jobs ?? []) as unknown as Record<string, unknown>[];
@@ -301,8 +301,8 @@ export async function persist(state: CronServiceState, opts?: PersistOptions) {
       state.deps.storePath,
       store,
       stateOnly
-        ? { stateOnly: true, expectedStoreEpoch: state.storeEpoch }
-        : { expectedStoreEpoch: state.storeEpoch },
+        ? { stateOnly: true, expectedStoreEpoch: state.storeEpoch, env: state.deps.env }
+        : { expectedStoreEpoch: state.storeEpoch, env: state.deps.env },
     );
     if (!stateOnly && committedStoreEpoch !== undefined) {
       state.storeEpoch = committedStoreEpoch;

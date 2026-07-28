@@ -90,11 +90,22 @@ function stripNullBytes(s: string): string {
 /** Lists valid configured agent entries from config. */
 export function listAgentEntriesWithSource(cfg: OpenClawConfig): ListedAgentEntry[] {
   const roster = readAgentRosterProperty(cfg);
-  if (roster?.kind === "entries" && roster.value && typeof roster.value === "object") {
-    return Object.entries(roster.value).map(([id, entry]) => ({
-      entry: { ...(entry as Omit<AgentEntry, "id">), id },
-      source: { kind: "entries", key: id },
-    }));
+  if (
+    roster?.kind === "entries" &&
+    roster.value &&
+    typeof roster.value === "object" &&
+    !Array.isArray(roster.value)
+  ) {
+    return Object.entries(roster.value).flatMap(([id, entry]) =>
+      entry !== null && typeof entry === "object" && !Array.isArray(entry)
+        ? [
+            {
+              entry: { ...(entry as Omit<AgentEntry, "id">), id },
+              source: { kind: "entries" as const, key: id },
+            },
+          ]
+        : [],
+    );
   }
   if (roster?.kind !== "list" || !Array.isArray(roster.value)) {
     return [];

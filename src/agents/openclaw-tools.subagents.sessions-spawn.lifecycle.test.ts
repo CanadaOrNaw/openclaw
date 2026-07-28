@@ -535,7 +535,7 @@ describe("openclaw-tools: subagents (sessions_spawn lifecycle)", () => {
         callId: "call-bound-account",
         agentId: "bot-alpha",
         context: {
-          agentSessionKey: "main",
+          agentSessionKey: "agent:main:main",
           agentChannel: "matrix",
           agentAccountId: "bot-beta",
           agentTo: boundRoom,

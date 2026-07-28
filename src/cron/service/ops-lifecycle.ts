@@ -1,9 +1,14 @@
+import path from "node:path";
 import { listAgentIds } from "../../agents/agent-scope-config.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
+import {
+  completeLegacyDefaultCronOwnerHandoff,
+  readRetainedLegacyDefaultCronOwnerForStore,
+} from "../legacy-default-agent-owner-handoff.js";
 import { materializeLegacyDefaultCronJobOwners } from "../legacy-default-agent-owner-migration.js";
 import { materializeLegacyDefaultCronJobOwnersInRecords } from "../legacy-default-agent-owner-records.js";
-import { transformCronJobsStore } from "../store.js";
+import { resolveCronJobsStorePathFromConfig, transformCronJobsStore } from "../store.js";
 import type { CronJob } from "../types.js";
 import { failureNotificationDeliveryFromJobState } from "./failure-alerts.js";
 import { nextWakeAtMs, recomputeNextRunsForMaintenance } from "./jobs.js";
@@ -61,7 +66,7 @@ async function materializeLoadedLegacyDefaultAgentOwners(
             }
             return { version: 1, jobs: merged as unknown as CronJob[] };
           },
-          { bumpStoreEpoch: true, expectedStoreEpoch },
+          { bumpStoreEpoch: true, expectedStoreEpoch, env: state.deps.env },
         );
         if (transformRan) {
           return rewritten;
@@ -116,16 +121,58 @@ export async function reloadForConfigAdoption(
   const release = await acquireCronOperationLock(state);
   try {
     await ensureLoaded(state, { skipRecompute: true });
-    const legacyDefaultAgentId =
+    const incomingStorePath = resolveCronJobsStorePathFromConfig(incomingConfig, state.deps.env);
+    const currentRetainedOwner = readRetainedLegacyDefaultCronOwnerForStore(
+      state.deps.storePath,
+      state.deps.env,
+    );
+    const incomingRetainedOwner =
+      path.resolve(incomingStorePath) === path.resolve(state.deps.storePath)
+        ? currentRetainedOwner
+        : readRetainedLegacyDefaultCronOwnerForStore(incomingStorePath, state.deps.env);
+    const runtimeLegacyOwner =
       state.deps.legacyDefaultAgentId ?? resolveCurrentDefaultAgentId(state);
+    const currentStoreOwner = currentRetainedOwner ?? runtimeLegacyOwner;
+    const incomingStoreOwner = incomingRetainedOwner ?? runtimeLegacyOwner;
     const incomingAgentIds = new Set(listAgentIds(incomingConfig).map(normalizeAgentId));
-    if (legacyDefaultAgentId && incomingAgentIds.has(normalizeAgentId(legacyDefaultAgentId))) {
-      const migration = await materializeLoadedLegacyDefaultAgentOwners(
-        state,
-        legacyDefaultAgentId,
-      );
+    if (currentStoreOwner && incomingAgentIds.has(normalizeAgentId(currentStoreOwner))) {
+      const migration = await materializeLoadedLegacyDefaultAgentOwners(state, currentStoreOwner);
       if (migration.warnings.length > 0) {
         throw new Error(migration.warnings.join("\n"));
+      }
+      if (
+        currentRetainedOwner &&
+        normalizeAgentId(currentRetainedOwner) === normalizeAgentId(currentStoreOwner)
+      ) {
+        completeLegacyDefaultCronOwnerHandoff(
+          state.deps.storePath,
+          currentRetainedOwner,
+          state.deps.env,
+        );
+      }
+    }
+    if (
+      path.resolve(incomingStorePath) !== path.resolve(state.deps.storePath) &&
+      incomingStoreOwner &&
+      incomingAgentIds.has(normalizeAgentId(incomingStoreOwner))
+    ) {
+      const incomingMigration = await materializeLegacyDefaultCronJobOwners({
+        storePath: incomingStorePath,
+        legacyDefaultAgentId: incomingStoreOwner,
+        env: state.deps.env,
+      });
+      if (incomingMigration.warnings.length > 0) {
+        throw new Error(incomingMigration.warnings.join("\n"));
+      }
+      if (
+        incomingRetainedOwner &&
+        normalizeAgentId(incomingRetainedOwner) === normalizeAgentId(incomingStoreOwner)
+      ) {
+        completeLegacyDefaultCronOwnerHandoff(
+          incomingStorePath,
+          incomingRetainedOwner,
+          state.deps.env,
+        );
       }
     }
     await refreshLegacyDefaultAgentOwnerHandoff(state);
@@ -153,10 +200,20 @@ export async function start(state: CronServiceState) {
   let repairedAnyStartupRun = false;
   await locked(state, async () => {
     await ensureLoaded(state, { skipRecompute: true });
-    if (state.deps.legacyDefaultAgentId) {
+    const retainedStoreOwner = readRetainedLegacyDefaultCronOwnerForStore(
+      state.deps.storePath,
+      state.deps.env,
+    );
+    const legacyDefaultAgentId = retainedStoreOwner ?? state.deps.legacyDefaultAgentId;
+    // A removed/renamed owner is not a valid historical replacement: leave rows
+    // ownerless and keep the receipt pending until a later roster can adopt it safely.
+    const legacyOwnerEligible =
+      legacyDefaultAgentId !== undefined &&
+      state.deps.isAgentAvailable?.(normalizeAgentId(legacyDefaultAgentId)) !== false;
+    if (legacyDefaultAgentId && legacyOwnerEligible) {
       const migration = await materializeLoadedLegacyDefaultAgentOwners(
         state,
-        state.deps.legacyDefaultAgentId,
+        legacyDefaultAgentId,
       );
       if (migration.warnings.length > 0) {
         throw new Error(migration.warnings.join("\n"));
@@ -165,6 +222,16 @@ export async function start(state: CronServiceState) {
         state.deps.log.info({ storePath: state.deps.storePath }, `cron: ${change}`);
       }
       await ensureLoaded(state, { forceReload: true, skipRecompute: true });
+      if (
+        retainedStoreOwner &&
+        normalizeAgentId(retainedStoreOwner) === normalizeAgentId(legacyDefaultAgentId)
+      ) {
+        completeLegacyDefaultCronOwnerHandoff(
+          state.deps.storePath,
+          retainedStoreOwner,
+          state.deps.env,
+        );
+      }
     }
     if (state.stopped) {
       return;

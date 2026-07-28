@@ -2434,8 +2434,9 @@ describe("buildGatewayCronService", () => {
         store: path.join(os.tmpdir(), `server-cron-relative-default-${Date.now()}`, "cron.json"),
       },
       agents: {
+        ownership: "explicit",
         entries: {
-          primary: { default: true, model: "test/primary" },
+          primary: { model: "test/primary" },
           main: { model: "test/main" },
         },
       },
@@ -2953,7 +2954,10 @@ describe("buildGatewayCronService", () => {
     const tmpDir = path.join(os.tmpdir(), `server-cron-default-change-${Date.now()}`);
     const startupCfg = {
       cron: { store: path.join(tmpDir, "cron.json") },
-      agents: { entries: { main: {}, yinze: { default: true }, other: {} } },
+      agents: {
+        ownership: "explicit",
+        entries: { main: {}, yinze: {}, other: {} },
+      },
     } as OpenClawConfig;
     loadConfigMock.mockReturnValue(startupCfg);
     const state = buildGatewayCronService({

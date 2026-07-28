@@ -495,7 +495,7 @@ describe("CronService", () => {
     }
   });
 
-  it("rejects sessionTarget main for non-default agents at creation time", async () => {
+  it("runs sessionTarget main for an explicitly owned agent", async () => {
     const runHeartbeatOnce = vi.fn(async () => ({ status: "ran" as const, durationMs: 1 }));
 
     const { store, cron } = await createWakeModeNowMainHarness({
@@ -509,7 +509,7 @@ describe("CronService", () => {
         name: "wakeMode now with agent",
         agentId: "ops",
       }),
-    ).rejects.toThrow('cron: sessionTarget "main" is only valid for the default agent');
+    ).resolves.toMatchObject({ sessionTarget: "main", agentId: "ops" });
 
     await stopCronAndCleanup(cron, store);
   });

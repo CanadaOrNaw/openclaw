@@ -1,6 +1,12 @@
-import { resolveDefaultAgentId, tryResolveSoleAgentId } from "../../agents/agent-scope.js";
+import {
+  listAgentIds,
+  resolveDefaultAgentId,
+  tryResolveSoleAgentId,
+} from "../../agents/agent-scope.js";
 import { getReplyPayloadMetadata, type ReplyPayload } from "../../auto-reply/reply-payload.js";
+import { tryGetLegacyDefaultAgentId } from "../../config/legacy.default-agent-owner.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import { normalizeAgentId } from "../../routing/session-key.js";
 import { projectChatDisplayMessage } from "../chat-display-projection.js";
 import type { GatewayRequestContext } from "./types.js";
 
@@ -35,10 +41,20 @@ function resolveGlobalAwareNodeChatDeliveryKeys(params: {
   if (params.sessionKey !== "global") {
     return [params.sessionKey];
   }
-  const soleAgentId = tryResolveSoleAgentId(params.cfg);
-  const scopedAgentId = params.agentId ?? soleAgentId ?? resolveDefaultAgentId(params.cfg);
+  const retainedAgentId = tryGetLegacyDefaultAgentId(params.cfg);
+  const retainedAgentAvailable =
+    retainedAgentId !== undefined &&
+    listAgentIds(params.cfg).some(
+      (agentId) => normalizeAgentId(agentId) === normalizeAgentId(retainedAgentId),
+    );
+  const compatibilityAgentId =
+    (retainedAgentAvailable ? retainedAgentId : undefined) ?? tryResolveSoleAgentId(params.cfg);
+  const scopedAgentId = params.agentId ?? compatibilityAgentId ?? resolveDefaultAgentId(params.cfg);
   const keys = [`agent:${scopedAgentId}:global`];
-  if (soleAgentId === scopedAgentId) {
+  if (
+    compatibilityAgentId &&
+    normalizeAgentId(compatibilityAgentId) === normalizeAgentId(scopedAgentId)
+  ) {
     keys.push("global");
   }
   return keys;

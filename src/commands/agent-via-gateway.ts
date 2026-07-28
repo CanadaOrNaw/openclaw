@@ -181,10 +181,12 @@ function applyRemoteGatewayRoster(
   cfg: OpenClawConfig,
   roster: RemoteGatewayRoster,
 ): OpenClawConfig {
+  const { ownership: _localOwnership, ...localAgentConfig } = cfg.agents ?? {};
   return {
     ...cfg,
     agents: {
-      ...cfg.agents,
+      ...localAgentConfig,
+      ...(roster.ownership === "explicit" ? { ownership: "explicit" as const } : {}),
       entries: Object.fromEntries(
         roster.entries.map((entry) => [entry.id, entry.name ? { name: entry.name } : {}]),
       ),

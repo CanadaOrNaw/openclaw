@@ -1,0 +1,215 @@
+import { describe, expect, it } from "vitest";
+import { prepareLegacyCronOwnerHandoffs } from "../../config/io.cron-owner-handoff.js";
+import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import { readRetainedLegacyDefaultCronOwnerForStore } from "../legacy-default-agent-owner-handoff.js";
+import { setupCronServiceSuite } from "../service.test-harness.js";
+import { loadCronStore, saveCronStore } from "../store.js";
+import type { CronJob } from "../types.js";
+import { reloadForConfigAdoption, start, stop } from "./ops-lifecycle.js";
+import { createCronServiceState } from "./state.js";
+
+const { logger, makeStorePath } = setupCronServiceSuite({
+  prefix: "cron-service-legacy-owner-handoff",
+});
+const NOW = Date.parse("2026-03-23T12:00:00.000Z");
+
+function createOwnerlessJob(id: string): CronJob {
+  return {
+    id,
+    name: id,
+    enabled: true,
+    createdAtMs: NOW - 60_000,
+    updatedAtMs: NOW - 60_000,
+    schedule: { kind: "cron", expr: "0 6 * * *", tz: "UTC" },
+    sessionTarget: "main",
+    wakeMode: "now",
+    payload: { kind: "systemEvent", text: "tick" },
+    state: {},
+  };
+}
+
+async function writeJobs(storePath: string, jobs: CronJob[]) {
+  await saveCronStore(storePath, { version: 1, jobs });
+}
+
+function createState(storePath: string) {
+  return createCronServiceState({
+    storePath,
+    cronEnabled: true,
+    log: logger,
+    nowMs: () => NOW,
+    enqueueSystemEvent: () => false,
+    requestHeartbeat: () => {},
+    runIsolatedAgentJob: async () => ({ status: "ok" as const }),
+  });
+}
+
+function incomingRoster(storePath: string): OpenClawConfig {
+  return {
+    agents: { ownership: "explicit", entries: { ops: {}, research: {} } },
+    cron: { store: storePath } as never,
+  };
+}
+
+describe("cron legacy owner handoff persistence", () => {
+  it("migrates rows written by an old gateway after a separate config-write commit", async () => {
+    const { storePath } = await makeStorePath();
+    const originalOwnerless = createOwnerlessJob("original-ownerless");
+    await writeJobs(storePath, [originalOwnerless]);
+
+    const handoff = await prepareLegacyCronOwnerHandoffs({
+      env: process.env,
+      legacyDefaultAgentId: "ops",
+      targets: [{ config: {}, storePath }],
+    });
+    handoff.release();
+    expect(readRetainedLegacyDefaultCronOwnerForStore(storePath)).toBe("ops");
+
+    // Simulate pre-upgrade code replacing the migrated snapshot after the CLI
+    // commit. It knows neither store epochs nor the durable handoff receipt.
+    await writeJobs(storePath, [originalOwnerless, createOwnerlessJob("late-ownerless")]);
+
+    const state = createState(storePath);
+    state.deps.isAgentAvailable = (agentId) => agentId === "ops";
+    await start(state);
+    stop(state);
+
+    expect((await loadCronStore(storePath)).jobs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "original-ownerless", agentId: "ops" }),
+        expect.objectContaining({ id: "late-ownerless", agentId: "ops" }),
+      ]),
+    );
+    expect(readRetainedLegacyDefaultCronOwnerForStore(storePath)).toBe("ops");
+
+    // The old process still cannot be fenced after the first new-code startup.
+    await writeJobs(storePath, [createOwnerlessJob("later-ownerless")]);
+    const restarted = createState(storePath);
+    restarted.deps.isAgentAvailable = (agentId) => agentId === "ops";
+    await start(restarted);
+    stop(restarted);
+    expect((await loadCronStore(storePath)).jobs[0]).toMatchObject({
+      id: "later-ownerless",
+      agentId: "ops",
+    });
+  });
+
+  it("keeps the receipt pending when the former owner has left the startup roster", async () => {
+    const { storePath } = await makeStorePath();
+    await writeJobs(storePath, [createOwnerlessJob("departed-owner")]);
+    const handoff = await prepareLegacyCronOwnerHandoffs({
+      env: process.env,
+      legacyDefaultAgentId: "ops",
+      targets: [{ config: {}, storePath }],
+    });
+    handoff.release();
+
+    await writeJobs(storePath, [createOwnerlessJob("late-departed-owner")]);
+    const state = createState(storePath);
+    state.deps.isAgentAvailable = () => false;
+    await start(state);
+    stop(state);
+
+    expect((await loadCronStore(storePath)).jobs[0]?.agentId).toBeUndefined();
+    expect(readRetainedLegacyDefaultCronOwnerForStore(storePath)).toBe("ops");
+  });
+
+  it("prefers the store receipt over conflicting process legacy metadata", async () => {
+    const { storePath } = await makeStorePath();
+    await writeJobs(storePath, [createOwnerlessJob("before-conflict")]);
+    const handoff = await prepareLegacyCronOwnerHandoffs({
+      env: process.env,
+      legacyDefaultAgentId: "research",
+      targets: [{ config: {}, storePath }],
+    });
+    handoff.release();
+    await writeJobs(storePath, [createOwnerlessJob("late-conflict")]);
+
+    const state = createState(storePath);
+    state.deps.legacyDefaultAgentId = "ops";
+    state.deps.isAgentAvailable = () => true;
+    await start(state);
+    stop(state);
+
+    expect((await loadCronStore(storePath)).jobs[0]).toMatchObject({
+      id: "late-conflict",
+      agentId: "research",
+    });
+    expect(readRetainedLegacyDefaultCronOwnerForStore(storePath)).toBe("research");
+  });
+
+  it("consumes a pending receipt when config adoption restores its owner", async () => {
+    const { storePath } = await makeStorePath();
+    await writeJobs(storePath, [createOwnerlessJob("before-restore")]);
+    const handoff = await prepareLegacyCronOwnerHandoffs({
+      env: process.env,
+      legacyDefaultAgentId: "ops",
+      targets: [{ config: {}, storePath }],
+    });
+    handoff.release();
+    await writeJobs(storePath, [createOwnerlessJob("late-before-restore")]);
+
+    const state = createState(storePath);
+    await reloadForConfigAdoption(state, incomingRoster(storePath));
+
+    expect((await loadCronStore(storePath)).jobs[0]).toMatchObject({
+      id: "late-before-restore",
+      agentId: "ops",
+    });
+    expect(readRetainedLegacyDefaultCronOwnerForStore(storePath)).toBe("ops");
+  });
+
+  it("migrates the incoming store before adopting a roster and store change", async () => {
+    const { storePath: currentStorePath } = await makeStorePath();
+    const { storePath: incomingStorePath } = await makeStorePath();
+    await writeJobs(currentStorePath, [createOwnerlessJob("current-ownerless")]);
+    await writeJobs(incomingStorePath, [createOwnerlessJob("incoming-ownerless")]);
+    const state = createState(currentStorePath);
+    state.deps.legacyDefaultAgentId = "ops";
+
+    await reloadForConfigAdoption(state, incomingRoster(incomingStorePath));
+
+    expect((await loadCronStore(currentStorePath)).jobs[0]).toMatchObject({
+      id: "current-ownerless",
+      agentId: "ops",
+    });
+    expect((await loadCronStore(incomingStorePath)).jobs[0]).toMatchObject({
+      id: "incoming-ownerless",
+      agentId: "ops",
+    });
+  });
+
+  it("keeps source and destination receipt owners distinct during store adoption", async () => {
+    const { storePath: currentStorePath } = await makeStorePath();
+    const { storePath: incomingStorePath } = await makeStorePath();
+    await writeJobs(currentStorePath, [createOwnerlessJob("current-before-handoff")]);
+    await writeJobs(incomingStorePath, [createOwnerlessJob("incoming-before-handoff")]);
+    const currentHandoff = await prepareLegacyCronOwnerHandoffs({
+      env: process.env,
+      legacyDefaultAgentId: "ops",
+      targets: [{ config: {}, storePath: currentStorePath }],
+    });
+    currentHandoff.release();
+    const incomingHandoff = await prepareLegacyCronOwnerHandoffs({
+      env: process.env,
+      legacyDefaultAgentId: "research",
+      targets: [{ config: {}, storePath: incomingStorePath }],
+    });
+    incomingHandoff.release();
+    await writeJobs(currentStorePath, [createOwnerlessJob("current-late")]);
+    await writeJobs(incomingStorePath, [createOwnerlessJob("incoming-late")]);
+
+    await reloadForConfigAdoption(createState(currentStorePath), incomingRoster(incomingStorePath));
+
+    expect((await loadCronStore(currentStorePath)).jobs[0]).toMatchObject({
+      id: "current-late",
+      agentId: "ops",
+    });
+    expect((await loadCronStore(incomingStorePath)).jobs[0]).toMatchObject({
+      id: "incoming-late",
+      agentId: "research",
+    });
+    expect(readRetainedLegacyDefaultCronOwnerForStore(currentStorePath)).toBe("ops");
+    expect(readRetainedLegacyDefaultCronOwnerForStore(incomingStorePath)).toBe("research");
+  });
+});

@@ -68,6 +68,8 @@ export type CronSystemEventEnqueueResult =
 
 /** Dependency injection surface for the cron service runtime. */
 export type CronServiceDeps = {
+  /** State/config environment used to resolve the shared SQLite database. */
+  env?: NodeJS.ProcessEnv;
   nowMs?: () => number;
   log: Logger;
   storePath: string;

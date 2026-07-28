@@ -1,3 +1,4 @@
+import { retainLegacyDefaultCronOwnerHandoffForStore } from "../cron/legacy-default-agent-owner-handoff.js";
 import { beginLegacyDefaultOwnerHandoff } from "../cron/live-service-registry.js";
 import type { OpenClawConfig } from "./types.openclaw.js";
 
@@ -44,6 +45,13 @@ export async function prepareLegacyCronOwnerHandoffs(params: {
           `Config write refused before retired default ownership was durable: ${migration.warnings.join(" ")}`,
         );
       }
+      // A CLI process cannot fence a separately running pre-upgrade Gateway.
+      // Persist this after row migration but before config commit so late rows migrate at startup.
+      retainLegacyDefaultCronOwnerHandoffForStore(
+        target.storePath,
+        params.legacyDefaultAgentId,
+        params.env,
+      );
       await handoff.refreshSealedServices();
     }
     return { release };
