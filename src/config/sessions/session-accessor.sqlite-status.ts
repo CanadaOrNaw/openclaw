@@ -185,8 +185,11 @@ function buildSessionListPredicate(
       eb("parent_session_key", "in", lineageKeys),
       eb("spawned_by", "in", lineageKeys),
     ]);
-    const excluded = query.excludeLineageSessionKeys?.slice(0, 400);
-    const storedSelection = excluded?.length
+    const excluded = query.excludeLineageSessionKeys ?? [];
+    if (excluded.length > 400) {
+      throw new Error("SQLite lineage exclusion query must use residual selection above 400 keys");
+    }
+    const storedSelection = excluded.length
       ? eb.and([eb("session_key", "not in", [...excluded]), storedLineage])
       : storedLineage;
     conditions.push(

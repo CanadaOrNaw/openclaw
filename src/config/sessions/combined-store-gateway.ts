@@ -380,7 +380,7 @@ export function loadCombinedSessionStoreForGateway(
   }
   const combined: Record<string, SessionEntry> = {};
   const rowContextCombined: Record<string, SessionEntry> = {};
-  let selectionExact = targets.length === 1 && !openIncognito;
+  let selectionExact = targets.length === 1 && !openIncognito && query?.selectionResidual !== true;
   for (const target of targets) {
     const agentId = target.agentId;
     const storePath = target.storePath;

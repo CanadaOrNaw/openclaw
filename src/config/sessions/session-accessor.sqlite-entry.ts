@@ -267,6 +267,7 @@ export function copySqliteSessionOwnedStateForCanonicalRepair(params: {
   destinationDatabase: OpenClawAgentDatabase;
   preferSource: boolean;
   preferredEntry?: SessionEntry;
+  preferredSessionKey?: string;
   source: { agentId: string; storePath: string };
   sourceEntries: readonly SessionEntry[];
   sourceKeys: readonly string[];
@@ -280,6 +281,7 @@ export function copySqliteSessionOwnedStateForCanonicalRepair(params: {
     destination: params.destinationDatabase,
     preferSource: params.preferSource,
     ...(params.preferredEntry ? { preferredEntry: params.preferredEntry } : {}),
+    ...(params.preferredSessionKey ? { preferredSessionKey: params.preferredSessionKey } : {}),
     source: sourceDatabase,
     sourceEntries: params.sourceEntries,
     sourceKeys: params.sourceKeys,

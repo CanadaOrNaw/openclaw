@@ -251,7 +251,7 @@ describe("doctor canonical session-key repair", () => {
       const sourceAlias = "agent:main:main ";
       replaceSessionEntrySync(
         { agentId: "main", env, sessionKey: "agent:main:shared", storePath: mainStore },
-        { sessionId: "destination-only", updatedAt: 10 },
+        { archivedAt: 10, sessionId: "destination-only", updatedAt: 10 },
       );
       const staleDestinationDatabase = openOpenClawAgentDatabase({
         agentId: "main",
@@ -349,14 +349,14 @@ describe("doctor canonical session-key repair", () => {
       const report = await repairCanonicalSessionKeys({ apply: true, cfg, env });
       expect(report).toMatchObject({ foundGroups: 1, removedRows: 2, repairedGroups: 1 });
       expect(report.archivedTranscriptDirectories).toHaveLength(1);
-      expect(
-        loadExactSessionEntryReadOnly({
-          agentId: "main",
-          env,
-          sessionKey: "agent:main:shared",
-          storePath: mainStore,
-        })?.entry,
-      ).toMatchObject({ sessionId: "winner", subject: "merged subject" });
+      const repairedEntry = loadExactSessionEntryReadOnly({
+        agentId: "main",
+        env,
+        sessionKey: "agent:main:shared",
+        storePath: mainStore,
+      })?.entry;
+      expect(repairedEntry).toMatchObject({ sessionId: "winner", subject: "merged subject" });
+      expect(repairedEntry?.archivedAt).toBeUndefined();
       await expect(
         loadTranscriptEvents({
           agentId: "main",
@@ -417,6 +417,11 @@ describe("doctor canonical session-key repair", () => {
           )
           .get(),
       ).toEqual({ previous_session_id: "destination-only", updated_at: 20 });
+      expect(
+        mainDatabase.db
+          .prepare("SELECT display_name FROM session_nodes WHERE session_key = 'agent:main:shared'")
+          .get(),
+      ).toEqual({ display_name: "merged subject" });
       expect(mainDatabase.db.prepare("SELECT session_key FROM board_tabs").get()).toEqual({
         session_key: "agent:main:shared",
       });

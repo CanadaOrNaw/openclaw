@@ -30,6 +30,7 @@ import { withEnvAsync } from "../test-utils/env.js";
 import { listSessionsFromStoreAsync as listSqlSelectedSessions } from "./session-utils-list.js";
 import { listSessionsFromStoreForTest as listSessionsFromStore } from "./session-utils-list.test-support.js";
 import {
+  buildSessionListSqlQuery,
   loadCombinedSessionStoreForGateway,
   resolveGatewayModelSupportsImages,
   resolveSessionListLineageSqlQuery,
@@ -90,6 +91,26 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(resolveSessionListLineageSqlQuery("agent:main:work", now, "work").lineageKeys).toEqual(
       expect.arrayContaining(["work", "main", "agent:main:main"]),
     );
+    for (let index = 0; index < 200; index += 1) {
+      addSubagentRunForTests({
+        runId: `run-large-lineage-${index}`,
+        childSessionKey: `agent:main:matrix:group:!Room${index}:Server`,
+        controllerSessionKey: parentKey,
+        requesterSessionKey: parentKey,
+        requesterDisplayKey: "main",
+        task: "large lineage",
+        cleanup: "keep",
+        createdAt: now - 1_000,
+        startedAt: now - 500,
+      });
+    }
+    const residual = buildSessionListSqlQuery(
+      { spawnedBy: parentKey, limit: 1 },
+      { bounded: true, includeCreatorFilter: true, mainKey: "main", now },
+    ).query;
+    expect(residual.selectionResidual).toBe(true);
+    expect(residual.limit).toBeUndefined();
+    expect(residual.spawnedBy).toBeUndefined();
   });
 
   test("searches channel-derived display names before row enrichment", async () => {

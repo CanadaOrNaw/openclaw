@@ -28,6 +28,7 @@ import {
 import {
   bindSqliteSessionNode,
   bindSqliteSessionRoot,
+  deriveSessionTitle,
   deriveSqliteSessionTitle,
   normalizeSqliteSessionEntryTimestamp,
 } from "./session-accessor.sqlite-session-row.js";
@@ -514,6 +515,7 @@ export function copySqliteSessionOwnedStateForRepair(params: {
   destination: OpenClawAgentDatabase;
   preferSource: boolean;
   preferredEntry?: SessionEntry;
+  preferredSessionKey?: string;
   source: OpenClawAgentDatabase;
   sourceEntries: readonly SessionEntry[];
   sourceKeys: readonly string[];
@@ -693,7 +695,6 @@ export function copySqliteSessionOwnedStateForRepair(params: {
         .onConflict((conflict) => conflict.doNothing()),
     );
   }
-  const sourceWindowIds = new Set(windows.map((row) => row.session_id));
   for (const sessionId of sessionIds) {
     const sourceIsAuthoritative = authoritativeSourceSessionIds.has(sessionId);
     if (
@@ -709,7 +710,6 @@ export function copySqliteSessionOwnedStateForRepair(params: {
       sessionId,
       source: params.source,
       sourceIsAuthoritative,
-      sourceHasWindow: sourceWindowIds.has(sessionId),
     });
     // Search and active-event tables are derived from transcript_events; force their canonical rebuild.
     deleteSessionTranscriptIndexInTransaction(params.destination.db, sessionId);
@@ -722,6 +722,22 @@ export function copySqliteSessionOwnedStateForRepair(params: {
       sourceKeys,
       params.canonicalKey,
     );
+    if (params.preferredEntry && params.preferredSessionKey) {
+      const sourceTitle = executeSqliteQueryTakeFirstSync(
+        params.source.db,
+        sourceDb
+          .selectFrom("session_nodes")
+          .select("display_name")
+          .where("session_key", "=", params.preferredSessionKey),
+      )?.display_name;
+      executeSqliteQuerySync(
+        params.destination.db,
+        destinationDb
+          .updateTable("session_nodes")
+          .set({ display_name: sourceTitle ?? deriveSessionTitle(params.preferredEntry) ?? null })
+          .where("session_key", "=", params.canonicalKey),
+      );
+    }
   }
 }
 
@@ -731,7 +747,6 @@ function copySqliteSessionGenerationRows(params: {
   sessionId: string;
   source: OpenClawAgentDatabase;
   sourceIsAuthoritative: boolean;
-  sourceHasWindow: boolean;
 }): void {
   const sourceDb = getSessionKysely(params.source.db);
   const destinationDb = getSessionKysely(params.destination.db);
@@ -767,17 +782,9 @@ function copySqliteSessionGenerationRows(params: {
       .selectAll()
       .where("session_id", "=", params.sessionId),
   ).rows;
-  const sourceHasState =
-    transcriptEvents.length > 0 ||
-    transcriptIdentities.length > 0 ||
-    rewriteWatermarks.length > 0 ||
-    trajectoryEvents.length > 0 ||
-    parentStreamEvents.length > 0;
-  if (
-    params.preferSource &&
-    params.sourceIsAuthoritative &&
-    (params.sourceHasWindow || sourceHasState)
-  ) {
+  // Cross-store rows have no deletion tombstone. Empty winner tables cannot authorize
+  // destructive loss, so doctor replaces only tables backed by winner rows.
+  if (params.preferSource && params.sourceIsAuthoritative && transcriptEvents.length > 0) {
     executeSqliteQuerySync(
       params.destination.db,
       destinationDb
@@ -788,18 +795,28 @@ function copySqliteSessionGenerationRows(params: {
       params.destination.db,
       destinationDb.deleteFrom("transcript_events").where("session_id", "=", params.sessionId),
     );
+  }
+  if (
+    params.preferSource &&
+    params.sourceIsAuthoritative &&
+    (transcriptEvents.length > 0 || rewriteWatermarks.length > 0)
+  ) {
     executeSqliteQuerySync(
       params.destination.db,
       destinationDb
         .deleteFrom("transcript_rewrite_watermarks")
         .where("session_id", "=", params.sessionId),
     );
+  }
+  if (params.preferSource && params.sourceIsAuthoritative && trajectoryEvents.length > 0) {
     executeSqliteQuerySync(
       params.destination.db,
       destinationDb
         .deleteFrom("trajectory_runtime_events")
         .where("session_id", "=", params.sessionId),
     );
+  }
+  if (params.preferSource && params.sourceIsAuthoritative && parentStreamEvents.length > 0) {
     executeSqliteQuerySync(
       params.destination.db,
       destinationDb

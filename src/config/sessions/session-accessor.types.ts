@@ -81,6 +81,7 @@ export type SessionEntryListQuery = {
   limit?: number;
   ownerAgentId?: string;
   requireLastInteraction?: boolean;
+  selectionResidual?: boolean;
   sessionId?: string;
   sortBy?: "updatedAt" | "lastInteractionAt";
   spawnedBy?: string;

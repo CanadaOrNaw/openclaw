@@ -190,12 +190,13 @@ export function buildSessionListSqlQuery(
       ? Math.max(1, Math.floor(opts.activeMinutes))
       : undefined;
   const lineage = resolveSessionListLineageSqlQuery(opts.spawnedBy, params.now, params.mainKey);
+  const lineageRequiresResidual = (lineage.excludeLineageSessionKeys?.length ?? 0) > 400;
   const query: SessionEntryListQuery = {
     archived: opts.archived ?? false,
     includeGlobal: opts.includeGlobal === true,
     includeUnknown: !opts.agentId && opts.includeUnknown === true,
     sortBy: opts.sortBy ?? "updatedAt",
-    ...lineage,
+    ...(lineageRequiresResidual ? { selectionResidual: true } : lineage),
   };
   if (activeMinutes !== undefined) {
     query.activeAfter = params.now - activeMinutes * 60_000;
@@ -209,13 +210,13 @@ export function buildSessionListSqlQuery(
   if (label) {
     query.label = label;
   }
-  if (spawnedBy) {
+  if (spawnedBy && !lineageRequiresResidual) {
     query.spawnedBy = spawnedBy;
   }
   if (opts.requireLastInteraction) {
     query.requireLastInteraction = true;
   }
-  if (params.bounded) {
+  if (params.bounded && !lineageRequiresResidual) {
     query.limit = resolveSessionsListOffset(opts) + (resolveSessionsListLimit(opts, 100) ?? 100);
   }
   return { lineage, query };

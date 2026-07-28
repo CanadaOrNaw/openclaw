@@ -171,6 +171,7 @@ async function repairCanonicalSessionGroup(
           destinationDatabase,
           preferSource: sqlitePath === winner.sqlitePath,
           ...(sqlitePath === winner.sqlitePath ? { preferredEntry: selected.entry } : {}),
+          ...(sqlitePath === winner.sqlitePath ? { preferredSessionKey: winner.sessionKey } : {}),
           source,
           sourceEntries: storeCandidates.map((candidate) => candidate.entry),
           sourceKeys: storeCandidates.map((candidate) => candidate.sessionKey),

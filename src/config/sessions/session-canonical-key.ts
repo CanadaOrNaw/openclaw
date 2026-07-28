@@ -57,9 +57,9 @@ export function mergeCanonicalSessionEntryCandidates<T>(
       candidate.entry.updatedAt > selected.entry.updatedAt ||
       (candidate.entry.updatedAt === selected.entry.updatedAt &&
         JSON.stringify(candidate.entry).localeCompare(JSON.stringify(selected.entry)) > 0);
-    selected = incomingWins
-      ? { entry: { ...selected.entry, ...candidate.entry }, winner: candidate.value }
-      : { entry: { ...candidate.entry, ...selected.entry }, winner: selected.winner };
+    if (incomingWins) {
+      selected = { entry: structuredClone(candidate.entry), winner: candidate.value };
+    }
   }
   return selected;
 }

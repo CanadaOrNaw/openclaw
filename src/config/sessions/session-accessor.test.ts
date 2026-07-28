@@ -253,6 +253,23 @@ describe("session accessor seam", () => {
         { type: "system", id: "scheduler", label: "Scheduler" },
       ]),
     );
+    expect(
+      querySqliteSessionEntriesReadOnly({
+        agentId: "main",
+        projection: "list",
+        query: {
+          archived: false,
+          excludeLineageSessionKeys: [
+            ...Array.from({ length: 399 }, (_, index) => `agent:main:excluded-${index}`),
+            "agent:main:older-child",
+          ],
+          includeGlobal: true,
+          includeUnknown: true,
+          spawnedBy: "agent:main:parent",
+        },
+        storePath,
+      }).entries.map(({ sessionKey }) => sessionKey),
+    ).toEqual(["agent:main:child"]);
   });
 
   it("orders zero-valued promoted timestamps like absent values", () => {
