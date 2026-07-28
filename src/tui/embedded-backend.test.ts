@@ -206,7 +206,7 @@ vi.mock("../gateway/server-methods/chat.js", () => ({
 vi.mock("../gateway/session-utils.js", () => ({
   buildGatewaySessionInfo: (params: Parameters<typeof buildGatewaySessionInfoMock>[0]) =>
     buildGatewaySessionInfoMock(params),
-  buildSessionListSqlQuery: (...args: unknown[]) => buildSessionListSqlQueryMock(...args),
+  buildSessionListSqlQuery: () => buildSessionListSqlQueryMock(),
   getSessionDefaults: () => getSessionDefaultsMock(),
   listAgentsForGateway: () => [],
   listSessionsFromStoreAsync: (...args: unknown[]) => listSessionsFromStoreAsyncMock(...args),
