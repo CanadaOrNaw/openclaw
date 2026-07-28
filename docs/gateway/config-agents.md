@@ -610,6 +610,22 @@ Selects the agent whose model and credentials own ambient OpenClaw system-agent 
 
 Delegated consults with a requesting agent keep that requester as their owner. When `agentId` is absent, a sole configured agent resolves implicitly; ambient consults in a multi-agent fleet fail with an actionable error.
 
+### `agents.defaults.authInheritance`
+
+Upgrade compatibility binding for inherited model credentials:
+
+```json5
+{
+  agents: {
+    defaults: {
+      authInheritance: { agentId: "ops" },
+    },
+  },
+}
+```
+
+Doctor writes this only when retiring a legacy non-`main` default marker would otherwise switch credential inheritance to the physical `main` store. Keep it until the H2-2 credential-relocation migration moves inherited credentials to their final per-agent stores; new fleets normally do not need to set it.
+
 ### `agents.defaults.compaction`
 
 ```json5

@@ -194,17 +194,25 @@ export function resolveSoleAgentId(cfg: OpenClawConfig, context?: AgentSelection
   );
 }
 
-/** @deprecated Use resolveSoleAgentId; stored default markers are retired. */
+function tryResolveRawLegacyDefaultAgentId(cfg: OpenClawConfig): string | undefined {
+  if (cfg.agents?.ownership === "explicit") {
+    return undefined;
+  }
+  const marked = listAgentEntries(cfg).filter((entry) => entry.default === true);
+  return marked.length === 1 ? normalizeAgentId(marked[0]!.id) : undefined;
+}
+
+/** @deprecated Use resolveSoleAgentId; accepts raw shipped markers only for input compatibility. */
 export function resolveDefaultAgentId(
   cfg: OpenClawConfig,
   context?: AgentSelectionContext,
 ): string {
-  return resolveSoleAgentId(cfg, context);
+  return tryResolveRawLegacyDefaultAgentId(cfg) ?? resolveSoleAgentId(cfg, context);
 }
 
-/** @deprecated Use tryResolveSoleAgentId; stored default markers are retired. */
+/** @deprecated Use tryResolveSoleAgentId; accepts raw shipped markers only for input compatibility. */
 export function tryResolveDefaultAgentId(cfg: OpenClawConfig): string | undefined {
-  return tryResolveSoleAgentId(cfg);
+  return tryResolveRawLegacyDefaultAgentId(cfg) ?? tryResolveSoleAgentId(cfg);
 }
 
 export function resolveAgentEntry(cfg: OpenClawConfig, agentId: string): AgentEntry | undefined {

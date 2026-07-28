@@ -106,13 +106,17 @@ export async function refreshLegacyDefaultAgentOwnerHandoff(
 }
 
 /** Replaces stale in-memory rows before a Gateway publishes new agent resolution. */
-export async function reloadForConfigAdoption(state: CronServiceState) {
+export async function reloadForConfigAdoption(
+  state: CronServiceState,
+  incomingConfig: OpenClawConfig,
+) {
   const release = await acquireCronOperationLock(state);
   try {
     await ensureLoaded(state, { skipRecompute: true });
     const legacyDefaultAgentId =
       state.deps.legacyDefaultAgentId ?? resolveCurrentDefaultAgentId(state);
-    if (legacyDefaultAgentId) {
+    const incomingAgentIds = new Set(listAgentIds(incomingConfig).map(normalizeAgentId));
+    if (legacyDefaultAgentId && incomingAgentIds.has(normalizeAgentId(legacyDefaultAgentId))) {
       const migration = await materializeLoadedLegacyDefaultAgentOwners(
         state,
         legacyDefaultAgentId,
@@ -122,11 +126,14 @@ export async function reloadForConfigAdoption(state: CronServiceState) {
       }
     }
     await refreshLegacyDefaultAgentOwnerHandoff(state);
-    // The config adoption that retires legacy ownership has now committed to the store.
-    state.deps.legacyDefaultAgentId = undefined;
   } finally {
     release();
   }
+}
+
+/** Retires the retained handoff owner only after the caller publishes the incoming config. */
+export function completeConfigAdoption(state: CronServiceState) {
+  state.deps.legacyDefaultAgentId = undefined;
 }
 
 /** Starts the cron service, recovers interrupted runs, catches up missed jobs, and arms the timer. */
@@ -307,3 +314,6 @@ export function resumeScheduling(state: CronServiceState) {
     throw err;
   }
 }
+import { listAgentIds } from "../../agents/agent-scope-config.js";
+import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import { normalizeAgentId } from "../../routing/session-key.js";

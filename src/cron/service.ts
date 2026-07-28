@@ -1,3 +1,4 @@
+import type { OpenClawConfig } from "../config/types.openclaw.js";
 /** Stateful CronService facade around the locked service operation helpers. */
 import { registerLiveCronService } from "./live-service-registry.js";
 import type {
@@ -115,8 +116,12 @@ export class CronService implements CronServiceContract {
     await lifecycleOps.refreshLegacyDefaultAgentOwnerHandoff(this.state, options);
   }
 
-  async reloadForConfigAdoption() {
-    await lifecycleOps.reloadForConfigAdoption(this.state);
+  async reloadForConfigAdoption(incomingConfig: OpenClawConfig) {
+    await lifecycleOps.reloadForConfigAdoption(this.state, incomingConfig);
+  }
+
+  completeConfigAdoption() {
+    lifecycleOps.completeConfigAdoption(this.state);
   }
 
   pauseScheduling() {

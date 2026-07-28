@@ -647,6 +647,8 @@ export const FIELD_LABELS: Record<string, string> = {
   "agents.entries.*.heartbeat.timeoutSeconds": "Heartbeat Timeout (Seconds)",
   "agents.defaults.systemAgent": "System Agent Target",
   "agents.defaults.systemAgent.agentId": "System Agent Owner",
+  "agents.defaults.authInheritance": "Auth Inheritance Target",
+  "agents.defaults.authInheritance.agentId": "Auth Inheritance Owner",
   "agents.defaults.sandbox.browser.network": "Sandbox Browser Network",
   "agents.defaults.sandbox.browser.cdpSourceRange": "Sandbox Browser CDP Source Port Range",
   "agents.defaults.sandbox.docker.dangerouslyAllowContainerNamespaceJoin":

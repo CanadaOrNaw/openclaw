@@ -51,13 +51,14 @@ describe("explicit ambient agent targets", () => {
     }
   });
 
-  it("accepts configured heartbeat, system-agent, and Talk targets", () => {
+  it("accepts configured heartbeat, system-agent, auth-inheritance, and Talk targets", () => {
     expect(
       OpenClawSchema.safeParse({
         agents: {
           defaults: {
             heartbeat: { agentId: "ops" },
             systemAgent: { agentId: "ops" },
+            authInheritance: { agentId: "ops" },
           },
           entries: { ops: {} },
         },
@@ -79,6 +80,12 @@ describe("explicit ambient agent targets", () => {
         entries: { main: {} },
       },
     },
+    {
+      agents: {
+        defaults: { authInheritance: { agentId: " " } },
+        entries: { main: {} },
+      },
+    },
     { agents: { entries: { main: {} } }, talk: { agentId: " " } },
   ])("rejects blank explicit targets", (config) => {
     expect(OpenClawSchema.safeParse(config).success).toBe(false);
@@ -87,6 +94,18 @@ describe("explicit ambient agent targets", () => {
   it("validates targets against the implicit main roster", () => {
     expect(OpenClawSchema.safeParse({ talk: { agentId: "main" } }).success).toBe(true);
     expect(OpenClawSchema.safeParse({ talk: { agentId: "missing" } }).success).toBe(false);
+  });
+
+  it("allows the inherited credential owner to outlive its roster entry", () => {
+    expect(
+      OpenClawSchema.safeParse({
+        agents: {
+          ownership: "explicit",
+          defaults: { authInheritance: { agentId: "retired-ops" } },
+          entries: { research: {}, writer: {} },
+        },
+      }).success,
+    ).toBe(true);
   });
 });
 
@@ -126,6 +145,7 @@ describe("multi-agent ambient ownership warnings", () => {
       "channels.telegram",
       "agents.defaults.heartbeat.agentId",
       "agents.defaults.systemAgent.agentId",
+      "agents.defaults.authInheritance.agentId",
       "talk.agentId",
     ]);
   });

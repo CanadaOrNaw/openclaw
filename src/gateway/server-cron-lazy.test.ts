@@ -204,6 +204,31 @@ describe("createLazyGatewayCronState", () => {
     expect(cron["resumeScheduling"]).toHaveBeenCalledTimes(2);
   });
 
+  it("forwards config-adoption completion to the loaded service", async () => {
+    const cron = createCronService();
+    hoisted.setState(createCronState(cron));
+    const lazy = createLazyGatewayCronState(createParams());
+    const incomingConfig = { agents: { entries: { ops: {} } } };
+
+    await lazy.cron.reloadForConfigAdoption(incomingConfig);
+    lazy.cron.completeConfigAdoption();
+
+    expect(cron.reloadForConfigAdoption).toHaveBeenCalledWith(incomingConfig);
+    expect(cron.completeConfigAdoption).toHaveBeenCalledOnce();
+  });
+
+  it("applies config-adoption completion when the service loads later", async () => {
+    const cron = createCronService();
+    hoisted.setState(createCronState(cron));
+    const lazy = createLazyGatewayCronState(createParams());
+
+    lazy.cron.completeConfigAdoption();
+    expect(hoisted.buildGatewayCronService).not.toHaveBeenCalled();
+    await lazy.cron.status();
+
+    expect(cron.completeConfigAdoption).toHaveBeenCalledOnce();
+  });
+
   it("waits to start while scheduling is paused", async () => {
     const cron = createCronService();
     hoisted.setState(createCronState(cron));
@@ -324,6 +349,7 @@ function createCronService(): GatewayCronServiceContract {
     pauseScheduling: vi.fn(),
     resumeScheduling: vi.fn(),
     reloadForConfigAdoption: vi.fn(async () => {}),
+    completeConfigAdoption: vi.fn(),
     status: vi.fn(async () => ({ enabled: true }) as never),
     list: vi.fn(async () => [] as never),
     listPage: vi.fn(async () => ({ items: [], total: 0 }) as never),

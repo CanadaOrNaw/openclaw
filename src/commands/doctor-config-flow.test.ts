@@ -1677,6 +1677,7 @@ describe("doctor config flow", () => {
     expect(result.cfg.agents?.defaults).toMatchObject({
       heartbeat: { agentId: "ops" },
       systemAgent: { agentId: "ops" },
+      authInheritance: { agentId: "ops" },
     });
     expect(result.cfg.talk).toMatchObject({ provider: "test", agentId: "ops" });
     expect(result.cfg.agents?.entries?.ops).not.toHaveProperty("default");

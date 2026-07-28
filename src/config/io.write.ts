@@ -313,6 +313,9 @@ export async function writeConfigFileFromContext(
   const validationCandidate = containsConfigIncludeDirective(validationSourceCandidate)
     ? context.resolveRuntimePreflightSourceConfig(validationSourceCandidate as OpenClawConfig)
     : validationSourceCandidate;
+  if (workspacePin.pluginPath) {
+    await deps.fs.promises.mkdir(workspacePin.pluginPath, { recursive: true, mode: 0o700 });
+  }
   const validated = validateConfigObjectRawWithPlugins(validationCandidate, {
     env: deps.env,
     pluginValidation: options.skipPluginValidation ? "skip" : "full",

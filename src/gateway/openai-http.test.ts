@@ -210,7 +210,7 @@ describe("OpenAI-compatible HTTP API (e2e)", () => {
     };
 
     try {
-      testState.agentsConfig = { list: [{ id: "main" }, { id: "beta" }] };
+      testState.agentsConfig = { list: [{ id: "main", default: true }, { id: "beta" }] };
       resetConfigRuntimeState();
 
       {
@@ -228,6 +228,7 @@ describe("OpenAI-compatible HTTP API (e2e)", () => {
           method: "POST",
           headers: {
             "content-type": "application/json",
+            "x-openclaw-agent-id": "main",
           },
           body: JSON.stringify({ messages: [{ role: "user", content: "hi" }] }),
         });
@@ -256,6 +257,7 @@ describe("OpenAI-compatible HTTP API (e2e)", () => {
           model: "openclaw/default",
           messages: [{ role: "user", content: "hi" }],
         },
+        headers: { "x-openclaw-agent-id": "main" },
         matcher: /^agent:main:/,
       });
 
@@ -292,6 +294,7 @@ describe("OpenAI-compatible HTTP API (e2e)", () => {
           port,
           { model: "openclaw", messages: [{ role: "user", content: "hi" }] },
           {
+            "x-openclaw-agent-id": "main",
             "x-openclaw-session-key": "agent:main:harness:codex:supervision:spoofed-native-thread",
           },
         );
@@ -320,12 +323,18 @@ describe("OpenAI-compatible HTTP API (e2e)", () => {
         await res.text();
       }
 
+      testState.agentsConfig = { list: [{ id: "main" }] };
+      resetConfigRuntimeState();
+
       {
         agentCommand.mockClear();
         const res = await postChatCompletions(
           port,
           { model: "openclaw", messages: [{ role: "user", content: "hi" }] },
-          { "x-openclaw-session-key": "agent:main:subagent:spoofed" },
+          {
+            "x-openclaw-agent-id": "main",
+            "x-openclaw-session-key": "agent:main:subagent:spoofed",
+          },
         );
         expect(res.status).toBe(400);
         const json = (await res.json()) as { error?: { type?: string; message?: string } };

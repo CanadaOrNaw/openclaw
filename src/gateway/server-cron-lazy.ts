@@ -30,6 +30,7 @@ export function createLazyGatewayCronState(params: LazyGatewayCronParams): Gatew
   const storePath = resolveCronJobsStorePathFromConfig(params.cfg, env);
   const cronEnabled = env.OPENCLAW_SKIP_CRON !== "1" && params.cfg.cron?.enabled !== false;
   let loaded: LoadedGatewayCronState | null = null;
+  let configAdoptionCompletionPending = false;
   let stopped = false;
   let lifecycleGeneration = 0;
   let schedulingPaused = false;
@@ -76,7 +77,12 @@ export function createLazyGatewayCronState(params: LazyGatewayCronParams): Gatew
     }
     // Share the same import promise across concurrent API calls so only one
     // scheduler instance is built for a Gateway process.
-    return await cronStateLoader.load();
+    const resolved = await cronStateLoader.load();
+    if (configAdoptionCompletionPending) {
+      resolved.state.cron.completeConfigAdoption();
+      configAdoptionCompletionPending = false;
+    }
+    return resolved;
   };
 
   const cron: GatewayCronServiceContract = {
@@ -241,8 +247,15 @@ export function createLazyGatewayCronState(params: LazyGatewayCronParams): Gatew
       const loadedBlockers = loaded?.state.cron.getSuspensionBlockerCount?.() ?? 0;
       return loaded?.phase === "starting" ? Math.max(1, loadedBlockers) : loadedBlockers;
     },
-    async reloadForConfigAdoption() {
-      await (await load()).state.cron.reloadForConfigAdoption();
+    async reloadForConfigAdoption(incomingConfig) {
+      await (await load()).state.cron.reloadForConfigAdoption(incomingConfig);
+    },
+    completeConfigAdoption() {
+      if (loaded) {
+        loaded.state.cron.completeConfigAdoption();
+      } else {
+        configAdoptionCompletionPending = true;
+      }
     },
     async status() {
       return await (await load()).state.cron.status();

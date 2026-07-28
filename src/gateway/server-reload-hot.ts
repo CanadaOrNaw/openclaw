@@ -112,7 +112,7 @@ export function createGatewayReloadHandlers(params: GatewayReloadHandlerParams) 
     // A CLI may have migrated SQLite in another process. Replace the live
     // scheduler snapshot before commitRuntime publishes the new agent roster.
     if (reloadPlanChangesAgentResolution(plan)) {
-      await state.cronState.cron.reloadForConfigAdoption();
+      await state.cronState.cron.reloadForConfigAdoption(nextConfig);
       if (!isTransactionCurrent()) {
         throw new GatewayHotReloadCancelledError();
       }
@@ -197,6 +197,9 @@ export function createGatewayReloadHandlers(params: GatewayReloadHandlerParams) 
           { waitForReplacement: true },
         );
         params.setState(nextState);
+        if (reloadPlanChangesAgentResolution(plan)) {
+          state.cronState.cron.completeConfigAdoption();
+        }
         // All rejecting work is complete. Publish pre-resolved lane limits at
         // the final synchronous commit edge, alongside the accepted state.
         if (hooksReloadResolved) {

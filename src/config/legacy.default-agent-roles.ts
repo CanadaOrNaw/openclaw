@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
-import { listAgentEntries } from "../agents/agent-scope-config.js";
+import { listAgentEntries, tryResolveSoleAgentId } from "../agents/agent-scope-config.js";
 import { resolveDefaultAgentWorkspaceDir } from "../agents/workspace-default.js";
 import { normalizeRouteBindingChannelId } from "../routing/binding-scope.js";
 import { normalizeAgentId } from "../routing/session-key.js";
@@ -233,6 +233,38 @@ export function materializeLegacyDefaultAgentRoles(
     warnings.push({
       path: "agents.defaults.systemAgent.agentId",
       message: `legacy marker-free fleet temporarily assigns system-agent consults to first roster agent "${defaultAgentId}"; set agents.defaults.systemAgent.agentId or run "openclaw doctor --fix"`,
+    });
+  }
+
+  const rawAuthInheritance = defaultsConfig?.authInheritance;
+  const authInheritanceConfig = isRecord(rawAuthInheritance) ? rawAuthInheritance : undefined;
+  // A sole non-main owner stays implicit; the sole-to-fleet writer reruns this materializer
+  // against the expanded roster and persists the binding at that behavior-changing commit.
+  const inheritedAuthFallbackAgentId = tryResolveSoleAgentId(cfg) ?? "main";
+  if (
+    defaultAgentId !== normalizeAgentId(inheritedAuthFallbackAgentId) &&
+    canMaterializeDefaults &&
+    (rawAuthInheritance === undefined || authInheritanceConfig !== undefined) &&
+    (!authInheritanceConfig || !Object.hasOwn(authInheritanceConfig, "agentId"))
+  ) {
+    next = {
+      ...next,
+      agents: {
+        ...next.agents,
+        defaults: {
+          ...next.agents?.defaults,
+          authInheritance: {
+            ...next.agents?.defaults?.authInheritance,
+            agentId: defaultAgentId,
+          },
+        },
+      },
+    };
+    changes.push(`Preserved inherited credential ownership for agent "${defaultAgentId}".`);
+    insertedPaths.push(["agents", "defaults", "authInheritance", "agentId"]);
+    warnings.push({
+      path: "agents.defaults.authInheritance.agentId",
+      message: `legacy upgrade keeps inherited credentials in agent "${defaultAgentId}" until H2-2 relocation; keep this binding until credential relocation completes`,
     });
   }
 

@@ -12,6 +12,33 @@ function expectedAgentDir(agentId: string): string {
 }
 
 describe("resolveLegacyInheritedAuthDir", () => {
+  it("uses the durable binding after a process restart", () => {
+    const config = {
+      agents: {
+        ownership: "explicit",
+        defaults: { authInheritance: { agentId: "ops" } },
+        entries: { ops: {}, research: {} },
+      },
+    } satisfies OpenClawConfig;
+
+    expect(resolveLegacyInheritedAuthDir(config, env)).toBe(expectedAgentDir("ops"));
+  });
+
+  it("prefers the durable binding during the same-process retention window", () => {
+    const config = retainLegacyDefaultAgentId(
+      {
+        agents: {
+          ownership: "explicit",
+          defaults: { authInheritance: { agentId: "research" } },
+          entries: { ops: {}, research: {} },
+        },
+      } satisfies OpenClawConfig,
+      "ops",
+    );
+
+    expect(resolveLegacyInheritedAuthDir(config, env)).toBe(expectedAgentDir("research"));
+  });
+
   it("follows the retained legacy owner for an upgraded fleet", () => {
     const config = retainLegacyDefaultAgentId(
       {

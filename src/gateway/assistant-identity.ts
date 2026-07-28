@@ -2,7 +2,11 @@
 // Combines UI, agent config, and workspace identity files for Control UI display.
 import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
 import { truncateUtf16Safe } from "@openclaw/normalization-core/utf16-slice";
-import { resolveAgentWorkspaceDir, resolveDefaultAgentId } from "../agents/agent-scope.js";
+import {
+  resolveAgentWorkspaceDir,
+  resolveDefaultAgentId,
+  tryResolveSoleAgentId,
+} from "../agents/agent-scope.js";
 import { resolveAgentIdentity } from "../agents/identity.js";
 import { loadAgentIdentity } from "../commands/agents.config.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
@@ -101,9 +105,11 @@ export function resolveAssistantIdentity(params: {
   agentId?: string | null;
   workspaceDir?: string | null;
 }): ResolvedAssistantIdentity {
-  const defaultAgentId = normalizeAgentId(resolveDefaultAgentId(params.cfg));
-  const agentId = normalizeAgentId(params.agentId ?? defaultAgentId);
-  const isDefaultAgent = agentId === defaultAgentId;
+  const soleAgentId = tryResolveSoleAgentId(params.cfg);
+  const agentId = normalizeAgentId(
+    params.agentId ?? soleAgentId ?? resolveDefaultAgentId(params.cfg),
+  );
+  const isDefaultAgent = soleAgentId !== undefined && agentId === normalizeAgentId(soleAgentId);
   const workspaceDir = params.workspaceDir ?? resolveAgentWorkspaceDir(params.cfg, agentId);
   const configAssistant = params.cfg.ui?.assistant;
   const agentIdentity = resolveAgentIdentity(params.cfg, agentId);

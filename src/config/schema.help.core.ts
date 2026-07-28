@@ -315,6 +315,10 @@ export const CORE_FIELD_HELP: Record<string, string> = {
     "Target settings for ambient OpenClaw system-agent and Custodian inference.",
   "agents.defaults.systemAgent.agentId":
     "Agent whose model and credentials own ambient system-agent and Custodian consults. Delegated consults still use their requesting agent.",
+  "agents.defaults.authInheritance":
+    "Upgrade compatibility owner for the inherited credential store until credentials are relocated per agent.",
+  "agents.defaults.authInheritance.agentId":
+    "Agent whose legacy credential store remains the inheritance source after default-marker retirement. Written automatically during upgrade when the former owner was not main.",
   "talk.agentId":
     "Agent that owns Talk sessions created without an explicit agent-scoped session key.",
 };

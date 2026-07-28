@@ -533,6 +533,7 @@ function createReloadHandlersForTest(
     start: vi.fn(async () => {}),
     stop: vi.fn(),
     reloadForConfigAdoption: vi.fn(async () => {}),
+    completeConfigAdoption: vi.fn(),
   };
   const stopExitWatchers = vi.fn();
   const heartbeatRunner = {
@@ -971,6 +972,9 @@ describe("managed reload transaction ownership", () => {
       reloadForConfigAdoption: vi.fn(async () => {
         events.push("cron-adoption");
       }),
+      completeConfigAdoption: vi.fn(() => {
+        events.push("cron-adoption-complete");
+      }),
     };
     const state = { ...createDefaultGatewayReloadState(), cronState: { cron } as never };
     const writeListenerRef = createConfigWriteListenerRef();
@@ -1008,7 +1012,9 @@ describe("managed reload transaction ownership", () => {
       await accepted;
 
       expect(cron.reloadForConfigAdoption).toHaveBeenCalledOnce();
-      expect(events.slice(0, 2)).toEqual(["cron-adoption", "restart-preflight"]);
+      expect(cron.reloadForConfigAdoption).toHaveBeenCalledWith(nextConfig);
+      expect(cron.completeConfigAdoption).toHaveBeenCalledOnce();
+      expect(events).toEqual(["cron-adoption", "restart-preflight", "cron-adoption-complete"]);
     } finally {
       await reloader.stop();
     }
@@ -1048,13 +1054,19 @@ describe("gateway hot reload model state", () => {
       changedPaths: ["agents"],
       hotReasons: ["agents"],
     });
+    const nextConfig = {
+      agents: { ownership: "explicit" as const, entries: { ops: {}, research: {} } },
+    };
 
-    await applyHotReload(plan, {
-      agents: { ownership: "explicit", entries: { ops: {}, research: {} } },
-    });
+    await applyHotReload(plan, nextConfig);
 
     expect(cron.reloadForConfigAdoption).toHaveBeenCalledOnce();
+    expect(cron.reloadForConfigAdoption).toHaveBeenCalledWith(nextConfig);
+    expect(cron.completeConfigAdoption).toHaveBeenCalledOnce();
     expect(cron.reloadForConfigAdoption.mock.invocationCallOrder[0]).toBeLessThan(
+      setState.mock.invocationCallOrder[0]!,
+    );
+    expect(cron.completeConfigAdoption.mock.invocationCallOrder[0]).toBeGreaterThan(
       setState.mock.invocationCallOrder[0]!,
     );
   });

@@ -272,6 +272,7 @@ describe("persisted implicit-main roster migration", () => {
             workspace: "/srv/ops",
             heartbeat: { agentId: "writer" },
             systemAgent: { agentId: "writer" },
+            authInheritance: { agentId: "writer" },
           },
         },
         talk: { agentId: "writer" },
@@ -282,6 +283,7 @@ describe("persisted implicit-main roster migration", () => {
         'Pinned the retired default agent "writer" to its current workspace.',
         'Assigned ambient heartbeat runs to agent "writer".',
         'Assigned ambient system-agent consults to agent "writer".',
+        'Preserved inherited credential ownership for agent "writer".',
         'Assigned ambient Talk sessions to agent "writer".',
         "Removed retired agents.entries.*.default markers.",
       ],
@@ -289,6 +291,7 @@ describe("persisted implicit-main roster migration", () => {
         ["agents", "entries", "writer", "workspace"],
         ["agents", "defaults", "heartbeat", "agentId"],
         ["agents", "defaults", "systemAgent", "agentId"],
+        ["agents", "defaults", "authInheritance", "agentId"],
         ["talk", "agentId"],
       ],
       retainedLegacyDefaultAgentId: "writer",
@@ -319,6 +322,18 @@ describe("persisted implicit-main roster migration", () => {
       talk: { agentId: "10" },
     });
     expect(migrated.retainedLegacyDefaultAgentId).toBe("10");
+  });
+
+  it("does not persist a redundant auth inheritance owner for main or a sole agent", () => {
+    const mainFleet = migratePersistedImplicitMainRoster({
+      agents: { entries: { main: { default: true }, ops: {} } },
+    }).config as OpenClawConfig;
+    const soleAgent = migratePersistedImplicitMainRoster({
+      agents: { entries: { ops: { default: true } } },
+    }).config as OpenClawConfig;
+
+    expect(mainFleet.agents?.defaults?.authInheritance).toBeUndefined();
+    expect(soleAgent.agents?.defaults?.authInheritance).toBeUndefined();
   });
 
   it.each([
@@ -471,6 +486,9 @@ describe("persisted implicit-main roster migration", () => {
       }
       expect(snapshot.sourceConfig.agents?.defaults?.heartbeat?.agentId).toBe(expectedOwner);
       expect(snapshot.sourceConfig.agents?.defaults?.systemAgent?.agentId).toBe(expectedOwner);
+      expect(snapshot.sourceConfig.agents?.defaults?.authInheritance?.agentId).toBe(
+        expectedOwner === "main" ? undefined : expectedOwner,
+      );
       expect(snapshot.sourceConfig.talk?.agentId).toBe(expectedOwner);
       expect(JSON.parse(await fs.readFile(configPath, "utf8"))).toEqual({
         agents: { entries },
@@ -493,6 +511,7 @@ describe("persisted implicit-main roster migration", () => {
         defaults: {
           heartbeat: { agentId: "ops" },
           systemAgent: { agentId: "ops" },
+          authInheritance: { agentId: "ops" },
         },
         entries: { ops: { workspace: expect.any(String) }, research: {} },
       },
@@ -514,6 +533,7 @@ describe("persisted implicit-main roster migration", () => {
       "channels.telegram",
       "agents.defaults.heartbeat.agentId",
       "agents.defaults.systemAgent.agentId",
+      "agents.defaults.authInheritance.agentId",
       "talk.agentId",
     ]);
   });

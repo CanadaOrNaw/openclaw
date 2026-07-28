@@ -175,7 +175,7 @@ export function startManagedGatewayConfigReloader(
     if (reloadPlanChangesAgentResolution(plan)) {
       // The old scheduler still owns the retained legacy id. Adopt its rows before
       // restart tears it down, or the replacement can cold-start ownerless jobs.
-      await params.getState().cronState.cron.reloadForConfigAdoption();
+      await params.getState().cronState.cron.reloadForConfigAdoption(nextConfig);
       assertCurrent();
     }
     const restartLifecycle = beginGatewayRestartLifecycle();
@@ -294,6 +294,9 @@ export function startManagedGatewayConfigReloader(
       restartTransaction.settle("committed");
       transactionOwnership.commitRuntimeEnv();
       restartLifecycle.settle("committed");
+      if (reloadPlanChangesAgentResolution(plan)) {
+        params.getState().cronState.cron.completeConfigAdoption();
+      }
     } catch (error) {
       restartTransaction?.settle("rejected");
       restartLifecycle.settle("rejected");

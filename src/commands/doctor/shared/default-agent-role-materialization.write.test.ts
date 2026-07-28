@@ -97,7 +97,11 @@ describe("default role materialization authored writes", () => {
     const persisted = JSON.parse(await fs.readFile(configPath, "utf-8")) as {
       agents?: {
         ownership?: string;
-        defaults?: { model?: string; heartbeat?: { agentId?: string } };
+        defaults?: {
+          model?: string;
+          heartbeat?: { agentId?: string };
+          authInheritance?: { agentId?: string };
+        };
         entries?: Record<string, { model?: string; default?: boolean; workspace?: string }>;
       };
       channels?: { $include?: string };
@@ -122,6 +126,7 @@ describe("default role materialization authored writes", () => {
       match: { channel: "telegram", accountId: "*" },
     });
     expect(persisted.agents?.defaults?.heartbeat?.agentId).toBe("ops");
+    expect(persisted.agents?.defaults?.authInheritance?.agentId).toBe("ops");
     expect(persisted.talk?.agentId).toBe("ops");
     expect(persisted.plugins?.load?.paths).toContain(workspacePluginPath);
     expect(persisted.plugins?.entries?.["voice-call"]?.config?.agentId).toBe("ops");
@@ -538,6 +543,7 @@ describe("default role materialization authored writes", () => {
                 heartbeat?: { agentId?: string };
                 model?: { primary?: string };
                 systemAgent?: { agentId?: string };
+                authInheritance?: { agentId?: string };
               };
               entries?: Record<string, { default?: boolean; workspace?: string }>;
             };
@@ -560,6 +566,7 @@ describe("default role materialization authored writes", () => {
           });
           expect(persisted.agents?.defaults?.heartbeat?.agentId).toBe("ops");
           expect(persisted.agents?.defaults?.systemAgent?.agentId).toBe("ops");
+          expect(persisted.agents?.defaults?.authInheritance?.agentId).toBe("ops");
           expect(persisted.talk?.agentId).toBe("ops");
           expect(persisted.plugins?.entries?.["voice-call"]?.config?.agentId).toBe("ops");
           expect(persisted.agents?.defaults?.model?.primary).toBe("openai/gpt-5.5");

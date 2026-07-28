@@ -29,22 +29,20 @@ describe("agent roster resolution", () => {
     expect(() => resolveDefaultAgentId({ agents: { list: [] } })).toThrow("No agents configured");
   });
 
-  it("resolves only a sole agent and ignores retired marker aliases", () => {
+  it("keeps raw retired markers only at the deprecated compatibility alias", () => {
     expect(resolveSoleAgentId({ agents: { entries: { alpha: {} } } })).toBe("alpha");
     expect(tryResolveSoleAgentId({ agents: { entries: { alpha: {} } } })).toBe("alpha");
     const multi = {
       agents: { list: [{ id: "alpha", default: true }, { id: "beta" }] },
     };
-    expect(tryResolveDefaultAgentId(multi)).toBeUndefined();
+    expect(tryResolveDefaultAgentId(multi)).toBe("alpha");
+    expect(resolveDefaultAgentId(multi)).toBe("alpha");
+    expect(() => resolveSoleAgentId(multi)).toThrow(AgentSelectionRequiredError);
     expect(() =>
-      resolveDefaultAgentId(multi, {
-        surface: "test surface",
-        hint: "Set test.agentId.",
+      resolveDefaultAgentId({
+        agents: { ownership: "explicit", list: multi.agents.list },
       }),
-    ).toThrow(AgentSelectionRequiredError);
-    expect(() => resolveDefaultAgentId(multi)).toThrow(
-      "Multiple agents are configured, but this operation has no explicit owner",
-    );
+    ).toThrow("Multiple agents are configured, but this operation has no explicit owner");
   });
 
   it("offers a non-throwing sole-agent lookup for raw SDK rosters", () => {
