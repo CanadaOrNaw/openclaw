@@ -13,6 +13,7 @@ const {
 }));
 
 vi.mock("../agents/agent-scope.js", () => ({
+  resolveDefaultAgentId: vi.fn(() => "main"),
   tryResolveDefaultAgentId: vi.fn(() => undefined),
 }));
 

@@ -3,7 +3,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { prepareLegacyCronOwnerHandoffs } from "../../config/io.cron-owner-handoff.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
-import { readRetainedLegacyDefaultCronOwnerForStore } from "../legacy-default-agent-owner-handoff.js";
+import {
+  readRetainedLegacyDefaultCronOwnerForStore,
+  retainLegacyDefaultCronOwnerHandoffForStore,
+} from "../legacy-default-agent-owner-handoff.js";
 import { setupCronServiceSuite } from "../service.test-harness.js";
 import { loadCronStore, saveCronStore } from "../store.js";
 import type { CronJob } from "../types.js";
@@ -234,5 +237,30 @@ describe("cron legacy owner handoff persistence", () => {
     });
     expect(readRetainedLegacyDefaultCronOwnerForStore(currentStorePath)).toBe("ops");
     expect(readRetainedLegacyDefaultCronOwnerForStore(incomingStorePath)).toBe("research");
+  });
+
+  it("honors a destination receipt without changing receiptless destination ownership", async () => {
+    const { storePath: sourceStorePath } = await makeStorePath();
+    const { storePath: retainedDestinationPath } = await makeStorePath();
+    const { storePath: receiptlessDestinationPath } = await makeStorePath();
+    await writeJobs(sourceStorePath, [createOwnerlessJob("source-ownerless")]);
+    await writeJobs(retainedDestinationPath, [createOwnerlessJob("retained-ownerless")]);
+    await writeJobs(receiptlessDestinationPath, [createOwnerlessJob("receiptless-ownerless")]);
+    retainLegacyDefaultCronOwnerHandoffForStore(retainedDestinationPath, "research", process.env);
+
+    const handoff = await prepareLegacyCronOwnerHandoffs({
+      env: process.env,
+      legacyDefaultAgentId: "ops",
+      targets: [sourceStorePath, retainedDestinationPath, receiptlessDestinationPath].map(
+        (storePath) => ({ config: {}, storePath }),
+      ),
+    });
+    handoff.release();
+
+    expect((await loadCronStore(sourceStorePath)).jobs[0]?.agentId).toBe("ops");
+    expect((await loadCronStore(retainedDestinationPath)).jobs[0]?.agentId).toBe("research");
+    expect((await loadCronStore(receiptlessDestinationPath)).jobs[0]?.agentId).toBe("ops");
+    expect(readRetainedLegacyDefaultCronOwnerForStore(retainedDestinationPath)).toBe("research");
+    expect(readRetainedLegacyDefaultCronOwnerForStore(receiptlessDestinationPath)).toBe("ops");
   });
 });

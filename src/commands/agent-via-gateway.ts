@@ -251,8 +251,7 @@ async function loadRemoteGatewayRoster(cfg: OpenClawConfig): Promise<RemoteGatew
     defaultId: normalizedDefaultId,
     ownership: result.ownership,
     // Old gateways expose only defaultId, where it remains authoritative.
-    selectionRequired:
-      result.selectionRequired ?? (result.ownership === "explicit" && entries.length > 1),
+    selectionRequired: result.selectionRequired ?? result.ownership === "explicit",
     mainKey: result.mainKey,
     scope: result.scope,
   };

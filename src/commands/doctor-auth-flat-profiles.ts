@@ -39,6 +39,7 @@ import type {
   AuthProfileState,
   AuthProfileStore,
 } from "../agents/auth-profiles/types.js";
+import { resolveLegacyInheritedAuthDir } from "../agents/legacy-inherited-auth-dir.js";
 import { splitTrailingAuthProfile } from "../agents/model-ref-profile.js";
 import { formatCliCommand } from "../cli/command-format.js";
 import { resolveStateDir } from "../config/paths.js";
@@ -503,10 +504,8 @@ function isDefaultAgentCandidate(
   cfg: OpenClawConfig,
   env: NodeJS.ProcessEnv,
 ): boolean {
-  const soleAgentId = tryResolveSoleAgentId(cfg);
   return (
-    soleAgentId !== undefined &&
-    path.resolve(candidate.agentDir ?? "") === path.resolve(resolveAgentDir(cfg, soleAgentId, env))
+    path.resolve(candidate.agentDir ?? "") === path.resolve(resolveLegacyInheritedAuthDir(cfg, env))
   );
 }
 

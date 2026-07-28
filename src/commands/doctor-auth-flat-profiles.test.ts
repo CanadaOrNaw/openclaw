@@ -1176,6 +1176,70 @@ describe("maybeMigrateAuthProfileJsonStoresToSqlite", () => {
     expectMigratedArchive(authPath);
   });
 
+  it("strips config credentials only from the configured inheritance store", async () => {
+    const state = await makeTestState();
+    const researchAuthPath = await writeLegacyAuthProfilesJson(
+      state,
+      {
+        version: 1,
+        profiles: {
+          "openai:default": {
+            type: "api_key",
+            provider: "openai",
+            key: "sk-research-json",
+          },
+        },
+      },
+      "research",
+    );
+    const cfg = {
+      auth: {
+        profiles: {
+          "openai:default": {
+            provider: "openai",
+            mode: "api_key",
+            key: "sk-inherited-config",
+          },
+        },
+      },
+      agents: {
+        defaults: { authInheritance: { agentId: "ops" } },
+        entries: { ops: {}, research: {} },
+      },
+    } as OpenClawConfig;
+
+    const result = await maybeMigrateAuthProfileJsonStoresToSqlite({
+      cfg,
+      prompter: makePrompter(true),
+      env: state.env,
+      now: () => 475,
+    });
+
+    expect(result.detected).toEqual(
+      expect.arrayContaining([`${state.agentDir("ops")}/auth-profiles.json`, researchAuthPath]),
+    );
+    expect(result.configChanged).toBe(true);
+    expect(result.warnings).toStrictEqual([]);
+    expect(cfg.auth?.profiles?.["openai:default"]).toEqual({
+      provider: "openai",
+      mode: "api_key",
+    });
+    expect(
+      loadPersistedAuthProfileStore(state.agentDir("ops"))?.profiles["openai:default"],
+    ).toEqual({
+      type: "api_key",
+      provider: "openai",
+      key: "sk-inherited-config",
+    });
+    expect(
+      loadPersistedAuthProfileStore(state.agentDir("research"))?.profiles["openai:default"],
+    ).toEqual({
+      type: "api_key",
+      provider: "openai",
+      key: "sk-research-json",
+    });
+  });
+
   it("imports default-agent config api key alias SecretRefs as key refs", async () => {
     const cases = [
       {

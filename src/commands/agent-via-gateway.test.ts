@@ -939,6 +939,42 @@ describe("agentCliCommand", () => {
     );
   });
 
+  it("requires an explicit agent for a one-agent explicitly owned remote roster", async () => {
+    callGateway.mockImplementation(async (requestValue) => {
+      const request = requireRecord(requestValue, "gateway request");
+      if (request.method === "agents.list") {
+        return {
+          defaultId: "ops",
+          ownership: "explicit",
+          mainKey: "main",
+          scope: "per-sender",
+          agents: [{ id: "ops", name: "Operations" }],
+        };
+      }
+      return {
+        runId: "idem-1",
+        status: "ok",
+        result: { payloads: [{ text: "remote" }], meta: { stub: true } },
+      };
+    });
+
+    await withTempStore(
+      async () => {
+        await expect(agentCliCommand({ message: "hi" }, runtime)).rejects.toMatchObject({
+          code: "AGENT_SELECTION_REQUIRED",
+        });
+        await agentCliCommand({ message: "hi", agent: "ops" }, runtime);
+
+        const agentRequest = requireRecord(callGateway.mock.calls[2]?.[0], "agent request");
+        expect(requireRecord(agentRequest.params, "agent params").agentId).toBe("ops");
+      },
+      {
+        agents: { list: [{ id: "local-main" }] },
+        gateway: { mode: "remote", remote: { url: "wss://gateway.example" } },
+      },
+    );
+  });
+
   it("uses a retained legacy owner when selectionRequired is omitted", async () => {
     const selectAgent = vi.fn(async () => "research");
     callGateway.mockImplementation(async (requestValue) => {

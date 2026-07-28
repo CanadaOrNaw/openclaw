@@ -1,4 +1,7 @@
-import { retainLegacyDefaultCronOwnerHandoffForStore } from "../cron/legacy-default-agent-owner-handoff.js";
+import {
+  readRetainedLegacyDefaultCronOwnerForStore,
+  retainLegacyDefaultCronOwnerHandoffForStore,
+} from "../cron/legacy-default-agent-owner-handoff.js";
 import { beginLegacyDefaultOwnerHandoff } from "../cron/live-service-registry.js";
 import type { OpenClawConfig } from "./types.openclaw.js";
 
@@ -23,9 +26,14 @@ export async function prepareLegacyCronOwnerHandoffs(params: {
     const { materializeLegacyDefaultCronJobOwners } =
       await import("../commands/doctor/cron/legacy-repair.js");
     for (const target of params.targets) {
+      // Receipts belong to physical stores, not the config selecting them. A destination
+      // can carry an older owner's late-writer handoff and must keep that authority.
+      const legacyDefaultAgentId =
+        readRetainedLegacyDefaultCronOwnerForStore(target.storePath, params.env) ??
+        params.legacyDefaultAgentId;
       const handoff = beginLegacyDefaultOwnerHandoff({
         storePath: target.storePath,
-        legacyDefaultAgentId: params.legacyDefaultAgentId,
+        legacyDefaultAgentId,
       });
       handoffs.push(handoff);
       const liveMigration = await handoff.drainAndSeal();
@@ -38,7 +46,7 @@ export async function prepareLegacyCronOwnerHandoffs(params: {
         cfg: target.config,
         storePath: target.storePath,
         env: params.env,
-        legacyDefaultAgentId: params.legacyDefaultAgentId,
+        legacyDefaultAgentId,
       });
       if (migration.warnings.length > 0) {
         throw new Error(
@@ -49,7 +57,7 @@ export async function prepareLegacyCronOwnerHandoffs(params: {
       // Persist this after row migration but before config commit so late rows migrate at startup.
       retainLegacyDefaultCronOwnerHandoffForStore(
         target.storePath,
-        params.legacyDefaultAgentId,
+        legacyDefaultAgentId,
         params.env,
       );
       await handoff.refreshSealedServices();
