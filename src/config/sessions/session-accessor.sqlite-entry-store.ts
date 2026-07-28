@@ -530,7 +530,7 @@ export function copySqliteSessionOwnedStateForRepair(params: {
     ...storedSourceKeys.flatMap((key) => {
       const trimmedKey = key.trim();
       const normalizedKey = normalizeStoreSessionKey(trimmedKey);
-      return [trimmedKey, normalizedKey, ...foldedSessionKeyAliasCandidates(normalizedKey)];
+      return [trimmedKey, normalizedKey];
     }),
   ]).filter(Boolean);
   const sourceDb = getSessionKysely(params.source.db);

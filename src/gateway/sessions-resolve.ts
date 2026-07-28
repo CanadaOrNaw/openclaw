@@ -172,6 +172,11 @@ export async function resolveSessionKeyFromResolveParams(params: {
       Date.now(),
       cfg.session?.mainKey,
     );
+    const spawnedBy = normalizeOptionalString(p.spawnedBy);
+    const lineageSqlQuery =
+      (lineageQuery.excludeLineageSessionKeys?.length ?? 0) > 400
+        ? { selectionResidual: true as const }
+        : { ...lineageQuery, ...(spawnedBy ? { spawnedBy } : {}) };
     const { store } = loadCombinedSessionStoreForGateway(cfg, {
       agentId: p.agentId,
       projection: "list",
@@ -179,11 +184,8 @@ export async function resolveSessionKeyFromResolveParams(params: {
         archived: false,
         includeGlobal: p.includeGlobal === true,
         includeUnknown: !p.agentId && p.includeUnknown === true,
-        ...lineageQuery,
+        ...lineageSqlQuery,
         sessionId,
-        ...(normalizeOptionalString(p.spawnedBy)
-          ? { spawnedBy: normalizeOptionalString(p.spawnedBy) }
-          : {}),
       },
     });
     const matches = Object.entries(store).filter(
@@ -227,6 +229,11 @@ export async function resolveSessionKeyFromResolveParams(params: {
     Date.now(),
     cfg.session?.mainKey,
   );
+  const labelSpawnedBy = normalizeOptionalString(p.spawnedBy);
+  const labelLineageSqlQuery =
+    (labelLineageQuery.excludeLineageSessionKeys?.length ?? 0) > 400
+      ? { selectionResidual: true as const }
+      : { ...labelLineageQuery, ...(labelSpawnedBy ? { spawnedBy: labelSpawnedBy } : {}) };
   const { store } = loadCombinedSessionStoreForGateway(cfg, {
     agentId: p.agentId,
     projection: "list",
@@ -235,10 +242,7 @@ export async function resolveSessionKeyFromResolveParams(params: {
       includeGlobal: p.includeGlobal === true,
       includeUnknown: !p.agentId && p.includeUnknown === true,
       label: parsedLabel.label,
-      ...labelLineageQuery,
-      ...(normalizeOptionalString(p.spawnedBy)
-        ? { spawnedBy: normalizeOptionalString(p.spawnedBy) }
-        : {}),
+      ...labelLineageSqlQuery,
     },
   });
   const matches = Object.entries(store).filter(([matchKey]) =>

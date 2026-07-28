@@ -112,7 +112,7 @@ function loadGatewayStoreEntries(params: {
   const dependencies: SessionEntrySummary[] = [];
   for (let offset = 0; offset < dependencyKeys.length; offset += 400) {
     dependencies.push(
-      ...querySqliteSessionEntriesReadOnly({
+      ...queryEntries({
         agentId: params.agentId,
         clone: false,
         projection: params.projection,
