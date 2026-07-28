@@ -19,6 +19,7 @@ import { normalizeRouteBindingChannelId } from "../../routing/binding-scope.js";
 import { resolveAgentRoute } from "../../routing/resolve-route.js";
 import {
   buildAgentMainSessionKey,
+  isUnscopedSessionKeySentinel,
   isSubagentSessionKey,
   normalizeAccountId,
   normalizeAgentId,
@@ -188,6 +189,9 @@ function isConfiguredAgentMainSessionKey(params: {
   sessionKey: string;
   mainKey: string;
 }): boolean {
+  if (isUnscopedSessionKeySentinel(params.sessionKey)) {
+    return false;
+  }
   const agentId = resolveAgentIdFromSessionKey(
     params.sessionKey,
     tryResolveSoleAgentId(params.cfg),
@@ -611,7 +615,7 @@ export function createSessionsSendTool(opts?: {
         resolvedTargetAgentId ??
         parseAgentSessionKey(resolvedKey)?.agentId ??
         (labelAgentIdParam ? normalizeAgentId(labelAgentIdParam) : undefined) ??
-        (resolvedKey === "global" ? requesterAgentId : undefined);
+        (isUnscopedSessionKeySentinel(resolvedKey) ? requesterAgentId : undefined);
       const rawRequesterSessionKey = opts?.agentSessionKey ? effectiveRequesterKey : undefined;
       const parsedRequesterSessionKey = parseAgentSessionKey(rawRequesterSessionKey);
       const requesterRouteBindings = cfg.bindings?.filter(
@@ -741,7 +745,9 @@ export function createSessionsSendTool(opts?: {
         a2aPolicy,
       });
       const authorizationTargetKey =
-        resolvedKey === "global" && targetAgentId ? `agent:${targetAgentId}:global` : resolvedKey;
+        isUnscopedSessionKeySentinel(resolvedKey) && targetAgentId
+          ? `agent:${targetAgentId}:${resolvedKey}`
+          : resolvedKey;
       const access = visibilityGuard.check(authorizationTargetKey);
       if (!access.allowed) {
         return jsonResult({
