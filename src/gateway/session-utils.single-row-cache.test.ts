@@ -273,6 +273,7 @@ describe("single gateway session row child-session cache", () => {
           storePath,
           store,
           opts: { agentId: MAIN_AGENT_ID, limit: 1 },
+          sqlSelection: {},
         });
 
         expect(syncListed.sessions).toHaveLength(1);
@@ -288,6 +289,7 @@ describe("single gateway session row child-session cache", () => {
           storePath,
           store,
           opts: { agentId: MAIN_AGENT_ID, limit: 1 },
+          sqlSelection: {},
         });
 
         expect(asyncListed.sessions).toHaveLength(1);

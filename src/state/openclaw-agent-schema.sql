@@ -63,6 +63,18 @@ CREATE INDEX IF NOT EXISTS idx_agent_session_nodes_updated_at
 CREATE INDEX IF NOT EXISTS idx_agent_session_nodes_last_interaction_at
   ON session_nodes(last_interaction_at DESC, session_key);
 
+CREATE INDEX IF NOT EXISTS idx_agent_session_nodes_valid_updated_at
+  ON session_nodes(updated_at DESC, session_key)
+  WHERE json_valid(entry_json) = 1;
+
+CREATE INDEX IF NOT EXISTS idx_agent_session_nodes_valid_last_interaction_at
+  ON session_nodes(last_interaction_at DESC, session_key)
+  WHERE json_valid(entry_json) = 1;
+
+CREATE INDEX IF NOT EXISTS idx_agent_session_nodes_valid_creator
+  ON session_nodes(created_actor_id, created_actor_type)
+  WHERE created_actor_id IS NOT NULL AND json_valid(entry_json) = 1;
+
 CREATE INDEX IF NOT EXISTS idx_agent_session_nodes_parent_session_key
   ON session_nodes(parent_session_key, session_key);
 

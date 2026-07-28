@@ -14,6 +14,7 @@ import {
   listSessionEntriesReadOnly,
   replaceSessionEntry,
 } from "../config/sessions/session-accessor.js";
+import { setSessionProjectedTitle } from "../config/sessions/session-accessor.sqlite-session-row.js";
 import { resolveSqliteTargetFromSessionStorePath } from "../config/sessions/session-sqlite-target.js";
 import type { CronJob } from "../cron/types.js";
 import { createEmptyPluginRegistry } from "../plugins/registry-empty.js";
@@ -26,14 +27,13 @@ import type { GatewayModelCatalogSnapshot } from "./server-model-catalog.types.j
 import { registerSessionAutomationSource } from "./session-automation-index.js";
 import { buildGatewaySessionEventFields } from "./session-event-payload.js";
 import { capArrayByJsonBytes } from "./session-transcript-readers.js";
+import { listSessionsFromStoreForTest as listSessionsFromStore } from "./session-utils-list.test-support.js";
 import { buildSingleRowStoreChildSessionsByKey } from "./session-utils-projection.js";
 import {
-  canonicalizeSpawnedByForAgent,
   buildGatewaySessionRow,
   deriveSessionTitle,
   getSessionDefaults,
   listAgentsForGateway,
-  listSessionsFromStore,
   listSessionsFromStoreAsync,
   loadSessionEntry,
   loadSessionEntryReadOnly,
@@ -354,6 +354,7 @@ describe("gateway session utils", () => {
       storePath: "",
       store,
       opts: {},
+      sqlSelection: {},
     });
 
     expect(listed.sessions).toHaveLength(100);
@@ -806,6 +807,7 @@ describe("gateway session utils", () => {
       storePath: "",
       store,
       opts: {},
+      sqlSelection: {},
     });
 
     expect(result.sessions).toHaveLength(5);
@@ -1718,20 +1720,6 @@ describe("gateway session utils", () => {
     expect(
       resolveSessionStoreKey({ cfg, sessionKey: `Agent:Alpha:Signal:Group:${mixedGroupId}` }),
     ).toBe(`agent:alpha:signal:group:${mixedGroupId}`);
-  });
-
-  test("canonicalizeSpawnedByForAgent preserves Signal group ids", () => {
-    const cfg = {
-      session: { mainKey: "main" },
-    } as OpenClawConfig;
-    const mixedGroupId = "VWATodkf2hc8zdOS76q9Tb0+5Bi522E03qLdaQ/9ypg=";
-
-    expect(canonicalizeSpawnedByForAgent(cfg, "ops", `Signal:Group:${mixedGroupId}`)).toBe(
-      `agent:ops:signal:group:${mixedGroupId}`,
-    );
-    expect(
-      canonicalizeSpawnedByForAgent(cfg, "ops", `Agent:Main:Signal:Group:${mixedGroupId}`),
-    ).toBe(`agent:main:signal:group:${mixedGroupId}`);
   });
 
   test("resolveSessionStoreKey honors global scope", () => {
@@ -2808,7 +2796,7 @@ describe("resolveSessionModelRef", () => {
 });
 
 describe("listSessionsFromStore selected model display", () => {
-  test("async list yields during bulk transcript title and last-message hydration", async () => {
+  test("async list yields during bulk last-message hydration", async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-sessions-list-yield-"));
     try {
       const storePath = path.join(tmpDir, "sessions.json");
@@ -2828,6 +2816,7 @@ describe("listSessionsFromStore selected model display", () => {
           estimatedCostUsd: 0,
         } as SessionEntry;
         store[sessionKey] = entry;
+        setSessionProjectedTitle(entry, `title ${i}`);
         await seedSessionEntries(storePath, {
           [sessionKey]: entry,
         });
@@ -2849,7 +2838,7 @@ describe("listSessionsFromStore selected model display", () => {
         opts: { includeDerivedTitles: true, includeLastMessage: true, limit: 11 },
       };
       const expected = listSessionsFromStore(params);
-      const listedPromise = listSessionsFromStoreAsync(params);
+      const listedPromise = listSessionsFromStoreAsync({ ...params, sqlSelection: {} });
       let settled = false;
       void listedPromise.then(() => {
         settled = true;
@@ -2879,7 +2868,7 @@ describe("listSessionsFromStore selected model display", () => {
     }
   });
 
-  test("caps transcript title and last-message hydration for bulk list responses", async () => {
+  test("caps projected titles and transcript last-message hydration for bulk lists", async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "openclaw-sessions-list-cap-"));
     try {
       const storePath = path.join(tmpDir, "sessions.json");
@@ -2895,6 +2884,7 @@ describe("listSessionsFromStore selected model display", () => {
           model: "gpt-5.4",
         } as SessionEntry;
         store[sessionKey] = entry;
+        setSessionProjectedTitle(entry, `title ${i}`);
         await seedSessionEntries(storePath, {
           [sessionKey]: entry,
         });
@@ -2916,6 +2906,7 @@ describe("listSessionsFromStore selected model display", () => {
         storePath,
         store,
         opts: { includeDerivedTitles: true, includeLastMessage: true, limit: 101 },
+        sqlSelection: {},
       });
 
       expect(result.sessions).toHaveLength(101);

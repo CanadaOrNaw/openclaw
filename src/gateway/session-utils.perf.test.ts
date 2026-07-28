@@ -17,7 +17,7 @@ import { resetPluginRuntimeStateForTest, setActivePluginRegistry } from "../plug
 import { openOpenClawStateDatabase } from "../state/openclaw-state-db.js";
 import { withStateDirEnv } from "../test-helpers/state-dir-env.js";
 import * as usageFormat from "../utils/usage-format.js";
-import { listSessionsFromStore } from "./session-utils.js";
+import { listSessionsFromStoreForTest as listSessionsFromStore } from "./session-utils-list.test-support.js";
 
 /**
  * Regression smoke for the per-list rowContext resolver cache. The bug we are

@@ -112,6 +112,28 @@ describe("resolveSessionKeyFromResolveParams", () => {
     });
   });
 
+  it("does not resolve reserved keys through a spawnedBy filter", async () => {
+    targetStore = {
+      global: { sessionId: "global-session", updatedAt: 1 },
+    };
+    hoisted.resolveGatewaySessionStoreTargetWithStoreMock.mockReturnValue({
+      canonicalKey: "global",
+      storeKeys: ["global"],
+      storePath,
+      store: targetStore,
+    });
+
+    await expect(
+      resolveSessionKeyFromResolveParams({
+        cfg: {},
+        p: { key: "global", spawnedBy: "agent:main:parent", includeGlobal: true },
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCodes.INVALID_REQUEST, message: "No session found: global" },
+    });
+  });
+
   it("does not page-limit exact key spawnedBy visibility checks", async () => {
     const now = Date.now();
     const store: Record<string, SessionEntry> = {
@@ -131,6 +153,14 @@ describe("resolveSessionKeyFromResolveParams", () => {
     targetStore = store;
 
     await expectResolveToCanonicalKey({ key: canonicalKey, spawnedBy: "controller-1" });
+  });
+
+  it("resolves an archived session by its exact key", async () => {
+    targetStore = {
+      [canonicalKey]: { archivedAt: 2, sessionId: "sess-archived", updatedAt: 1 },
+    };
+
+    await expectResolveToCanonicalKey({ key: canonicalKey });
   });
 
   it("re-checks migrated legacy keys through the same visibility filter", async () => {
@@ -283,9 +313,14 @@ describe("resolveSessionKeyFromResolveParams", () => {
     });
 
     expect(result).toEqual({ ok: true, key: "agent:main:target" });
-    expect(hoisted.loadCombinedSessionStoreForGatewayMock).toHaveBeenCalledWith(cfg, {
-      agentId: "main",
-    });
+    expect(hoisted.loadCombinedSessionStoreForGatewayMock).toHaveBeenCalledWith(
+      cfg,
+      expect.objectContaining({
+        agentId: "main",
+        projection: "list",
+        query: expect.objectContaining({ sessionId: "sess-target" }),
+      }),
+    );
     expect(hoisted.listSessionsFromStoreMock).not.toHaveBeenCalled();
   });
 
@@ -306,9 +341,14 @@ describe("resolveSessionKeyFromResolveParams", () => {
       p: { label: "my-label", agentId: "main" },
     });
 
-    expect(hoisted.loadCombinedSessionStoreForGatewayMock).toHaveBeenCalledWith(cfg, {
-      agentId: "main",
-    });
+    expect(hoisted.loadCombinedSessionStoreForGatewayMock).toHaveBeenCalledWith(
+      cfg,
+      expect.objectContaining({
+        agentId: "main",
+        projection: "list",
+        query: expect.objectContaining({ label: "my-label" }),
+      }),
+    );
     expect(result).toEqual({
       ok: false,
       error: {

@@ -15,7 +15,10 @@ import {
 import type { SubagentRunRecord } from "../agents/subagent-registry.types.js";
 import type { OpenClawConfig } from "../config/config.js";
 import type { SessionEntry } from "../config/sessions.js";
-import { replaceSessionEntry } from "../config/sessions/session-accessor.js";
+import {
+  replaceSessionEntry,
+  replaceSessionEntrySync,
+} from "../config/sessions/session-accessor.js";
 import { registerAgentRunContext, resetAgentEventsForTest } from "../infra/agent-events.js";
 import {
   closeOpenClawAgentDatabasesForTest,
@@ -24,10 +27,12 @@ import {
 import { closeOpenClawStateDatabaseForTest } from "../state/openclaw-state-db.js";
 import { withStateDirEnv } from "../test-helpers/state-dir-env.js";
 import { withEnv } from "../test-utils/env.js";
+import { listSessionsFromStore as listSqlSelectedSessions } from "./session-utils-list.js";
+import { listSessionsFromStoreForTest as listSessionsFromStore } from "./session-utils-list.test-support.js";
 import {
-  listSessionsFromStore,
   loadCombinedSessionStoreForGateway,
   resolveGatewayModelSupportsImages,
+  resolveSessionListLineageSqlQuery,
 } from "./session-utils.js";
 
 afterEach(() => {
@@ -58,6 +63,31 @@ describe("listSessionsFromStore subagent metadata", () => {
     session: { mainKey: "main" },
     agents: { list: [{ id: "main", default: true }] },
   } as OpenClawConfig;
+
+  test("projects folded opaque child aliases into SQL lineage sets", () => {
+    const now = Date.now();
+    const parentKey = "agent:main:main";
+    const childKey = "agent:main:matrix:group:!Room:Server";
+    addSubagentRunForTests({
+      runId: "run-folded-lineage",
+      childSessionKey: childKey,
+      controllerSessionKey: parentKey,
+      requesterSessionKey: parentKey,
+      requesterDisplayKey: "main",
+      task: "folded lineage",
+      cleanup: "keep",
+      createdAt: now - 1_000,
+      startedAt: now - 500,
+    });
+
+    const query = resolveSessionListLineageSqlQuery(parentKey, now, "main");
+    expect(query.excludeLineageSessionKeys).toEqual(
+      expect.arrayContaining([childKey, childKey.toLowerCase()]),
+    );
+    expect(query.includeLineageSessionKeys).toEqual(
+      expect.arrayContaining([childKey, childKey.toLowerCase()]),
+    );
+  });
 
   test("searches channel-derived display names before row enrichment", () => {
     const result = listSessionsFromStore({
@@ -1311,6 +1341,72 @@ describe("listSessionsFromStore subagent metadata", () => {
 });
 
 describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)", () => {
+  test("keeps off-page store children available to bounded row enrichment", async () => {
+    await withStateDirEnv("openclaw-session-list-child-context-", async ({ stateDir }) => {
+      const storePath = path.join(stateDir, "agents", "main", "sessions", "sessions.json");
+      const parentKey = "agent:main:parent";
+      const childKey = "agent:main:child";
+      const now = Date.now();
+      const cfg = { agents: { list: [{ id: "main", default: true }] } } as OpenClawConfig;
+      replaceSessionEntrySync(
+        { sessionKey: childKey, storePath },
+        {
+          sessionId: "child-session",
+          spawnedBy: parentKey,
+          updatedAt: now - 1_000,
+        },
+      );
+      replaceSessionEntrySync(
+        { sessionKey: parentKey, storePath },
+        {
+          label: "parent",
+          sessionId: "parent-session",
+          updatedAt: now,
+        },
+      );
+
+      const loaded = loadCombinedSessionStoreForGateway(cfg, {
+        agentId: "main",
+        includeRowContext: true,
+        projection: "list",
+        query: {
+          archived: false,
+          includeGlobal: false,
+          includeUnknown: false,
+          limit: 1,
+          sortBy: "updatedAt",
+        },
+      });
+      expect(Object.keys(loaded.store)).toEqual([parentKey]);
+      expect(loaded.rowContextStore?.[childKey]).toBeDefined();
+
+      const result = listSqlSelectedSessions({
+        cfg,
+        storePath: loaded.storePath,
+        store: loaded.store,
+        opts: { agentId: "main", limit: 1 },
+        ...(loaded.rowContextStore ? { rowContextStore: loaded.rowContextStore } : {}),
+        sqlSelection: { ordered: true, totalCount: 2 },
+      });
+      expect(result.sessions[0]?.childSessions).toEqual([childKey]);
+
+      const filtered = loadCombinedSessionStoreForGateway(cfg, {
+        agentId: "main",
+        includeRowContext: true,
+        projection: "list",
+        query: {
+          archived: false,
+          includeGlobal: false,
+          includeUnknown: false,
+          label: "parent",
+          sortBy: "updatedAt",
+        },
+      });
+      expect(Object.keys(filtered.store)).toEqual([parentKey]);
+      expect(filtered.rowContextStore?.[childKey]).toBeDefined();
+    });
+  });
+
   test("fixed stores retain a colliding unsuffixed database on the default owner", async () => {
     await withStateDirEnv("openclaw-fixed-store-collision-", async ({ stateDir }) => {
       const storePath = path.join(stateDir, "ops.json");

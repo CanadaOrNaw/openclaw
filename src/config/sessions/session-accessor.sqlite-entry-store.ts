@@ -27,6 +27,7 @@ import {
 import {
   bindSqliteSessionNode,
   bindSqliteSessionRoot,
+  deriveSqliteSessionTitle,
   normalizeSqliteSessionEntryTimestamp,
 } from "./session-accessor.sqlite-session-row.js";
 import { parseSqliteSessionEntryJson as parseSessionEntryRow } from "./session-accessor.sqlite-status.js";
@@ -41,7 +42,6 @@ import type { SessionEntry } from "./types.js";
 // Canonical owner for session_nodes row selection, alias snapshots, and writes.
 
 type OpenClawAgentDatabaseReader = Pick<OpenClawAgentDatabase, "db">;
-
 type SessionEntryRow = Selectable<OpenClawAgentKyselyDatabase["session_nodes"]>;
 export type ResolvedSessionEntryRow = {
   entry: SessionEntry;
@@ -160,7 +160,7 @@ export function assertSqliteSessionEntrySelectionUnchanged(
 }
 
 export function collectSessionEntryLookupKeys(
-  database: OpenClawAgentDatabaseReader,
+  _database: OpenClawAgentDatabaseReader,
   sessionKey: string,
 ): string[] {
   const trimmedKey = sessionKey.trim();
@@ -168,22 +168,13 @@ export function collectSessionEntryLookupKeys(
     return [];
   }
   const normalizedKey = normalizeStoreSessionKey(trimmedKey);
-  const lookupKeys = new Set([
+  // Runtime probes only canonical keys plus contracted folded opaque-id aliases. Arbitrary
+  // legacy structural spellings belong to doctor migration, not a full session_nodes scan.
+  return uniqueStrings([
     trimmedKey,
     normalizedKey,
     ...foldedSessionKeyAliasCandidates(normalizedKey),
-  ]);
-  const db = getSessionKysely(database.db);
-  const rows = executeSqliteQuerySync(
-    database.db,
-    db.selectFrom("session_nodes").select("session_key").orderBy("session_key", "asc"),
-  ).rows;
-  for (const row of rows) {
-    if (normalizeStoreSessionKey(row.session_key) === normalizedKey) {
-      lookupKeys.add(row.session_key);
-    }
-  }
-  return [...lookupKeys].filter(Boolean);
+  ]).filter(Boolean);
 }
 
 export function readExactSessionEntryRow(
@@ -562,6 +553,7 @@ export function writeSessionEntry(
   });
   const sessionNode = bindSqliteSessionNode({
     entry: normalizedEntry,
+    projectedTitle: deriveSqliteSessionTitle(database.db, normalizedEntry),
     sessionKey,
     updatedAt,
   });

@@ -5,11 +5,13 @@ import { buildMainSessionRecoveryClearPatch } from "../../agents/main-session-re
 import {
   evaluateSessionFreshness,
   hasTerminalMainSessionTranscriptNewerThanRegistrySync,
+  resolveStorePath,
   resolveSessionLifecycleTimestamps,
   type SessionEntry,
   type SessionFreshness,
 } from "../../config/sessions.js";
 import { hasProviderOwnedSession } from "../../config/sessions/entry-freshness.js";
+import { loadSessionEntryReadOnly } from "../../config/sessions/session-accessor.js";
 import { isRecoverableTerminalSessionStatus } from "../../config/sessions/terminal-status.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import {
@@ -20,7 +22,7 @@ import {
   sessionDeliveryRoute,
   type DeliveryContext,
 } from "../../utils/delivery-context.shared.js";
-import { canonicalizeSpawnedByForAgent, loadSessionEntryReadOnly } from "../session-utils.js";
+import { resolveSessionStoreAgentId, resolveSessionStoreKey } from "../session-store-key.js";
 import {
   normalizeTrustedGroupMetadata,
   requestGroupMatchesTrusted,
@@ -63,11 +65,14 @@ export function buildAgentSessionPatch(params: {
   touchInteraction: boolean;
   failedSessionTranscriptMissing: (entry: SessionEntry | undefined) => boolean;
 }): AgentSessionPatchBuild {
-  const freshSpawnedBy = canonicalizeSpawnedByForAgent(
-    params.cfg,
-    params.sessionAgentId,
-    params.freshEntry?.spawnedBy,
-  );
+  const storedSpawnedBy = normalizeOptionalString(params.freshEntry?.spawnedBy);
+  const freshSpawnedBy = storedSpawnedBy
+    ? resolveSessionStoreKey({
+        cfg: params.cfg,
+        sessionKey: storedSpawnedBy,
+        storeAgentId: params.sessionAgentId,
+      })
+    : undefined;
   const storedGroup = normalizeTrustedGroupMetadata(params.freshEntry);
   let inheritedGroup: TrustedGroupMetadata | undefined;
   if (
@@ -75,7 +80,13 @@ export function buildAgentSessionPatch(params: {
     (!storedGroup.groupId || !storedGroup.groupChannel || !storedGroup.groupSpace)
   ) {
     try {
-      const parentEntry = loadSessionEntryReadOnly(freshSpawnedBy)?.entry;
+      const parentAgentId = resolveSessionStoreAgentId(params.cfg, freshSpawnedBy);
+      const parentEntry = loadSessionEntryReadOnly({
+        agentId: parentAgentId,
+        clone: false,
+        sessionKey: freshSpawnedBy,
+        storePath: resolveStorePath(params.cfg.session?.store, { agentId: parentAgentId }),
+      });
       inheritedGroup = normalizeTrustedGroupMetadata({
         groupId: parentEntry?.groupId,
         groupChannel: parentEntry?.groupChannel,

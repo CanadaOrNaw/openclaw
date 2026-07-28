@@ -150,7 +150,7 @@ function findFreshestSessionEntryMatch(
     if (!trimmed) {
       continue;
     }
-    const match = loadExactSessionEntry({ ...scope, sessionKey: trimmed });
+    const match = loadExactSessionEntryReadOnly({ ...scope, sessionKey: trimmed });
     if (match && (!freshest || (match.entry.updatedAt ?? 0) >= (freshest.entry.updatedAt ?? 0))) {
       freshest = match;
     }
@@ -360,7 +360,8 @@ export function openSessionEntryReadView(
   scope: Omit<SessionEntryListScope, "clone" | "readConsistency"> = {},
 ): SessionEntryReadView {
   return {
-    get: (sessionKey) => loadExactSessionEntry({ ...scope, clone: false, sessionKey })?.entry,
+    get: (sessionKey) =>
+      loadExactSessionEntryReadOnly({ ...scope, clone: false, sessionKey })?.entry,
     entries: () => listSqliteSessionEntries({ ...scope, clone: false }),
   };
 }

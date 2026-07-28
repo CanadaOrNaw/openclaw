@@ -33,6 +33,7 @@ import {
   collectSessionEntryLookupKeys,
   createSqliteSessionIdentitySnapshot,
   deleteLegacySessionEntryRows,
+  readExactSessionEntryRow,
   readSessionEntryRow,
   readSqliteLifecycleTargetSnapshot,
   readSqliteSessionEntrySelectionSnapshot,
@@ -62,13 +63,17 @@ import {
   toDatabaseOptions,
   type ResolvedSqliteScope,
 } from "./session-accessor.sqlite-scope.js";
-import { readSqliteSessionEntriesByStatus } from "./session-accessor.sqlite-status.js";
-import type { SessionEntryListScope } from "./session-accessor.types.js";
+import { setSessionProjectedTitle } from "./session-accessor.sqlite-session-row.js";
+import {
+  querySqliteSessionEntries,
+  readSqliteSessionEntriesByStatus,
+  type SqliteSessionEntryListQueryResult,
+} from "./session-accessor.sqlite-status.js";
+import type { SessionEntryListQuery, SessionEntryListScope } from "./session-accessor.types.js";
 import { preserveSqliteSameKeySessionRolloverLineage } from "./session-entry-lineage.js";
 import { buildSessionCreationStamp } from "./session-entry-provenance.js";
 import { kickSessionHistoryDiskBudgetMaintenance } from "./session-history-eviction.js";
 import { resolveSessionStorePathForScope } from "./session-store-path.js";
-import { resolveSessionEntryCandidates } from "./store-entry.js";
 import type { GroupKeyResolution, SessionEntry } from "./types.js";
 import { mergeSessionEntry, mergeSessionEntryPreserveActivity } from "./types.js";
 
@@ -124,19 +129,15 @@ export function resolveSqliteSessionEntry(
   const read = (
     database: Pick<OpenClawAgentDatabase, "agentId" | "db" | "path">,
   ): ResolvedSqliteSessionEntry => {
-    const snapshot = readSessionEntrySnapshot(database, resolved, scope.readConsistency);
-    const selected = resolveSessionEntryCandidates({
-      entries: [...snapshot.entries].map(([sessionKey, entry]) => ({ entry, sessionKey })),
-      sessionKey: resolved.sessionKey,
-    });
-    const existing = selected.existing?.entry;
+    const selected = readSessionEntryRow(database, resolved.sessionKey);
+    const existing = selected?.entry;
     return {
       existing: existing
         ? scope.clone === false
           ? existing
           : cloneSessionEntry(existing)
         : undefined,
-      legacyKeys: selected.legacyKeys,
+      legacyKeys: selected?.legacyKeys ?? [],
       normalizedKey: resolved.sessionKey,
     };
   };
@@ -200,8 +201,7 @@ export function loadExactSqliteSessionEntryReadOnly(
   }
   const resolved = resolveSqliteScope(scope);
   const result = withOpenClawAgentDatabaseReadOnly(
-    (database) =>
-      readSessionEntrySnapshot(database, resolved, scope.readConsistency).entries.get(sessionKey),
+    (database) => readExactSessionEntryRow(database, sessionKey)?.entry,
     toDatabaseOptions(resolved),
   );
   return result.found && result.value
@@ -274,6 +274,22 @@ export function listSqliteSessionEntriesReadOnly(
     toDatabaseOptions(resolved),
   );
   return result.found ? result.value : [];
+}
+
+/** Queries a bounded promoted-column list without opening the database writable. */
+export function querySqliteSessionEntriesReadOnly(
+  scope: SessionEntryListScope & { query: SessionEntryListQuery },
+): SqliteSessionEntryListQueryResult {
+  const resolved = resolveSqliteScope({ ...scope, sessionKey: "" });
+  const result = withOpenClawAgentDatabaseReadOnly(
+    (database) =>
+      querySqliteSessionEntries(database, scope.query, {
+        projection: scope.projection,
+        setProjectedTitle: setSessionProjectedTitle,
+      }),
+    toDatabaseOptions(resolved),
+  );
+  return result.found ? result.value : { creatorActors: [], entries: [], totalCount: 0 };
 }
 
 function listSqliteSessionEntriesFromDatabase(

@@ -19,11 +19,8 @@ import {
 import { registerAgentRunContext, resetAgentEventsForTest } from "../infra/agent-events.js";
 import { closeOpenClawAgentDatabasesForTest } from "../state/openclaw-agent-db.js";
 import { closeOpenClawStateDatabaseForTest } from "../state/openclaw-state-db.js";
-import {
-  buildGatewaySessionInfo,
-  filterAndSortSessionEntries,
-  listSessionsFromStore,
-} from "./session-utils.js";
+import { listSessionsFromStoreForTest as listSessionsFromStore } from "./session-utils-list.test-support.js";
+import { buildGatewaySessionInfo } from "./session-utils.js";
 
 const MAIN_SESSION_KEY = "agent:main:main";
 const MAIN_SESSION_ID = "sess-main";
@@ -528,14 +525,14 @@ describe("listSessionsFromStore search", () => {
     ] as const;
 
     for (const testCase of cases) {
-      const entries = filterAndSortSessionEntries({
+      const result = listSessionsFromStore({
         cfg,
+        storePath: "",
         store,
         opts: { search: testCase.search },
-        now,
       });
 
-      expect(entries.map(([key]) => key)).toEqual([testCase.expectedKey]);
+      expect(result.sessions.map(({ key }) => key)).toEqual([testCase.expectedKey]);
     }
   });
 

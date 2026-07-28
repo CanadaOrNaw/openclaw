@@ -683,7 +683,7 @@ describe.each([publicAccessorAdapter, sqliteAdapter])(
       });
     });
 
-    it("parses SQLite entry blobs once across keyed loads", async () => {
+    it("parses only the selected SQLite entry across keyed loads", async () => {
       const scope = sqliteAdapter.entryScope(paths);
       for (let index = 0; index < 20; index += 1) {
         await upsertSqliteSessionEntry(
@@ -711,12 +711,12 @@ describe.each([publicAccessorAdapter, sqliteAdapter])(
           sessionId: "target-session",
         });
         const initialParseCount = parseSpy.mock.calls.length;
-        expect(initialParseCount).toBe(21);
+        expect(initialParseCount).toBe(1);
         expect(loadSqliteSessionEntry(scope)).toMatchObject({
           model: "target",
           sessionId: "target-session",
         });
-        expect(parseSpy).toHaveBeenCalledTimes(initialParseCount);
+        expect(parseSpy).toHaveBeenCalledTimes(initialParseCount + 1);
       } finally {
         parseSpy.mockRestore();
       }
