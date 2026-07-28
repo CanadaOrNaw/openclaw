@@ -230,6 +230,12 @@ describe("qa scenario catalog", () => {
     expect(staleSync.execution.suiteIsolation).toBe("isolated");
   });
 
+  it("isolates Matrix stale-sync replay state mutation from shared transport config", () => {
+    const scenario = requireFlowScenario(readQaScenarioById("matrix-stale-sync-replay-dedupe"));
+
+    expect(scenario.execution.suiteIsolation).toBe("isolated");
+  });
+
   it("loads scenario-declared gateway runtime options from YAML", () => {
     const scenario = readQaScenarioById("control-ui-qa-channel-image-roundtrip");
     const otelStdout = readQaScenarioById("otel-stdout-log-smoke");
