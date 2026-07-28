@@ -1,5 +1,5 @@
 import type { SessionObserverDigest } from "../../packages/gateway-protocol/src/schema/sessions.js";
-import { resolveDefaultAgentId, resolveSessionAgentId } from "../agents/agent-scope.js";
+import { resolveSessionAgentId, tryResolveSoleAgentId } from "../agents/agent-scope.js";
 import {
   createSessionActivityNoteState,
   flushSessionActivityAssistantNote,
@@ -8,6 +8,7 @@ import {
   terminalHealthFor,
 } from "../agents/session-activity-notes.js";
 import { resolveUtilityModelRefForAgent } from "../agents/utility-model.js";
+import { tryGetLegacyDefaultAgentId } from "../config/legacy.default-agent-owner.js";
 import { getAgentRunContext } from "../infra/agent-events.js";
 import { createSubsystemLogger } from "../logging/subsystem.js";
 import { createSessionObserverAudience } from "./session-observer-audience.js";
@@ -98,7 +99,10 @@ export function createSessionObserver(deps: SessionObserverDeps): SessionObserve
     subscribers: deps.subscribers,
     sessionEventSubscribers: deps.sessionEventSubscribers,
     isVisible: (connId) => visibleConnections.has(connId),
-    getDefaultAgentId: () => resolveDefaultAgentId(deps.getConfig()),
+    getCompatibilityAgentId: () => {
+      const cfg = deps.getConfig();
+      return tryGetLegacyDefaultAgentId(cfg) ?? tryResolveSoleAgentId(cfg);
+    },
   });
   // Narrow run-identity guard shared by persist paths: a digest may still land
   // while its session is unwatched, but never after a newer run replaces it.

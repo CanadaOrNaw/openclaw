@@ -1457,7 +1457,10 @@ describe("agentCliCommand", () => {
           selectionRequired: true,
           mainKey: "remote-main",
           scope: "per-sender",
-          agents: [{ id: "ops", name: "Operations" }],
+          agents: [
+            { id: "ops", name: "Operations" },
+            { id: "research", name: "Research" },
+          ],
         };
       }
       return {
@@ -1469,14 +1472,12 @@ describe("agentCliCommand", () => {
 
     await withTempStore(
       async () => {
-        await agentCliCommand(
-          { message: "hi", agent: "ops", sessionId: "remote-only-session" },
-          runtime,
-        );
+        await agentCliCommand({ message: "hi", sessionId: "remote-only-session" }, runtime);
 
         expect(resolveSessionKeyForRequest).not.toHaveBeenCalled();
         const agentRequest = requireRecord(callGateway.mock.calls[1]?.[0], "agent request");
         const params = requireRecord(agentRequest.params, "agent params");
+        expect(params.agentId).toBeUndefined();
         expect(params.sessionId).toBe("remote-only-session");
         expect(params.sessionKey).toBeUndefined();
       },
@@ -1489,22 +1490,53 @@ describe("agentCliCommand", () => {
 
   it("continues resolving session ids from the local gateway store", async () => {
     const resolveSessionKeyForRequest = vi.fn(() => ({
-      sessionKey: "agent:main:resolved-local-session",
+      agentId: "ops",
+      sessionKey: "agent:ops:resolved-local-session",
     }));
     loadAgentSessionModuleMock.mockResolvedValue({ resolveSessionKeyForRequest });
 
-    await withTempStore(async () => {
-      mockGatewaySuccessReply();
+    await withTempStore(
+      async () => {
+        mockGatewaySuccessReply();
 
-      await agentCliCommand({ message: "hi", sessionId: "local-session-id" }, runtime);
+        await agentCliCommand({ message: "hi", sessionId: "local-session-id" }, runtime);
 
-      expect(resolveSessionKeyForRequest).toHaveBeenCalledWith(
-        expect.objectContaining({ sessionId: "local-session-id" }),
+        expect(resolveSessionKeyForRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ sessionId: "local-session-id" }),
+        );
+        const request = requireRecord(
+          requireFirstCallArg(callGateway, "gateway"),
+          "gateway request",
+        );
+        const params = requireRecord(request.params, "gateway params");
+        expect(params.agentId).toBe("ops");
+        expect(params.sessionKey).toBe("agent:ops:resolved-local-session");
+      },
+      { agents: { list: [{ id: "ops" }, { id: "research" }] } },
+    );
+  });
+
+  it("rejects an explicit agent that does not own the resolved session id", async () => {
+    const resolveSessionKeyForRequest = vi.fn(() => {
+      throw Object.assign(
+        new Error('Agent id "ops" does not match session id "research-session" owner "research".'),
+        { name: "AgentSessionOwnerMismatchError", code: "AGENT_SESSION_OWNER_MISMATCH" },
       );
-      const request = requireRecord(requireFirstCallArg(callGateway, "gateway"), "gateway request");
-      const params = requireRecord(request.params, "gateway params");
-      expect(params.sessionKey).toBe("agent:main:resolved-local-session");
     });
+    loadAgentSessionModuleMock.mockResolvedValue({ resolveSessionKeyForRequest });
+
+    await withTempStore(
+      async () => {
+        await expect(
+          agentCliCommand({ message: "hi", agent: "ops", sessionId: "research-session" }, runtime),
+        ).rejects.toMatchObject({ code: "AGENT_SESSION_OWNER_MISMATCH" });
+        expect(resolveSessionKeyForRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ agentId: "ops", sessionId: "research-session" }),
+        );
+        expect(callGateway).not.toHaveBeenCalled();
+      },
+      { agents: { list: [{ id: "ops" }, { id: "research" }] } },
+    );
   });
 
   it("keeps an agent-scoped target usable when the remote roster is unavailable", async () => {

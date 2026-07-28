@@ -488,9 +488,9 @@ async function normalizeSessionKeyOptsForDispatch(
     rawSessionKey && classifySessionKeyShape(rawSessionKey) === "legacy_or_alias";
   const explicitAgentIdRaw = opts.agent?.trim();
   let agentIdRaw = explicitAgentIdRaw;
-  const hasAgentScopedTarget = [rawSessionKey, rawTo].some(
-    (value) => classifySessionKeyShape(value) === "agent",
-  );
+  const hasExplicitSessionTarget =
+    Boolean(opts.sessionId?.trim()) ||
+    [rawSessionKey, rawTo].some((value) => classifySessionKeyShape(value) === "agent");
   let selectionCfg: OpenClawConfig | undefined;
   let remoteGatewayRoster: RemoteGatewayRoster | undefined;
   if (opts.local !== true) {
@@ -500,7 +500,8 @@ async function normalizeSessionKeyOptsForDispatch(
       try {
         remoteGatewayRoster = await loadRemoteGatewayRoster(cfg);
       } catch (error) {
-        const hasContractIndependentTarget = Boolean(explicitAgentIdRaw) || hasAgentScopedTarget;
+        const hasContractIndependentTarget =
+          Boolean(explicitAgentIdRaw) || hasExplicitSessionTarget;
         if (!hasContractIndependentTarget || !(error instanceof AgentSelectionRequiredError)) {
           throw error;
         }
@@ -513,7 +514,7 @@ async function normalizeSessionKeyOptsForDispatch(
     }
     selectionCfg = cfg;
   }
-  if (!agentIdRaw && !hasAgentScopedTarget) {
+  if (!agentIdRaw && !hasExplicitSessionTarget) {
     const cfg =
       opts.local === true
         ? await loadRuntimeConfig()
@@ -877,7 +878,7 @@ async function agentViaGatewayCommand(
   }
   const remoteGateway = usesRemoteGateway(cfg);
   const agentIdRaw = opts.agent?.trim();
-  const agentId = agentIdRaw ? normalizeAgentId(agentIdRaw) : undefined;
+  let agentId = agentIdRaw ? normalizeAgentId(agentIdRaw) : undefined;
   if (agentId) {
     const knownAgents =
       opts.remoteGatewayRoster?.agentIds ?? (remoteGateway ? undefined : listAgentIds(cfg));
@@ -920,20 +921,32 @@ async function agentViaGatewayCommand(
     !agentId &&
     (isUnscopedSessionKeySentinel(explicitSessionKey) || hasImplicitRemoteGlobalTarget);
 
+  const locallyResolvedSession =
+    !remoteGateway && opts.sessionId?.trim() && !explicitSessionKey
+      ? (await loadAgentSessionModule()).resolveSessionKeyForRequest({
+          cfg,
+          agentId,
+          to: opts.to,
+          sessionId: opts.sessionId,
+        })
+      : undefined;
+  agentId ??= locallyResolvedSession?.agentId;
   const sessionKey =
     preserveUnavailableRemoteLegacyKey || preserveImplicitCompatibilitySession
       ? explicitSessionKey
       : deferExplicitRecipientSession || deferServerSessionResolution
         ? undefined
-        : classifySessionKeyShape(explicitSessionKey) === "agent"
-          ? explicitSessionKey
-          : (await loadAgentSessionModule()).resolveSessionKeyForRequest({
-              cfg,
-              agentId,
-              to: opts.to,
-              sessionId: opts.sessionId,
-              sessionKey: explicitSessionKey,
-            }).sessionKey;
+        : locallyResolvedSession
+          ? locallyResolvedSession.sessionKey
+          : classifySessionKeyShape(explicitSessionKey) === "agent"
+            ? explicitSessionKey
+            : (await loadAgentSessionModule()).resolveSessionKeyForRequest({
+                cfg,
+                agentId,
+                to: opts.to,
+                sessionId: opts.sessionId,
+                sessionKey: explicitSessionKey,
+              }).sessionKey;
   const abortSessionKey = deferServerSessionResolution
     ? undefined
     : deferExplicitRecipientSession

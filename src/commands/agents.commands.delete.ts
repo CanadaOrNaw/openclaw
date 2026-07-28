@@ -3,7 +3,7 @@ import { findOverlappingWorkspaceAgentIds } from "../agents/agent-delete-safety.
 import {
   resolveAgentDir,
   resolveAgentWorkspaceDir,
-  resolveDefaultAgentId,
+  tryResolveSoleAgentId,
 } from "../agents/agent-scope.js";
 import {
   prepareLegacyWorkspaceStateReset,
@@ -110,10 +110,8 @@ export async function agentsDeleteCommand(
     runtime.exit(1);
     return;
   }
-  if (agentId === resolveDefaultAgentId(cfg)) {
-    runtime.error(
-      `Agent "${agentId}" is the default and cannot be deleted. Reassign default first.`,
-    );
+  if (agentId === tryResolveSoleAgentId(cfg)) {
+    runtime.error(`Agent "${agentId}" is the only configured agent and cannot be deleted.`);
     runtime.exit(1);
     return;
   }

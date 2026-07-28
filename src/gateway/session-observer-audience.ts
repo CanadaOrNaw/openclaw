@@ -9,15 +9,17 @@ export function createSessionObserverAudience(params: {
   subscribers: SessionMessageSubscriberRegistry;
   sessionEventSubscribers?: SessionEventSubscriberRegistry;
   isVisible: (connId: string) => boolean;
-  getDefaultAgentId: () => string;
+  getCompatibilityAgentId: () => string | undefined;
 }) {
   const messageSubscriberKeys = (sessionKey: string, agentId: string): string[] => {
     // sessions.messages.subscribe canonicalizes selected-agent global aliases
     // to this same qualified key before registering the connection.
     const scopedKey = sessionObserverScopeKey(sessionKey, agentId);
+    const compatibilityAgentId = params.getCompatibilityAgentId();
     if (
       sessionKey === "global" &&
-      normalizeAgentId(agentId) === normalizeAgentId(params.getDefaultAgentId())
+      compatibilityAgentId !== undefined &&
+      normalizeAgentId(agentId) === normalizeAgentId(compatibilityAgentId)
     ) {
       // Keep legacy default-agent global subscribers while non-default global
       // sessions remain confined to their agent-qualified stream.

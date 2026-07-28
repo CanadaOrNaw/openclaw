@@ -60,6 +60,7 @@ import type {
 } from "../session-utils-store-lookup.js";
 import {
   buildGatewaySessionRow,
+  listSessionsFromStore,
   listSessionsFromStoreAsync,
   loadCombinedSessionStoreForGateway,
   resolveFreshestSessionEntryFromStoreKeys,
@@ -314,8 +315,8 @@ export const sessionReadHandlers: GatewayRequestHandlers = {
             : store;
           const result = await measureDiagnosticsTimelineSpan(
             "gateway.sessions.list.rows",
-            () =>
-              listSessionsFromStoreAsync({
+            () => {
+              const listParams = {
                 cfg,
                 durableStorePath,
                 ...(entryFilter ? { entryFilter } : {}),
@@ -323,7 +324,12 @@ export const sessionReadHandlers: GatewayRequestHandlers = {
                 store: listStore,
                 modelCatalog,
                 opts: p,
-              }),
+              };
+              // Empty stores have no transcript or row work to yield around.
+              return Object.keys(listStore).length === 0
+                ? listSessionsFromStore(listParams)
+                : listSessionsFromStoreAsync(listParams);
+            },
             {
               config: cfg,
               phase: "sessions.list",
