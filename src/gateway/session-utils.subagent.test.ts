@@ -87,6 +87,9 @@ describe("listSessionsFromStore subagent metadata", () => {
     expect(query.includeLineageSessionKeys).toEqual(
       expect.arrayContaining([childKey, childKey.toLowerCase()]),
     );
+    expect(resolveSessionListLineageSqlQuery("agent:main:work", now, "work").lineageKeys).toEqual(
+      expect.arrayContaining(["work", "main", "agent:main:main"]),
+    );
   });
 
   test("searches channel-derived display names before row enrichment", async () => {
@@ -1344,15 +1347,18 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
   test("keeps off-page store children available to bounded row enrichment", async () => {
     await withStateDirEnv("openclaw-session-list-child-context-", async ({ stateDir }) => {
       const storePath = path.join(stateDir, "agents", "main", "sessions", "sessions.json");
-      const parentKey = "agent:main:parent";
+      const parentKey = "agent:main:work";
       const childKey = "agent:main:child";
       const now = Date.now();
-      const cfg = { agents: { list: [{ id: "main", default: true }] } } as OpenClawConfig;
+      const cfg = {
+        agents: { list: [{ id: "main", default: true }] },
+        session: { mainKey: "work" },
+      } as OpenClawConfig;
       replaceSessionEntrySync(
         { sessionKey: childKey, storePath },
         {
           sessionId: "child-session",
-          spawnedBy: parentKey,
+          spawnedBy: "agent:main:main",
           updatedAt: now - 1_000,
         },
       );
@@ -1417,6 +1423,43 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
       });
       expect(Object.keys(filtered.store)).toEqual([parentKey]);
       expect(filtered.rowContextStore?.[childKey]).toBeDefined();
+    });
+  });
+
+  test("reruns a bounded per-agent query when a misplaced row consumes the page", async () => {
+    await withStateDirEnv("openclaw-session-list-misplaced-page-", async ({ stateDir }) => {
+      const storeTemplate = path.join(stateDir, "agents", "{agentId}", "sessions.json");
+      const opsStore = path.join(stateDir, "agents", "ops", "sessions.json");
+      const cfg = {
+        agents: { list: [{ id: "main", default: true }, { id: "ops" }] },
+        session: { store: storeTemplate },
+      } as OpenClawConfig;
+      replaceSessionEntrySync(
+        {
+          agentId: "ops",
+          sessionKey: "agent:main:misplaced",
+          storePath: opsStore,
+        },
+        { sessionId: "misplaced", updatedAt: 30 },
+      );
+      replaceSessionEntrySync(
+        { agentId: "ops", sessionKey: "agent:ops:valid", storePath: opsStore },
+        { sessionId: "valid", updatedAt: 20 },
+      );
+
+      const loaded = loadCombinedSessionStoreForGateway(cfg, {
+        agentId: "ops",
+        projection: "list",
+        query: {
+          archived: false,
+          includeGlobal: false,
+          includeUnknown: false,
+          limit: 1,
+          sortBy: "updatedAt",
+        },
+      });
+      expect(Object.keys(loaded.store)).toEqual(["agent:ops:valid"]);
+      expect(loaded.selectionExact).toBe(true);
     });
   });
 

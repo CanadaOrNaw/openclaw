@@ -178,6 +178,7 @@ describe("session accessor seam", () => {
     replaceSqliteSessionEntrySync(
       { agentId: "main", sessionKey: "agent:main:child", storePath },
       {
+        createdActor: { type: "agent", id: "agent:main:parent", label: "Parent agent" },
         sessionId: "child-session",
         updatedAt: 30,
         lastInteractionAt: 40,
@@ -187,6 +188,7 @@ describe("session accessor seam", () => {
     replaceSqliteSessionEntrySync(
       { agentId: "main", sessionKey: "agent:main:older-child", storePath },
       {
+        createdActor: { type: "system", id: "scheduler", label: "Scheduler" },
         sessionId: "older-child-session",
         updatedAt: 20,
         lastInteractionAt: 25,
@@ -232,6 +234,25 @@ describe("session accessor seam", () => {
       "agent:main:child",
       "agent:main:older-child",
     ]);
+    const bounded = querySqliteSessionEntriesReadOnly({
+      agentId: "main",
+      projection: "list",
+      query: {
+        archived: false,
+        includeGlobal: true,
+        includeUnknown: true,
+        limit: 1,
+        sortBy: "updatedAt",
+      },
+      storePath,
+    });
+    expect(bounded.entries).toHaveLength(1);
+    expect(bounded.creatorActors).toEqual(
+      expect.arrayContaining([
+        { type: "agent", id: "agent:main:parent", label: "Parent agent" },
+        { type: "system", id: "scheduler", label: "Scheduler" },
+      ]),
+    );
   });
 
   it("orders zero-valued promoted timestamps like absent values", () => {
@@ -265,6 +286,38 @@ describe("session accessor seam", () => {
     expect(query("lastInteractionAt")).toEqual(["agent:main:a-unpinned"]);
   });
 
+  it("matches owner agent segments exactly", () => {
+    replaceSqliteSessionEntrySync(
+      { agentId: "main", sessionKey: "agent:ops_team:own", storePath },
+      {
+        createdActor: {
+          type: "agent",
+          id: "agent:ops_team:owner",
+          label: { private: "data" },
+        } as unknown as NonNullable<SessionEntry["createdActor"]>,
+        sessionId: "own-session",
+        updatedAt: 20,
+      },
+    );
+    replaceSqliteSessionEntrySync(
+      { agentId: "main", sessionKey: "agent:opsXteam:other", storePath },
+      { sessionId: "other-session", updatedAt: 30 },
+    );
+
+    const result = querySqliteSessionEntriesReadOnly({
+      agentId: "main",
+      query: {
+        archived: false,
+        includeGlobal: false,
+        includeUnknown: false,
+        ownerAgentId: "ops_team",
+      },
+      storePath,
+    });
+    expect(result.entries.map(({ sessionKey }) => sessionKey)).toEqual(["agent:ops_team:own"]);
+    expect(result.creatorActors).toEqual([{ type: "agent", id: "agent:ops_team:owner" }]);
+  });
+
   it("does not let invalid JSON consume a bounded list page", () => {
     replaceSqliteSessionEntrySync(
       { agentId: "main", sessionKey: "agent:main:valid", storePath },
@@ -276,9 +329,9 @@ describe("session accessor seam", () => {
     });
     database.db
       .prepare(
-        "INSERT INTO session_nodes (session_key, current_session_id, entry_json, updated_at) VALUES (?, ?, ?, ?)",
+        "INSERT INTO session_nodes (session_key, current_session_id, entry_json, updated_at, created_actor_id, created_actor_type) VALUES (?, ?, ?, ?, ?, ?)",
       )
-      .run("agent:main:invalid", "invalid-session", "null", 20);
+      .run("agent:main:invalid", "invalid-session", "null", 20, "invalid-actor", "system");
 
     const result = querySqliteSessionEntriesReadOnly({
       agentId: "main",

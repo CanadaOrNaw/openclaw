@@ -79,6 +79,7 @@ export type SessionEntryListQuery = {
   label?: string;
   lineageKeys?: readonly string[];
   limit?: number;
+  ownerAgentId?: string;
   requireLastInteraction?: boolean;
   sessionId?: string;
   sortBy?: "updatedAt" | "lastInteractionAt";

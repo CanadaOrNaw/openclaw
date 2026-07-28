@@ -106,6 +106,27 @@ function buildSessionListPredicate(
   }
   const agentTail = eb.fn<string>("substr", ["session_key", eb.val(7)]);
   const agentDelimiter = eb.fn<number>("instr", [agentTail, eb.val(":")]);
+  if (query.ownerAgentId) {
+    const ownerConditions: Expression<SqlBool>[] = [
+      eb.and([
+        eb("session_key", "like", "agent:%"),
+        eb(agentDelimiter, ">", 0),
+        eb(
+          eb.fn<string>("substr", [agentTail, eb.val(1), eb(agentDelimiter, "-", 1)]),
+          "=",
+          query.ownerAgentId,
+        ),
+      ]),
+    ];
+    if (query.includeGlobal) {
+      ownerConditions.push(eb("session_key", "=", "global"));
+    }
+    if (query.includeUnknown) {
+      ownerConditions.push(eb("session_key", "=", "unknown"));
+    }
+    // Doctor owns legacy key migration; runtime accepts canonical agent keys plus explicit sentinels.
+    conditions.push(eb.or(ownerConditions));
+  }
   const agentRest = eb.fn<string>("substr", [agentTail, eb(agentDelimiter, "+", 1)]);
   if (!query.includeHidden) {
     const isCronRun = (rest: Expression<string>) => {
@@ -275,19 +296,57 @@ export function querySqliteSessionEntries(
     database.db,
     db
       .selectFrom("session_nodes")
-      .select(["created_actor_id", "created_actor_type"])
+      .select((eb) => [
+        "created_actor_id",
+        "created_actor_type",
+        eb
+          .case()
+          .when(eb(eb.fn<number>("json_valid", ["entry_json"]), "=", 1))
+          .then(
+            eb
+              .case()
+              .when(
+                eb(
+                  eb.fn<string | null>("json_type", ["entry_json", eb.val("$.createdActor.label")]),
+                  "=",
+                  "text",
+                ),
+              )
+              .then(eb.fn<string>("json_extract", ["entry_json", eb.val("$.createdActor.label")]))
+              .else(null)
+              .end(),
+          )
+          .else(null)
+          .end()
+          .as("created_actor_label"),
+      ])
       .distinct()
       .where((eb) => buildSessionListPredicate(eb, query, false))
       .where("created_actor_id", "is not", null),
   ).rows;
+  const creatorActors = new Map<string, NonNullable<SessionEntry["createdActor"]>>();
+  for (const row of creatorRows) {
+    const actorType = row.created_actor_type;
+    if (
+      !row.created_actor_id ||
+      (actorType !== "agent" && actorType !== "human" && actorType !== "system")
+    ) {
+      continue;
+    }
+    const label =
+      typeof row.created_actor_label === "string" ? row.created_actor_label.trim() : undefined;
+    const key = `${actorType}\0${row.created_actor_id}`;
+    const existing = creatorActors.get(key);
+    if (!existing?.label || (label && label.localeCompare(existing.label) < 0)) {
+      creatorActors.set(key, {
+        id: row.created_actor_id,
+        type: actorType,
+        ...(label ? { label } : {}),
+      });
+    }
+  }
   return {
-    creatorActors: creatorRows.flatMap((row) => {
-      const actorType = row.created_actor_type;
-      return row.created_actor_id &&
-        (actorType === "agent" || actorType === "human" || actorType === "system")
-        ? [{ id: row.created_actor_id, type: actorType }]
-        : [];
-    }),
+    creatorActors: [...creatorActors.values()],
     entries,
     totalCount: count ?? 0,
   };

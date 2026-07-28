@@ -57,6 +57,7 @@ function loadGatewayStoreEntries(params: {
   agentId: string;
   incognito?: boolean;
   includeDependencies?: boolean;
+  mainKey?: string;
   projection: GatewaySessionEntryProjection;
   query?: SessionEntryListQuery;
   storePath: string;
@@ -90,12 +91,21 @@ function loadGatewayStoreEntries(params: {
   const dependencyKeys = [
     ...new Set(
       params.includeDependencies
-        ? (result?.entries.flatMap(({ sessionKey }) => [
-            sessionKey,
-            normalizeStoreSessionKey(sessionKey),
-            ...foldedSessionKeyAliasCandidates(normalizeStoreSessionKey(sessionKey)),
-            parseAgentSessionKey(sessionKey)?.rest ?? sessionKey,
-          ]) ?? [])
+        ? (result?.entries.flatMap(({ sessionKey }) => {
+            const normalized = normalizeStoreSessionKey(sessionKey);
+            const parsed = parseAgentSessionKey(normalized);
+            const legacyMain =
+              parsed && params.mainKey?.trim().toLowerCase() === parsed.rest.trim().toLowerCase()
+                ? ["main", `agent:${parsed.agentId}:main`]
+                : [];
+            return [
+              sessionKey,
+              normalized,
+              ...foldedSessionKeyAliasCandidates(normalized),
+              parsed?.rest ?? sessionKey,
+              ...legacyMain,
+            ];
+          }) ?? [])
         : [],
     ),
   ];
@@ -236,6 +246,7 @@ function mergeOpenIncognitoStores(params: {
       incognito: true,
       includeDependencies: params.includeDependencies,
       projection: params.projection,
+      mainKey: params.cfg.session?.mainKey,
       ...(params.query ? { query: params.query } : {}),
       storePath: target.storePath,
     });
@@ -360,10 +371,13 @@ export function loadCombinedSessionStoreForGateway(
   });
   const targets = resolved.targets;
   const openIncognito = includeIncognito && listOpenIncognitoAgentDatabases().length > 0;
-  const query =
+  let query =
     opts.query && (targets.length !== 1 || openIncognito)
       ? { ...opts.query, limit: undefined }
       : opts.query;
+  if (query && requestedAgentId) {
+    query = { ...query, ownerAgentId: requestedAgentId };
+  }
   const combined: Record<string, SessionEntry> = {};
   const rowContextCombined: Record<string, SessionEntry> = {};
   let selectionExact = targets.length === 1 && !openIncognito;
@@ -373,6 +387,7 @@ export function loadCombinedSessionStoreForGateway(
     const loaded = loadGatewayStoreEntries({
       agentId,
       includeDependencies: opts.includeRowContext === true,
+      mainKey: cfg.session?.mainKey,
       projection,
       ...(query ? { query } : {}),
       storePath,

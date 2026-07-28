@@ -168,13 +168,14 @@ export function resolveSessionListLineageSqlQuery(
     normalizeOptionalString(mainKey)?.toLowerCase() === parsedParent.rest.toLowerCase()
       ? "main"
       : undefined;
+  const legacyScopedMain = legacyMain ? `agent:${parsedParent?.agentId}:main` : undefined;
   return {
     ...(childKeys.size > 0 ? { excludeLineageSessionKeys: [...childKeys] } : {}),
     ...(include.size > 0 ? { includeLineageSessionKeys: [...include] } : {}),
     lineageKeys: [
       ...new Set([
         ...sessionKeyAliasCandidates(parentKey),
-        ...[parsedParent?.rest, legacyMain].filter(Boolean),
+        ...[parsedParent?.rest, legacyMain, legacyScopedMain].filter(Boolean),
       ]),
     ] as string[],
   };
