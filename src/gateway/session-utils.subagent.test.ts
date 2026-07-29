@@ -1379,7 +1379,7 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
         { sessionKey: childKey, storePath },
         {
           sessionId: "child-session",
-          spawnedBy: "agent:main:main",
+          spawnedBy: parentKey,
           updatedAt: now - 1_000,
         },
       );
@@ -1669,7 +1669,7 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
       await seedSessionEntry(
         storePath,
         "agent:ops:legacy",
-        { sessionId: "s-legacy-ops", spawnedBy: "main", updatedAt: 400 },
+        { sessionId: "s-legacy-ops", spawnedBy: "agent:ops:main", updatedAt: 400 },
         "ops",
       );
       const dynamicIncognitoKey = "agent:dynamic:dashboard:incognito-dynamic";

@@ -21,6 +21,7 @@ import {
   querySqliteSessionEntries,
   querySqliteSessionEntriesReadOnly,
 } from "./session-accessor.sqlite-entry.js";
+import { cloneSessionEntry } from "./session-accessor.sqlite-scope.js";
 import type {
   SessionEntryListQuery,
   SessionEntryListScope,
@@ -174,13 +175,12 @@ function projectCombinedSessionEntry(params: {
       sessionKey,
       storeAgentId: params.agentId,
     });
-  const projected = {
-    ...params.entry,
+  const projected = Object.assign(cloneSessionEntry(params.entry), {
     ...(params.entry.parentSessionKey
       ? { parentSessionKey: resolveParent(params.entry.parentSessionKey) }
       : {}),
     ...(params.entry.spawnedBy ? { spawnedBy: resolveParent(params.entry.spawnedBy) } : {}),
-  };
+  });
   return projected;
 }
 
