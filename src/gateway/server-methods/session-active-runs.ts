@@ -18,13 +18,8 @@ type TrackedActiveSessionRun = {
 };
 
 /** Resolves the compatibility owner used to disambiguate an unscoped global run. */
-export function resolveActiveSessionRunDefaultAgentId(
-  cfg: OpenClawConfig,
-  requestedAgentId?: string,
-): string | undefined {
-  return requestedAgentId
-    ? normalizeAgentId(requestedAgentId)
-    : (tryGetLegacyDefaultAgentId(cfg) ?? tryResolveDefaultAgentId(cfg));
+export function resolveActiveSessionRunDefaultAgentId(cfg: OpenClawConfig): string | undefined {
+  return tryGetLegacyDefaultAgentId(cfg) ?? tryResolveDefaultAgentId(cfg);
 }
 
 export function collectTrackedActiveSessionRuns(

@@ -21,21 +21,32 @@ import {
   resolveVisibleActiveSessionRunState,
 } from "./session-active-runs.js";
 
-it("projects an active global run through the retained compatibility owner", () => {
+it("keeps a retained global run scoped to its compatibility owner", () => {
   const cfg = retainLegacyDefaultAgentId(
     { agents: { ownership: "explicit", entries: { main: {}, work: {} } } },
-    "work",
+    "main",
   );
   const defaultAgentId = resolveActiveSessionRunDefaultAgentId(cfg);
+  const context = {
+    chatAbortControllers: new Map([["run-global", { sessionKey: "global", agentId: "main" }]]),
+  } as never;
 
-  expect(defaultAgentId).toBe("work");
+  expect(defaultAgentId).toBe("main");
   expect(
     resolveVisibleActiveSessionRunState({
-      context: {
-        chatAbortControllers: new Map([["run-global", { sessionKey: "global", agentId: "work" }]]),
-      } as never,
+      context,
       requestedKey: "global",
       canonicalKey: "global",
+      agentId: "work",
+      defaultAgentId,
+    }),
+  ).toEqual({ active: false, runIds: [] });
+  expect(
+    resolveVisibleActiveSessionRunState({
+      context,
+      requestedKey: "global",
+      canonicalKey: "global",
+      agentId: "main",
       defaultAgentId,
     }),
   ).toEqual({ active: true, runIds: ["run-global"] });

@@ -9,7 +9,10 @@ const {
   broadcastToConnIds: vi.fn(),
   legacyDefaultAgentIdMock: vi.fn(() => undefined as string | undefined),
   loadGatewaySessionRowMock: vi.fn(),
-  resolveVisibleActiveSessionRunStateMock: vi.fn(() => ({ active: false, runIds: [] })),
+  resolveVisibleActiveSessionRunStateMock: vi.fn((): { active: boolean; runIds: string[] } => ({
+    active: false,
+    runIds: [],
+  })),
 }));
 
 vi.mock("../agents/agent-scope.js", async () => {
@@ -118,6 +121,82 @@ describe("server session events without a compatibility owner", () => {
 
     expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalledWith(
       expect.objectContaining({ agentId: undefined, defaultAgentId: "main" }),
+    );
+  });
+
+  it("projects a selected global run without a compatibility owner", () => {
+    resolveVisibleActiveSessionRunStateMock.mockReturnValue({
+      active: true,
+      runIds: ["run-work"],
+    });
+    emitSessionsChanged(
+      {
+        broadcastToConnIds,
+        chatAbortControllers: new Map(),
+        getRuntimeConfig: () => ({
+          agents: { ownership: "explicit", entries: { main: {}, work: {} } },
+        }),
+        getSessionEventSubscriberConnIds: () => new Set(["conn-1"]),
+      } as never,
+      { sessionKey: "global", agentId: "work", reason: "updated" },
+    );
+
+    expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: "work", defaultAgentId: undefined }),
+    );
+    expect(broadcastToConnIds.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({ hasActiveRun: true, activeRunIds: ["run-work"] }),
+    );
+  });
+
+  it("projects an explicitly owned non-global run without a compatibility owner", () => {
+    loadGatewaySessionRowMock.mockReturnValue({
+      ...globalRow,
+      key: "agent:work:incident",
+      kind: "other",
+    });
+    resolveVisibleActiveSessionRunStateMock.mockReturnValue({
+      active: true,
+      runIds: ["run-incident"],
+    });
+    emitSessionsChanged(
+      {
+        broadcastToConnIds,
+        chatAbortControllers: new Map(),
+        getRuntimeConfig: () => ({
+          agents: { ownership: "explicit", entries: { main: {}, work: {} } },
+        }),
+        getSessionEventSubscriberConnIds: () => new Set(["conn-1"]),
+      } as never,
+      { sessionKey: "agent:work:incident", reason: "updated" },
+    );
+
+    expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalled();
+    expect(broadcastToConnIds.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({ hasActiveRun: true, activeRunIds: ["run-incident"] }),
+    );
+  });
+
+  it("does not project an ownerless unselected global run", () => {
+    resolveVisibleActiveSessionRunStateMock.mockReturnValue({
+      active: true,
+      runIds: ["run-ownerless"],
+    });
+    emitSessionsChanged(
+      {
+        broadcastToConnIds,
+        chatAbortControllers: new Map(),
+        getRuntimeConfig: () => ({
+          agents: { ownership: "explicit", entries: { main: {}, work: {} } },
+        }),
+        getSessionEventSubscriberConnIds: () => new Set(["conn-1"]),
+      } as never,
+      { sessionKey: "global", reason: "updated" },
+    );
+
+    expect(resolveVisibleActiveSessionRunStateMock).not.toHaveBeenCalled();
+    expect(broadcastToConnIds.mock.calls[0]?.[1]).not.toEqual(
+      expect.objectContaining({ hasActiveRun: true }),
     );
   });
 

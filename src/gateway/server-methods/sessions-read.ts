@@ -415,7 +415,7 @@ export const sessionReadHandlers: GatewayRequestHandlers = {
           );
           const trackedActiveRuns = collectTrackedActiveSessionRuns(context);
           const projectedAgentRunIndex = buildProjectedAgentRunIndex();
-          const defaultAgentId = resolveActiveSessionRunDefaultAgentId(cfg, p.agentId);
+          const defaultAgentId = resolveActiveSessionRunDefaultAgentId(cfg);
           const sessions = measureDiagnosticsTimelineSpanSync(
             "gateway.sessions.list.active_run_flags",
             () => {
