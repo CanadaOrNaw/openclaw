@@ -121,6 +121,26 @@ describe("agent session resolution", () => {
     });
   });
 
+  it("does not resume a removed agent from a stale shared-store key", async () => {
+    await withTempHome(async (home) => {
+      const store = path.join(home, "sessions.json");
+      const cfg = mockConfig(home, store, [{ id: "ops" }, { id: "research" }]);
+      await replaceSessionEntry(
+        { agentId: "ops", sessionKey: "agent:retired:main", storePath: store },
+        { sessionId: "retired-session", updatedAt: 1 },
+      );
+
+      const resolution = resolveSessionKeyForRequest({
+        cfg,
+        sessionId: "retired-session",
+        agentId: "ops",
+      });
+
+      expect(resolution.agentId).toBe("ops");
+      expect(resolution.sessionKey).toBe("agent:ops:explicit:retired-session");
+    });
+  });
+
   it("derives a shared-store session owner from its scoped key", async () => {
     await withTempHome(async (home) => {
       const store = path.join(home, "sessions.json");

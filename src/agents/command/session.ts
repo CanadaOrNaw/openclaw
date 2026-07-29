@@ -209,12 +209,17 @@ function collectSessionIdMatchesForRequest(opts: {
       const pathOwners = configuredStoreOwners.get(path.resolve(candidateStorePath));
       const pathOwnedAgentId =
         pathOwners?.size === 1 ? pathOwners.values().next().value : undefined;
+      const parsedAgentId = parseAgentSessionKey(candidateKey)?.agentId;
+      const normalizedParsedAgentId = parsedAgentId ? normalizeAgentId(parsedAgentId) : undefined;
+      if (normalizedParsedAgentId && !configuredAgentIds.includes(normalizedParsedAgentId)) {
+        continue;
+      }
       const legacyUnscopedOwner =
         classifySessionKeyShape(candidateKey) === "legacy_or_alias"
           ? (pathOwnedAgentId ?? compatibilityAgentId)
           : undefined;
       const matchedAgentId =
-        parseAgentSessionKey(candidateKey)?.agentId ??
+        normalizedParsedAgentId ??
         legacyUnscopedOwner ??
         (normalizedCandidateAgentId && configuredAgentIds.includes(normalizedCandidateAgentId)
           ? normalizedCandidateAgentId
