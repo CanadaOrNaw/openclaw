@@ -410,31 +410,42 @@ function mergeTrajectoryRuntimeEvents(
     const key = identity(row);
     destinationCounts.set(key, (destinationCounts.get(key) ?? 0) + 1);
   }
-  const sourceCounts = new Map<string, number>();
-  for (const row of rows) {
+  const sortedRows = rows.toSorted((left, right) => left.seq - right.seq);
+  const unmatchedDestinationCounts = new Map(destinationCounts);
+  const representedRows = new Set<(typeof rows)[number]>();
+  const exactRepresentedRows = new Set<(typeof rows)[number]>();
+  for (const row of sortedRows) {
     const key = identity(row);
-    sourceCounts.set(key, (sourceCounts.get(key) ?? 0) + 1);
+    const original = bySeq.get(row.seq);
+    const remaining = unmatchedDestinationCounts.get(key) ?? 0;
+    if (remaining > 0 && original && identity(original) === key) {
+      representedRows.add(row);
+      exactRepresentedRows.add(row);
+      unmatchedDestinationCounts.set(key, remaining - 1);
+    }
   }
-  const remainingByIdentity = new Map(
-    [...sourceCounts].map(([key, count]) => [
-      key,
-      Math.max(0, count - (destinationCounts.get(key) ?? 0)),
-    ]),
-  );
+  for (const row of sortedRows) {
+    const key = identity(row);
+    const remaining = unmatchedDestinationCounts.get(key) ?? 0;
+    if (!representedRows.has(row) && remaining > 0) {
+      representedRows.add(row);
+      unmatchedDestinationCounts.set(key, remaining - 1);
+    }
+  }
   let nextSeq = 0;
   for (const row of existing) {
     nextSeq = Math.max(nextSeq, row.seq + 1);
   }
   let remapping = false;
-  for (const row of rows.toSorted((left, right) => left.seq - right.seq)) {
+  for (const row of sortedRows) {
     const key = identity(row);
+    if (representedRows.has(row)) {
+      remapping ||= !exactRepresentedRows.has(row);
+      continue;
+    }
     const original = bySeq.get(row.seq);
     if (original && identity(original) !== key) {
       remapping = true;
-    }
-    const remaining = remainingByIdentity.get(key) ?? 0;
-    if (remaining <= 0) {
-      continue;
     }
     remapping ||= bySeq.has(row.seq);
     if (remapping) {
@@ -449,7 +460,6 @@ function mergeTrajectoryRuntimeEvents(
       db.insertInto("trajectory_runtime_events").values(merged),
     );
     bySeq.set(seq, merged);
-    remainingByIdentity.set(key, remaining - 1);
     nextSeq = Math.max(nextSeq, seq + 1);
   }
 }
@@ -473,34 +483,47 @@ function mergeAcpParentStreamEvents(
     const key = identity(row);
     destinationCounts.set(key, (destinationCounts.get(key) ?? 0) + 1);
   }
-  const sourceCounts = new Map<string, number>();
-  for (const row of rows) {
+  const sortedRows = rows.toSorted((left, right) => {
+    const byRun = left.run_id.localeCompare(right.run_id);
+    return byRun || left.seq - right.seq;
+  });
+  const unmatchedDestinationCounts = new Map(destinationCounts);
+  const representedRows = new Set<(typeof rows)[number]>();
+  const exactRepresentedRows = new Set<(typeof rows)[number]>();
+  for (const row of sortedRows) {
     const key = identity(row);
-    sourceCounts.set(key, (sourceCounts.get(key) ?? 0) + 1);
+    const original = byKey.get(eventKey(row.run_id, row.seq));
+    const remaining = unmatchedDestinationCounts.get(key) ?? 0;
+    if (remaining > 0 && original && identity(original) === key) {
+      representedRows.add(row);
+      exactRepresentedRows.add(row);
+      unmatchedDestinationCounts.set(key, remaining - 1);
+    }
   }
-  const remainingByIdentity = new Map(
-    [...sourceCounts].map(([key, count]) => [
-      key,
-      Math.max(0, count - (destinationCounts.get(key) ?? 0)),
-    ]),
-  );
+  for (const row of sortedRows) {
+    const key = identity(row);
+    const remaining = unmatchedDestinationCounts.get(key) ?? 0;
+    if (!representedRows.has(row) && remaining > 0) {
+      representedRows.add(row);
+      unmatchedDestinationCounts.set(key, remaining - 1);
+    }
+  }
   const nextSeqByRun = new Map<string, number>();
   for (const row of existing) {
     nextSeqByRun.set(row.run_id, Math.max(nextSeqByRun.get(row.run_id) ?? 0, row.seq + 1));
   }
   const remappedRuns = new Set<string>();
-  for (const row of rows.toSorted((left, right) => {
-    const byRun = left.run_id.localeCompare(right.run_id);
-    return byRun || left.seq - right.seq;
-  })) {
+  for (const row of sortedRows) {
     const key = identity(row);
+    if (representedRows.has(row)) {
+      if (!exactRepresentedRows.has(row)) {
+        remappedRuns.add(row.run_id);
+      }
+      continue;
+    }
     const original = byKey.get(eventKey(row.run_id, row.seq));
     if (original && identity(original) !== key) {
       remappedRuns.add(row.run_id);
-    }
-    const remaining = remainingByIdentity.get(key) ?? 0;
-    if (remaining <= 0) {
-      continue;
     }
     if (byKey.has(eventKey(row.run_id, row.seq))) {
       remappedRuns.add(row.run_id);
@@ -519,7 +542,6 @@ function mergeAcpParentStreamEvents(
       db.insertInto("acp_parent_stream_events").values(merged),
     );
     byKey.set(eventKey(row.run_id, seq), merged);
-    remainingByIdentity.set(key, remaining - 1);
   }
 }
 

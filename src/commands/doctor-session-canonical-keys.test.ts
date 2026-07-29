@@ -565,6 +565,16 @@ describe("doctor canonical session-key repair", () => {
             type: "message",
           }),
         );
+      staleDestinationDatabase.db
+        .prepare(
+          "INSERT INTO trajectory_runtime_events (session_id, seq, run_id, event_json, created_at) VALUES ('winner-previous', 0, 'run-overlap', ?, 15), ('winner-previous', 2, 'run-overlap', ?, 15)",
+        )
+        .run(JSON.stringify({ source: "different" }), JSON.stringify({ source: "overlap" }));
+      staleDestinationDatabase.db
+        .prepare(
+          "INSERT INTO acp_parent_stream_events (session_id, run_id, seq, event_json, created_at) VALUES ('winner-previous', 'run-overlap', 0, ?, 15), ('winner-previous', 'run-overlap', 2, ?, 15)",
+        )
+        .run(JSON.stringify({ source: "different" }), JSON.stringify({ source: "overlap" }));
       insertLegacySession({
         agentId: "ops",
         entry: {
@@ -600,6 +610,18 @@ describe("doctor canonical session-key repair", () => {
             type: "message",
           }),
         );
+      for (const seq of [0, 1]) {
+        opsDatabase.db
+          .prepare(
+            "INSERT INTO trajectory_runtime_events (session_id, seq, run_id, event_json, created_at) VALUES ('winner-previous', ?, 'run-overlap', ?, 15)",
+          )
+          .run(seq, JSON.stringify({ source: "overlap" }));
+        opsDatabase.db
+          .prepare(
+            "INSERT INTO acp_parent_stream_events (session_id, run_id, seq, event_json, created_at) VALUES ('winner-previous', 'run-overlap', ?, ?, 15)",
+          )
+          .run(seq, JSON.stringify({ source: "overlap" }));
+      }
       opsDatabase.db
         .prepare(
           "INSERT INTO trajectory_runtime_events (session_id, seq, run_id, event_json, created_at) VALUES ('winner', 0, 'run-1', ?, 20)",
@@ -733,6 +755,20 @@ describe("doctor canonical session-key repair", () => {
         { session_key: "agent:main:shared" },
         { session_key: "agent:main:shared" },
       ]);
+      expect(
+        mainDatabase.db
+          .prepare(
+            "SELECT seq FROM trajectory_runtime_events WHERE session_id = 'winner-previous' AND event_json = ? ORDER BY seq",
+          )
+          .all(JSON.stringify({ source: "overlap" })),
+      ).toEqual([{ seq: 2 }, { seq: 3 }]);
+      expect(
+        mainDatabase.db
+          .prepare(
+            "SELECT seq FROM acp_parent_stream_events WHERE session_id = 'winner-previous' AND event_json = ? ORDER BY seq",
+          )
+          .all(JSON.stringify({ source: "overlap" })),
+      ).toEqual([{ seq: 2 }, { seq: 3 }]);
       expect(
         mainDatabase.db
           .prepare(
