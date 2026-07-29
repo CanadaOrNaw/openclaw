@@ -6,17 +6,14 @@ import path from "node:path";
 import { expectDefined } from "@openclaw/normalization-core";
 import { afterEach, beforeAll, describe, expect, test } from "vitest";
 import { ANTHROPIC_CONTEXT_1M_TOKENS } from "../agents/context-resolution.js";
-import {
-  addSubagentRunForTests,
-  resetSubagentRegistryForTests,
-} from "../agents/subagent-registry.test-helpers.js";
+import { resetSubagentRegistryForTests } from "../agents/subagent-registry.test-helpers.js";
 import type { OpenClawConfig } from "../config/config.js";
 import type { SessionEntry } from "../config/sessions.js";
 import {
   appendTranscriptMessageSync,
   replaceSessionEntry,
 } from "../config/sessions/session-accessor.js";
-import { registerAgentRunContext, resetAgentEventsForTest } from "../infra/agent-events.js";
+import { resetAgentEventsForTest } from "../infra/agent-events.js";
 import { closeOpenClawAgentDatabasesForTest } from "../state/openclaw-agent-db.js";
 import { closeOpenClawStateDatabaseForTest } from "../state/openclaw-state-db.js";
 import { listSessionsFromStoreForTest as listSessionsFromStore } from "./session-utils-list.test-support.js";
@@ -27,7 +24,6 @@ const MAIN_SESSION_ID = "sess-main";
 const TRANSCRIPT_TOTAL_TOKENS = 3_200;
 const TRANSCRIPT_COST_USD = 0.007725;
 const ANTHROPIC_MODEL = "claude-sonnet-4-6";
-const FREE_OPENAI_MODEL = "gpt-5.3-codex-spark";
 
 type TranscriptUsageFixture = {
   provider: string;
@@ -45,15 +41,6 @@ const ANTHROPIC_USAGE: TranscriptUsageFixture = {
   output: 500,
   cacheRead: 1_200,
   costTotal: TRANSCRIPT_COST_USD,
-};
-
-const FREE_OPENAI_USAGE: TranscriptUsageFixture = {
-  provider: "openai",
-  model: FREE_OPENAI_MODEL,
-  input: 5_107,
-  output: 1_827,
-  cacheRead: 1_536,
-  costTotal: 0,
 };
 
 function createModelDefaultsConfig(params: {
@@ -103,31 +90,6 @@ function buildLegacyRuntimeRow(cfg: OpenClawConfig, model: string) {
     key: MAIN_SESSION_KEY,
     entry: store[MAIN_SESSION_KEY],
   });
-}
-
-function createOpenAiPricingConfig(params: {
-  id: string;
-  label: string;
-  cost: { input: number; output: number; cacheRead: number; cacheWrite: number };
-}): OpenClawConfig {
-  return {
-    session: { mainKey: "main" },
-    agents: { list: [{ id: "main", default: true }] },
-    models: {
-      providers: {
-        openai: {
-          models: [
-            {
-              id: params.id,
-              label: params.label,
-              baseUrl: "https://api.openai.com/v1",
-              cost: params.cost,
-            },
-          ],
-        },
-      },
-    },
-  } as unknown as OpenClawConfig;
 }
 
 type DefaultTranscriptFixtureParams<T> = {
@@ -199,9 +161,6 @@ async function withTranscriptFixture<T>(
 const withAnthropicTranscriptFixture = <T>(params: DefaultTranscriptFixtureParams<T>) =>
   withTranscriptFixture(ANTHROPIC_USAGE, params);
 
-const withFreeOpenAiTranscriptFixture = <T>(params: DefaultTranscriptFixtureParams<T>) =>
-  withTranscriptFixture(FREE_OPENAI_USAGE, params);
-
 function createAnthropicContext1mConfig(): OpenClawConfig {
   return {
     session: { mainKey: "main" },
@@ -245,29 +204,6 @@ async function listMainSession(params: {
   });
 }
 
-function registerRunningSubagent(params: {
-  runId: string;
-  childSessionKey: string;
-  model: string;
-  now: number;
-}) {
-  addSubagentRunForTests({
-    runId: params.runId,
-    childSessionKey: params.childSessionKey,
-    controllerSessionKey: MAIN_SESSION_KEY,
-    requesterSessionKey: MAIN_SESSION_KEY,
-    requesterDisplayKey: "main",
-    task: "child task",
-    cleanup: "keep",
-    createdAt: params.now - 5_000,
-    startedAt: params.now - 4_000,
-    model: params.model,
-  });
-  registerAgentRunContext(params.runId, {
-    sessionKey: params.childSessionKey,
-  });
-}
-
 type ListedSession = Awaited<ReturnType<typeof listSessionsFromStore>>["sessions"][number];
 
 function expectSessionModel(
@@ -301,10 +237,6 @@ function sessionEntry(overrides: Partial<SessionEntry> = {}, updatedAt = Date.no
   } as SessionEntry;
 }
 
-function mainSessionStore(entry: SessionEntry): Record<string, SessionEntry> {
-  return { [MAIN_SESSION_KEY]: entry };
-}
-
 function transcriptFallbackEntry(now: number, overrides: Partial<SessionEntry> = {}): SessionEntry {
   return sessionEntry(
     {
@@ -332,17 +264,6 @@ function expectOpenAiGpt54Backfill(session: ListedSession | undefined) {
   expectTranscriptBackfill(session);
 }
 
-function freeOpenAiUsageEntry(): SessionEntry {
-  return sessionEntry({
-    modelProvider: "openai",
-    model: FREE_OPENAI_MODEL,
-    inputTokens: FREE_OPENAI_USAGE.input,
-    outputTokens: FREE_OPENAI_USAGE.output,
-    cacheRead: FREE_OPENAI_USAGE.cacheRead,
-    cacheWrite: 0,
-  });
-}
-
 function anthropicUsageEntry(now: number, overrides: Partial<SessionEntry> = {}): SessionEntry {
   return {
     sessionId: MAIN_SESSION_ID,
@@ -366,13 +287,6 @@ function zeroUsageTranscriptEntry(
     cacheRead: 0,
     cacheWrite: 0,
     ...overrides,
-  });
-}
-
-function childTranscriptEntry(sessionId: string, now: number): SessionEntry {
-  return transcriptFallbackEntry(now, {
-    sessionId,
-    spawnedBy: MAIN_SESSION_KEY,
   });
 }
 
@@ -449,14 +363,6 @@ describe("listSessionsFromStore search", () => {
       storePath: "/tmp/sessions.json",
       store: params.store ?? makeStore(),
       opts: params.opts,
-    });
-  }
-
-  async function listConfiguredMainSession(cfg: OpenClawConfig, entry: SessionEntry) {
-    return await listSearchSessions({
-      cfg,
-      store: mainSessionStore(entry),
-      opts: {},
     });
   }
 

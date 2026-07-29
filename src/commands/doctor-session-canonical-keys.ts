@@ -8,6 +8,7 @@ import {
   listSessionGenerationIdsForCanonicalRepair,
   loadTranscriptEvents,
 } from "../config/sessions/session-accessor.js";
+import type { SessionEntryLifecycleRemoval } from "../config/sessions/session-accessor.lifecycle-types.js";
 import { writeSqliteTranscriptArchive } from "../config/sessions/session-accessor.sqlite-archive.js";
 import { mergeCanonicalSessionEntryCandidates } from "../config/sessions/session-canonical-key.js";
 import { resolveAllAgentSessionStoreTargetsSync } from "../config/sessions/targets.js";
@@ -29,6 +30,22 @@ type CanonicalSessionCandidate = {
   sqlitePath: string;
   storePath: string;
 };
+
+function createCanonicalRepairRemoval(
+  candidate: CanonicalSessionCandidate,
+  params: { archiveRemovedTranscript: boolean; deleteOwnedWindows: boolean },
+): SessionEntryLifecycleRemoval {
+  const removal = {
+    archiveRemovedTranscript: params.archiveRemovedTranscript,
+    deleteOwnedWindows: params.deleteOwnedWindows,
+    exactStoredKey: true,
+    expectedEntry: candidate.entry,
+    sessionKey: candidate.sessionKey,
+  } satisfies SessionEntryLifecycleRemoval;
+  return candidate.rawEntryJson === undefined
+    ? removal
+    : Object.assign(removal, { expectedRawEntryJson: candidate.rawEntryJson });
+}
 
 export type CanonicalSessionKeyRepairReport = {
   archivedTranscriptDirectories: string[];
@@ -256,15 +273,12 @@ async function repairCanonicalSessionGroup(
         (candidate) =>
           candidate.sessionKey !== winner.canonicalKey || candidate.rawEntryJson !== undefined,
       )
-      .map((candidate) => ({
-        archiveRemovedTranscript: !relatedSessionIds.has(candidate.entry.sessionId),
-        exactStoredKey: true,
-        expectedEntry: candidate.entry,
-        ...(candidate.rawEntryJson !== undefined
-          ? { expectedRawEntryJson: candidate.rawEntryJson }
-          : {}),
-        sessionKey: candidate.sessionKey,
-      })),
+      .map((candidate) =>
+        createCanonicalRepairRemoval(candidate, {
+          archiveRemovedTranscript: !relatedSessionIds.has(candidate.entry.sessionId),
+          deleteOwnedWindows: false,
+        }),
+      ),
     skipMaintenance: true,
     storePath: destination.storePath,
     upserts: [{ entry: selected.entry, sessionKey: winner.canonicalKey }],
@@ -284,16 +298,12 @@ async function repairCanonicalSessionGroup(
     }
     const result = await applySessionEntryLifecycleMutation({
       agentId: storeCandidate.agentId,
-      removals: storeCandidates.map((candidate) => ({
-        archiveRemovedTranscript: true,
-        deleteOwnedWindows: true,
-        exactStoredKey: true,
-        expectedEntry: candidate.entry,
-        ...(candidate.rawEntryJson !== undefined
-          ? { expectedRawEntryJson: candidate.rawEntryJson }
-          : {}),
-        sessionKey: candidate.sessionKey,
-      })),
+      removals: storeCandidates.map((candidate) =>
+        createCanonicalRepairRemoval(candidate, {
+          archiveRemovedTranscript: true,
+          deleteOwnedWindows: true,
+        }),
+      ),
       skipMaintenance: true,
       storePath: storeCandidate.storePath,
     });

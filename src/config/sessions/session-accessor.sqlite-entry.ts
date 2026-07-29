@@ -16,6 +16,10 @@ import {
 import type { DeliveryContext } from "../../utils/delivery-context.types.js";
 import { isInternalSessionEffectsKey } from "./internal-session-key.js";
 import { deriveLastRoutePatch, deriveSessionMetaPatch } from "./metadata.js";
+import {
+  copySqliteSessionOwnedStateForRepair,
+  resolveSqliteCanonicalRepairLookupKeys,
+} from "./session-accessor.sqlite-canonical-repair.js";
 import type {
   ExactSessionEntry,
   SessionAccessScope,
@@ -42,8 +46,6 @@ import {
   readSqliteLifecycleTargetSnapshot,
   readSqliteSessionEntrySelectionSnapshot,
   readSqliteSessionIdentitySnapshot,
-  copySqliteSessionOwnedStateForRepair,
-  resolveSqliteCanonicalRepairLookupKeys,
   rehomeSqliteSessionWindows,
   writeSessionEntry,
 } from "./session-accessor.sqlite-entry-store.js";
