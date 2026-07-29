@@ -1,7 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-type LoadStaticCatalog =
-  typeof import("./embedded-agent-runner/model.static-catalog.js").loadBundledProviderStaticCatalogContextModels;
+import type { LoadStaticCatalog } from "./prepared-model-runtime.lifecycle.test-support.js";
 
 const mocks = vi.hoisted(() => ({
   authStorage: { getAll: vi.fn(() => ({ custom: { type: "api_key", key: "test-key" } })) },
