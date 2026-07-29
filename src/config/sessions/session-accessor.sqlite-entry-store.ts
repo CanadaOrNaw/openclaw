@@ -34,7 +34,7 @@ import { parseSqliteSessionEntryJson as parseSessionEntryRow } from "./session-a
 import { readTranscriptMutationStateInTransaction } from "./session-accessor.sqlite-transcript-state.js";
 import {
   assertCanonicalSqliteSessionKeysCurrent,
-  assertCanonicalSessionKeyWrite,
+  assertCanonicalSessionKeyWriteMatchesDatabase,
   canonicalSqliteSessionKeyTokenIsCurrent,
   duplicateCanonicalSessionKeyError,
   nonCanonicalSessionKeyRowError,
@@ -553,7 +553,7 @@ export function writeSessionEntry(
   entry: SessionEntry,
   options: { allowStoredAliases?: boolean; previousEntry?: SessionEntry | null } = {},
 ): void {
-  assertCanonicalSessionKeyWrite(sessionKey, database.agentId);
+  assertCanonicalSessionKeyWriteMatchesDatabase(database, sessionKey);
   const db = getSessionKysely(database.db);
   if (!options.allowStoredAliases) {
     assertCanonicalSqliteSessionKeysCurrent(database);

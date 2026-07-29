@@ -64,6 +64,27 @@ export function assertCanonicalSessionKeyWrite(sessionKey: string, databaseAgent
   }
 }
 
+export function assertCanonicalSessionKeyWriteMatchesDatabase(
+  database: Pick<OpenClawAgentDatabase, "agentId" | "db">,
+  sessionKey: string,
+): void {
+  assertCanonicalSessionKeyWrite(sessionKey, database.agentId);
+  const parsed = parseAgentSessionKey(sessionKey);
+  if (!parsed || parsed.rest !== "main") {
+    return;
+  }
+  const db = getNodeSqliteKysely<CanonicalSessionDatabase>(database.db);
+  const mainKey = normalizeMainKey(
+    executeSqliteQueryTakeFirstSync(
+      database.db,
+      db.selectFrom("session_key_contract").select("main_key").where("id", "=", 1),
+    )?.main_key,
+  );
+  if (mainKey !== "main") {
+    throw nonCanonicalSessionKeyWriteError(sessionKey);
+  }
+}
+
 export function duplicateCanonicalSessionKeyError(
   canonicalKey: string,
 ): SessionCanonicalKeyMigrationRequiredError {
@@ -74,6 +95,12 @@ export function nonCanonicalSessionKeyRowError(
   canonicalKey: string,
 ): SessionCanonicalKeyMigrationRequiredError {
   return new SessionCanonicalKeyMigrationRequiredError(canonicalKey, "non-canonical-row");
+}
+
+function nonCanonicalSessionKeyWriteError(
+  sessionKey: string,
+): SessionCanonicalKeyMigrationRequiredError {
+  return new SessionCanonicalKeyMigrationRequiredError(sessionKey, "non-canonical-write");
 }
 
 function readCanonicalSessionKeyToken(database: DatabaseSync): CanonicalSessionKeyToken {
@@ -142,6 +169,13 @@ export function setCanonicalSqliteSessionMainKey(
 ): void {
   const canonicalMainKey = normalizeMainKey(mainKey);
   const db = getNodeSqliteKysely<CanonicalSessionDatabase>(database.db);
+  const currentMainKey = executeSqliteQueryTakeFirstSync(
+    database.db,
+    db.selectFrom("session_key_contract").select("main_key").where("id", "=", 1),
+  )?.main_key;
+  if (currentMainKey === canonicalMainKey) {
+    return;
+  }
   executeSqliteQuerySync(
     database.db,
     db

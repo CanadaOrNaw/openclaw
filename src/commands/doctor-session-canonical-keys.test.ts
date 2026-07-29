@@ -203,6 +203,12 @@ describe("doctor canonical session-key repair", () => {
           storePath,
         })?.entry.sessionId,
       ).toBe("legacy");
+      expect(() =>
+        replaceSessionEntrySync(
+          { agentId: "main", env, sessionKey: "agent:main:main", storePath },
+          { sessionId: "recreated-alias", updatedAt: 20 },
+        ),
+      ).toThrow("openclaw doctor --fix");
     });
   });
 
@@ -259,6 +265,46 @@ describe("doctor canonical session-key repair", () => {
           message: expect.objectContaining({ content: "misplaced history" }),
         }),
       ]);
+    });
+  });
+
+  it("refreshes the title when a loser transcript fills an empty winner generation", async () => {
+    await withStateDirEnv("openclaw-doctor-canonical-title-refresh-", async ({ stateDir }) => {
+      const env = { ...process.env, OPENCLAW_STATE_DIR: stateDir };
+      const storeTemplate = path.join(stateDir, "agents", "{agentId}", "sessions.json");
+      const mainStore = resolveStorePath(storeTemplate, { agentId: "main", env });
+      const opsStore = resolveStorePath(storeTemplate, { agentId: "ops", env });
+      const cfg = {
+        agents: { list: [{ id: "main", default: true }, { id: "ops" }] },
+        session: { mainKey: "shared", store: storeTemplate },
+      } as OpenClawConfig;
+      replaceSessionEntrySync(
+        { agentId: "main", env, sessionKey: "agent:main:shared", storePath: mainStore },
+        { sessionId: "shared-session", updatedAt: 20 },
+      );
+      insertLegacySession({
+        agentId: "ops",
+        entry: { sessionId: "shared-session", updatedAt: 10 },
+        env,
+        eventText: "loser transcript title",
+        sessionKey: "agent:main:main ",
+        storePath: opsStore,
+      });
+
+      expect(await repairCanonicalSessionKeys({ apply: true, cfg, env })).toMatchObject({
+        foundGroups: 1,
+        repairedGroups: 1,
+      });
+      const database = openOpenClawAgentDatabase({
+        agentId: "main",
+        env,
+        path: resolveSqliteTargetFromSessionStorePath(mainStore, { agentId: "main", env }).path,
+      });
+      expect(
+        database.db
+          .prepare("SELECT display_name FROM session_nodes WHERE session_key = ?")
+          .get("agent:main:shared"),
+      ).toEqual({ display_name: "loser transcript title" });
     });
   });
 

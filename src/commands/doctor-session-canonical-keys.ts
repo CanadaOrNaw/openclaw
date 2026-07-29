@@ -11,6 +11,7 @@ import {
 import type { SessionEntryLifecycleRemoval } from "../config/sessions/session-accessor.lifecycle-types.js";
 import { writeSqliteTranscriptArchive } from "../config/sessions/session-accessor.sqlite-archive.js";
 import { mergeCanonicalSessionEntryCandidates } from "../config/sessions/session-canonical-key.js";
+import { setCanonicalSqliteSessionMainKey } from "../config/sessions/session-canonical-key.js";
 import { resolveAllAgentSessionStoreTargetsSync } from "../config/sessions/targets.js";
 import { serializeJsonlLines } from "../config/sessions/transcript-jsonl.js";
 import type { SessionEntry } from "../config/sessions/types.js";
@@ -19,6 +20,7 @@ import {
   resolveSessionStoreAgentId,
   resolveStoredSessionKeyForAgentStore,
 } from "../gateway/session-store-key.js";
+import { openOpenClawAgentDatabase } from "../state/openclaw-agent-db.js";
 import { resolveTargetSqlitePath } from "./doctor-session-sqlite-readers.js";
 
 type CanonicalSessionCandidate = {
@@ -55,11 +57,17 @@ export type CanonicalSessionKeyRepairReport = {
   scannedStores: number;
 };
 
-function collectCanonicalSessionCandidates(params: {
+type CanonicalSessionStore = {
+  agentId: string;
+  sqlitePath: string;
+  storePath: string;
+};
+
+function listCanonicalSessionStores(params: {
   cfg: OpenClawConfig;
   env: NodeJS.ProcessEnv;
-}): { candidates: CanonicalSessionCandidate[]; scannedStores: number } {
-  const candidates: CanonicalSessionCandidate[] = [];
+}): CanonicalSessionStore[] {
+  const stores: CanonicalSessionStore[] = [];
   const seenDatabases = new Set<string>();
   for (const target of resolveAllAgentSessionStoreTargetsSync(params.cfg, { env: params.env })) {
     const sqlitePath = resolveTargetSqlitePath(target);
@@ -67,6 +75,17 @@ function collectCanonicalSessionCandidates(params: {
       continue;
     }
     seenDatabases.add(sqlitePath);
+    stores.push({ agentId: target.agentId, sqlitePath, storePath: target.storePath });
+  }
+  return stores;
+}
+
+function collectCanonicalSessionCandidates(
+  params: { cfg: OpenClawConfig; env: NodeJS.ProcessEnv },
+  stores: readonly CanonicalSessionStore[],
+): CanonicalSessionCandidate[] {
+  const candidates: CanonicalSessionCandidate[] = [];
+  for (const target of stores) {
     for (const { entry, rawEntryJson, sessionKey } of listSessionEntriesForCanonicalRepair({
       agentId: target.agentId,
       clone: false,
@@ -87,7 +106,7 @@ function collectCanonicalSessionCandidates(params: {
       });
     }
   }
-  return { candidates, scannedStores: seenDatabases.size };
+  return candidates;
 }
 
 function resolveCanonicalDestination(params: {
@@ -320,14 +339,23 @@ export async function repairCanonicalSessionKeys(params: {
   cfg: OpenClawConfig;
   env?: NodeJS.ProcessEnv;
 }): Promise<CanonicalSessionKeyRepairReport> {
-  const { candidates, scannedStores } = collectCanonicalSessionCandidates({
-    cfg: params.cfg,
-    env: params.env ?? process.env,
-  });
   const env = params.env ?? process.env;
-  const repairGroups = groupRepairCandidates(candidates, { cfg: params.cfg, env });
+  const stores = listCanonicalSessionStores({
+    cfg: params.cfg,
+    env,
+  });
   const archivedTranscriptDirectories = new Set<string>();
   let repairedGroups = 0;
+  if (params.apply) {
+    for (const store of stores) {
+      setCanonicalSqliteSessionMainKey(
+        openOpenClawAgentDatabase({ agentId: store.agentId, path: store.sqlitePath }),
+        params.cfg.session?.mainKey,
+      );
+    }
+  }
+  const candidates = collectCanonicalSessionCandidates({ cfg: params.cfg, env }, stores);
+  const repairGroups = groupRepairCandidates(candidates, { cfg: params.cfg, env });
   if (params.apply) {
     for (const group of repairGroups) {
       for (const directory of await repairCanonicalSessionGroup(group, {
@@ -347,6 +375,6 @@ export async function repairCanonicalSessionKeys(params: {
       0,
     ),
     repairedGroups,
-    scannedStores,
+    scannedStores: stores.length,
   };
 }
