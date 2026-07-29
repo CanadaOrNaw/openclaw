@@ -7,7 +7,7 @@ import {
   validateSessionsPluginPatchParams,
   validateSessionsResetParams,
 } from "../../../packages/gateway-protocol/src/index.js";
-import { resolveDefaultAgentId, tryResolveDefaultAgentId } from "../../agents/agent-scope.js";
+import { resolveDefaultAgentId } from "../../agents/agent-scope.js";
 import { persistStickyModelSelectionBestEffort } from "../../agents/sticky-model-selection.js";
 import { replyRunRegistry } from "../../auto-reply/reply/reply-run-registry.js";
 import { tryResolveLegacyCompatibilityAgentId } from "../../config/legacy.default-agent-owner.js";
