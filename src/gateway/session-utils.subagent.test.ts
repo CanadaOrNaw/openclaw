@@ -1474,6 +1474,10 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
           env: { OPENCLAW_STATE_DIR: stateDir },
         }).path,
       });
+      replaceSessionEntrySync(
+        { agentId: "ops", sessionKey: "agent:ops:valid", storePath: opsStore },
+        { sessionId: "valid", updatedAt: 20 },
+      );
       database.db
         .prepare(
           "INSERT INTO session_nodes (session_key, current_session_id, entry_json, updated_at) VALUES (?, ?, ?, ?)",
@@ -1484,10 +1488,6 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
           JSON.stringify({ sessionId: "misplaced", updatedAt: 30 }),
           30,
         );
-      replaceSessionEntrySync(
-        { agentId: "ops", sessionKey: "agent:ops:valid", storePath: opsStore },
-        { sessionId: "valid", updatedAt: 20 },
-      );
 
       expect(() =>
         loadCombinedSessionStoreForGateway(cfg, {
@@ -1602,7 +1602,7 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
         storePath,
         "agent:ops:legacy",
         { sessionId: "s-legacy-ops", spawnedBy: "main", updatedAt: 400 },
-        "main",
+        "ops",
       );
       const dynamicIncognitoKey = "agent:dynamic:dashboard:incognito-dynamic";
       await seedSessionEntry(
