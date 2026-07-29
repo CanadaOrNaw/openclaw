@@ -114,6 +114,9 @@ export function startPty(
   const ansiStripper = new AnsiSequenceStripper();
   const ptyEnv = {
     ...process.env,
+    // The harness boots several tsx children concurrently. Sharing tsx's disk cache can
+    // deadlock all children before first output on loaded CI hosts, so keep transforms local.
+    TSX_DISABLE_CACHE: process.env.TSX_DISABLE_CACHE ?? "1",
     ...opts.env,
     TERM: "xterm-256color",
   };
