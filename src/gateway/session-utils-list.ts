@@ -548,7 +548,7 @@ export async function listSessionsFromStoreAsync(
     const sessions: GatewaySessionRow[] = [];
     for (let i = 0; i < prepared.entries.length; i++) {
       const [key, entry] = expectDefined(prepared.entries[i], "entries entry at i");
-      const includeTranscriptFields = i < 100;
+      const includeTranscriptFields = i < SESSIONS_LIST_TRANSCRIPT_FIELD_ROWS;
       const rowAgentId =
         key === "global" && typeof opts.agentId === "string"
           ? normalizeAgentId(opts.agentId)
@@ -572,7 +572,7 @@ export async function listSessionsFromStoreAsync(
         now: prepared.now,
         includeDerivedTitles: includeTranscriptFields && includeDerivedTitles,
         includeLastMessage: false,
-        transcriptUsageMaxBytes: 64 * 1024,
+        transcriptUsageMaxBytes: SESSIONS_LIST_TRANSCRIPT_USAGE_MAX_BYTES,
         storeChildSessionsByKey,
         rowContext: prepared.sharedRowContext,
       });

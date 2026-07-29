@@ -345,7 +345,7 @@ export function listSqliteSessionEntriesReadOnly(
 /** Doctor inventory hydrates legacy blobs from promoted identity/timestamp columns. */
 export function listSqliteSessionEntriesForCanonicalRepair(
   scope: SessionEntryListScope = {},
-): SessionEntrySummary[] {
+): Array<SessionEntrySummary & { rawEntryJson?: string }> {
   const resolved = resolveSqliteScope({ ...scope, sessionKey: "" });
   const result = withOpenClawAgentDatabaseReadOnly((database) => {
     const db = getSessionKysely(database.db);
