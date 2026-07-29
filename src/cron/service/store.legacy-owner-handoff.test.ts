@@ -253,6 +253,27 @@ describe("cron legacy owner handoff persistence", () => {
     expect(readRetainedLegacyDefaultCronOwnerForStore(storePath)).toBe("ops");
   });
 
+  it("retains the runtime owner for late rows after receiptless adoption", async () => {
+    const { storePath } = await makeStorePath();
+    await writeJobs(storePath, [createOwnerlessJob("before-receiptless-adoption")]);
+    const state = createState(storePath);
+    state.deps.legacyDefaultAgentId = "ops";
+
+    await reloadForConfigAdoption(state, incomingRoster(storePath));
+    expect(readRetainedLegacyDefaultCronOwnerForStore(storePath)).toBe("ops");
+
+    await writeJobs(storePath, [createOwnerlessJob("late-after-adoption")]);
+    const restarted = createState(storePath);
+    restarted.deps.isAgentAvailable = (agentId) => agentId === "ops";
+    await start(restarted);
+    stop(restarted);
+
+    expect((await loadCronStore(storePath)).jobs[0]).toMatchObject({
+      id: "late-after-adoption",
+      agentId: "ops",
+    });
+  });
+
   it("migrates the incoming store before adopting a roster and store change", async () => {
     const { storePath: currentStorePath } = await makeStorePath();
     const { storePath: incomingStorePath } = await makeStorePath();

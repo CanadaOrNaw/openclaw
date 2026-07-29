@@ -2,7 +2,7 @@
 // Gateway callers need canonical per-agent keys even when stores are split by `{agentId}`.
 
 import { expectDefined } from "@openclaw/normalization-core";
-import { listAgentEntries, tryResolveSoleAgentId } from "../../agents/agent-scope.js";
+import { listAgentEntries } from "../../agents/agent-scope.js";
 import {
   canonicalizeSpawnedByForAgent,
   resolveStoredSessionKeyForAgentStore,
@@ -14,6 +14,7 @@ import {
   parseAgentSessionKey,
 } from "../../routing/session-key.js";
 import { listOpenIncognitoAgentDatabases } from "../../state/openclaw-agent-db.js";
+import { tryResolveLegacyCompatibilityAgentId } from "../legacy.default-agent-owner.js";
 import type { OpenClawConfig } from "../types.openclaw.js";
 import { resolveStorePath } from "./paths.js";
 import { listSessionEntries, listSessionEntriesReadOnly } from "./session-accessor.js";
@@ -167,7 +168,7 @@ export function loadCombinedSessionStoreForGateway(
       ? normalizeAgentId(opts.agentId)
       : undefined;
   const defaultAgentId = normalizeAgentId(
-    requestedAgentId ?? tryResolveSoleAgentId(cfg) ?? LEGACY_IMPLICIT_AGENT_ID,
+    requestedAgentId ?? tryResolveLegacyCompatibilityAgentId(cfg) ?? LEGACY_IMPLICIT_AGENT_ID,
   );
   const configuredAgentIds =
     opts.configuredAgentsOnly === true && !requestedAgentId

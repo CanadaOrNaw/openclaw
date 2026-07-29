@@ -6,6 +6,7 @@ import { normalizeAgentId } from "../../routing/session-key.js";
 import {
   completeLegacyDefaultCronOwnerHandoff,
   readRetainedLegacyDefaultCronOwnerForStore,
+  retainLegacyDefaultCronOwnerHandoffForStore,
 } from "../legacy-default-agent-owner-handoff.js";
 import { materializeLegacyDefaultCronJobOwners } from "../legacy-default-agent-owner-migration.js";
 import { resolveCronJobsStorePathFromConfig } from "../store.js";
@@ -127,17 +128,24 @@ export async function reloadForConfigAdoption(
     const incomingStoreOwner = incomingRetainedOwner ?? runtimeLegacyOwner;
     const incomingAgentIds = new Set(listAgentIds(incomingConfig).map(normalizeAgentId));
     if (currentStoreOwner && incomingAgentIds.has(normalizeAgentId(currentStoreOwner))) {
+      if (!currentRetainedOwner) {
+        retainLegacyDefaultCronOwnerHandoffForStore(
+          state.deps.storePath,
+          currentStoreOwner,
+          state.deps.env,
+        );
+      }
       const migration = await materializeLoadedLegacyDefaultAgentOwners(state, currentStoreOwner);
       if (migration.warnings.length > 0) {
         throw new Error(migration.warnings.join("\n"));
       }
       if (
-        currentRetainedOwner &&
+        !currentRetainedOwner ||
         normalizeAgentId(currentRetainedOwner) === normalizeAgentId(currentStoreOwner)
       ) {
         completeLegacyDefaultCronOwnerHandoff(
           state.deps.storePath,
-          currentRetainedOwner,
+          currentStoreOwner,
           state.deps.env,
         );
       }
@@ -147,6 +155,13 @@ export async function reloadForConfigAdoption(
       incomingStoreOwner &&
       incomingAgentIds.has(normalizeAgentId(incomingStoreOwner))
     ) {
+      if (!incomingRetainedOwner) {
+        retainLegacyDefaultCronOwnerHandoffForStore(
+          incomingStorePath,
+          incomingStoreOwner,
+          state.deps.env,
+        );
+      }
       const { materializeLegacyDefaultCronJobOwners: repairLegacyDefaultCronJobOwners } =
         await import("../../commands/doctor/cron/legacy-repair.js");
       const incomingMigration = await repairLegacyDefaultCronJobOwners({
@@ -159,12 +174,12 @@ export async function reloadForConfigAdoption(
         throw new Error(incomingMigration.warnings.join("\n"));
       }
       if (
-        incomingRetainedOwner &&
+        !incomingRetainedOwner ||
         normalizeAgentId(incomingRetainedOwner) === normalizeAgentId(incomingStoreOwner)
       ) {
         completeLegacyDefaultCronOwnerHandoff(
           incomingStorePath,
-          incomingRetainedOwner,
+          incomingStoreOwner,
           state.deps.env,
         );
       }

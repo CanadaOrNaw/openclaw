@@ -3,7 +3,8 @@ import {
   normalizeLowercaseStringOrEmpty,
   normalizeOptionalString,
 } from "@openclaw/normalization-core/string-coerce";
-import { listAgentIds, resolveDefaultAgentId } from "../agents/agent-scope.js";
+import { listAgentIds } from "../agents/agent-scope.js";
+import { tryResolveLegacyCompatibilityAgentId } from "../config/legacy.default-agent-owner.js";
 import {
   canonicalizeMainSessionAlias,
   resolveAgentMainSessionKey,
@@ -33,7 +34,7 @@ export function canonicalizeSessionKeyForAgent(agentId: string, key: string): st
 }
 
 function resolveDefaultStoreAgentId(cfg: OpenClawConfig): string {
-  return normalizeAgentId(resolveDefaultAgentId(cfg));
+  return normalizeAgentId(tryResolveLegacyCompatibilityAgentId(cfg) ?? DEFAULT_AGENT_ID);
 }
 
 function shouldRemapLegacyDefaultMainAlias(
