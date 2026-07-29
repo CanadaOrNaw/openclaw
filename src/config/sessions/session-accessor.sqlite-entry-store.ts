@@ -556,7 +556,11 @@ export function writeSessionEntry(
   database: OpenClawAgentDatabase,
   sessionKey: string,
   entry: SessionEntry,
-  options: { allowStoredAliases?: boolean; previousEntry?: SessionEntry | null } = {},
+  options: {
+    allowStoredAliases?: boolean;
+    preserveNodeSuggestions?: boolean;
+    previousEntry?: SessionEntry | null;
+  } = {},
 ): void {
   assertCanonicalSessionKeyWriteMatchesDatabase(database, sessionKey);
   const db = getSessionKysely(database.db);
@@ -577,7 +581,11 @@ export function writeSessionEntry(
   // Collaboration rows belong to the exact canonical node being overwritten,
   // which can differ from the selected alias during canonicalization.
   if (canonicalPreviousEntry && canonicalPreviousEntry.sessionId !== normalizedEntry.sessionId) {
-    clearSessionCollaborationForKey(database, sessionKey);
+    // Doctor merges duplicate logical nodes; suggestions are owned by session_key,
+    // not by the transcript generation being replaced. Membership remains winner-only.
+    clearSessionCollaborationForKey(database, sessionKey, {
+      clearSuggestions: options.preserveNodeSuggestions !== true,
+    });
   }
   // Registry writes snapshot the current transcript watermark so recovery can
   // distinguish same-millisecond transcript writes before and after this row.

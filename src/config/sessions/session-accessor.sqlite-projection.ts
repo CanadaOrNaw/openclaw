@@ -423,6 +423,7 @@ export async function applySqliteSessionEntryLifecycleMutation(params: {
         }
         writeSessionEntry(transactionDb, sessionKey, entry, {
           allowStoredAliases: params.allowCanonicalRepair === true,
+          preserveNodeSuggestions: params.allowCanonicalRepair === true,
           previousEntry: expectedCurrentEntry ?? null,
         });
         const relatedRemovalKeys = validatedRemovals.flatMap((removal) => {

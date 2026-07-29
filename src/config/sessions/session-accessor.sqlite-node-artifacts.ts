@@ -8,6 +8,7 @@ import { getSessionKysely } from "./session-accessor.sqlite-scope.js";
 export function clearSessionCollaborationForKey(
   database: OpenClawAgentDatabase,
   sessionKey: string,
+  options: { clearSuggestions?: boolean } = {},
 ): void {
   const presentTables = readSessionNodeArtifactTables(database);
   const db = getSessionKysely(database.db);
@@ -17,7 +18,7 @@ export function clearSessionCollaborationForKey(
       db.deleteFrom("session_members").where("session_key", "=", sessionKey),
     );
   }
-  if (presentTables.has("session_suggestions")) {
+  if (options.clearSuggestions !== false && presentTables.has("session_suggestions")) {
     executeSqliteQuerySync(
       database.db,
       db.deleteFrom("session_suggestions").where("session_key", "=", sessionKey),
