@@ -549,6 +549,18 @@ describe("session accessor seam", () => {
     expect(getSessionProjectedTitle(result.entries[0]?.entry)).toBe(
       "Investigate the session list query",
     );
+    expect(
+      getSessionProjectedTitle(
+        loadSessionEntry({ agentId: "main", sessionKey: scope.sessionKey, storePath }),
+      ),
+    ).toBe("Investigate the session list query");
+    expect(
+      getSessionProjectedTitle(
+        listSessionEntries({ agentId: "main", storePath }).find(
+          ({ sessionKey }) => sessionKey === scope.sessionKey,
+        )?.entry,
+      ),
+    ).toBe("Investigate the session list query");
   });
 
   it("backfills titles written before the projection existed", async () => {

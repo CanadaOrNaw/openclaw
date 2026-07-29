@@ -20,6 +20,10 @@ import type {
   SessionTranscriptReadScope,
   SessionTranscriptWriteScope,
 } from "./session-accessor.sqlite-contract.js";
+import {
+  getSessionProjectedTitle,
+  setSessionProjectedTitle,
+} from "./session-accessor.sqlite-session-row.js";
 import { resolveSqliteTargetFromSessionStorePath } from "./session-sqlite-target.js";
 import { normalizeStoreSessionKey } from "./store-entry.js";
 import type { SessionEntry } from "./types.js";
@@ -285,7 +289,12 @@ export function normalizeSqliteSessionKey(sessionKey: string): string {
 }
 
 export function cloneSessionEntry(entry: SessionEntry): SessionEntry {
-  return structuredClone(entry);
+  const cloned = structuredClone(entry);
+  const projectedTitle = getSessionProjectedTitle(entry);
+  if (projectedTitle !== undefined) {
+    setSessionProjectedTitle(cloned, projectedTitle);
+  }
+  return cloned;
 }
 
 export function formatSqliteSessionReferenceForScope(scope: ResolvedTranscriptScope): string {

@@ -387,75 +387,65 @@ function copySqliteSessionOwnedStateForRepair(params: {
   }
 }
 
+type OrderedEventToken<T> = { row: T; token: string };
+
+function tokenizeOrderedEvents<T extends { seq: number }>(
+  rows: readonly T[],
+  identity: (row: T) => string,
+): OrderedEventToken<T>[] {
+  const occurrences = new Map<string, number>();
+  return rows
+    .toSorted((left, right) => left.seq - right.seq)
+    .map((row) => {
+      const key = identity(row);
+      const occurrence = occurrences.get(key) ?? 0;
+      occurrences.set(key, occurrence + 1);
+      return { row, token: `${key}\0${occurrence}` };
+    });
+}
+
+function mergeOrderedEventRows<T extends { seq: number }>(
+  destinationRows: readonly T[],
+  sourceRows: readonly T[],
+  identity: (row: T) => string,
+  sourceIsAuthoritative: boolean,
+): T[] {
+  const destination = tokenizeOrderedEvents(destinationRows, identity);
+  const source = tokenizeOrderedEvents(sourceRows, identity);
+  const [authoritative, supplemental] = sourceIsAuthoritative
+    ? [source, destination]
+    : [destination, source];
+  const merged: OrderedEventToken<T>[] = [];
+  const emitted = new Set<string>();
+  for (const event of [...authoritative, ...supplemental]) {
+    if (!emitted.has(event.token)) {
+      emitted.add(event.token);
+      merged.push(event);
+    }
+  }
+  return merged.map((event, seq) => Object.assign({}, event.row, { seq }));
+}
+
 function mergeTrajectoryRuntimeEvents(
   destination: OpenClawAgentDatabase,
   rows: readonly Selectable<OpenClawAgentKyselyDatabase["trajectory_runtime_events"]>[],
   sessionId: string,
+  sourceIsAuthoritative: boolean,
 ): void {
   const db = getSessionKysely(destination.db);
   const existing = executeSqliteQuerySync(
     destination.db,
     db.selectFrom("trajectory_runtime_events").selectAll().where("session_id", "=", sessionId),
   ).rows;
-  const bySeq = new Map(existing.map((row) => [row.seq, row]));
   const identity = (row: (typeof existing)[number]) =>
     JSON.stringify([row.run_id, row.created_at, row.event_json]);
-  const destinationCounts = new Map<string, number>();
-  for (const row of existing) {
-    const key = identity(row);
-    destinationCounts.set(key, (destinationCounts.get(key) ?? 0) + 1);
-  }
-  const sortedRows = rows.toSorted((left, right) => left.seq - right.seq);
-  const unmatchedDestinationCounts = new Map(destinationCounts);
-  const representedRows = new Set<(typeof rows)[number]>();
-  const exactRepresentedRows = new Set<(typeof rows)[number]>();
-  for (const row of sortedRows) {
-    const key = identity(row);
-    const original = bySeq.get(row.seq);
-    const remaining = unmatchedDestinationCounts.get(key) ?? 0;
-    if (remaining > 0 && original && identity(original) === key) {
-      representedRows.add(row);
-      exactRepresentedRows.add(row);
-      unmatchedDestinationCounts.set(key, remaining - 1);
-    }
-  }
-  for (const row of sortedRows) {
-    const key = identity(row);
-    const remaining = unmatchedDestinationCounts.get(key) ?? 0;
-    if (!representedRows.has(row) && remaining > 0) {
-      representedRows.add(row);
-      unmatchedDestinationCounts.set(key, remaining - 1);
-    }
-  }
-  let nextSeq = 0;
-  for (const row of existing) {
-    nextSeq = Math.max(nextSeq, row.seq + 1);
-  }
-  let remapping = false;
-  for (const row of sortedRows) {
-    const key = identity(row);
-    if (representedRows.has(row)) {
-      remapping ||= !exactRepresentedRows.has(row);
-      continue;
-    }
-    const original = bySeq.get(row.seq);
-    if (original && identity(original) !== key) {
-      remapping = true;
-    }
-    remapping ||= bySeq.has(row.seq);
-    if (remapping) {
-      while (bySeq.has(nextSeq)) {
-        nextSeq += 1;
-      }
-    }
-    const seq = remapping ? nextSeq : row.seq;
-    const merged = { ...row, seq };
-    executeSqliteQuerySync(
-      destination.db,
-      db.insertInto("trajectory_runtime_events").values(merged),
-    );
-    bySeq.set(seq, merged);
-    nextSeq = Math.max(nextSeq, seq + 1);
+  const merged = mergeOrderedEventRows(existing, rows, identity, sourceIsAuthoritative);
+  executeSqliteQuerySync(
+    destination.db,
+    db.deleteFrom("trajectory_runtime_events").where("session_id", "=", sessionId),
+  );
+  for (const row of merged) {
+    executeSqliteQuerySync(destination.db, db.insertInto("trajectory_runtime_events").values(row));
   }
 }
 
@@ -463,80 +453,30 @@ function mergeAcpParentStreamEvents(
   destination: OpenClawAgentDatabase,
   rows: readonly Selectable<OpenClawAgentKyselyDatabase["acp_parent_stream_events"]>[],
   sessionId: string,
+  sourceIsAuthoritative: boolean,
 ): void {
   const db = getSessionKysely(destination.db);
   const existing = executeSqliteQuerySync(
     destination.db,
     db.selectFrom("acp_parent_stream_events").selectAll().where("session_id", "=", sessionId),
   ).rows;
-  const eventKey = (runId: string, seq: number) => `${runId}\0${seq}`;
-  const byKey = new Map(existing.map((row) => [eventKey(row.run_id, row.seq), row]));
   const identity = (row: (typeof existing)[number]) =>
     JSON.stringify([row.run_id, row.created_at, row.event_json]);
-  const destinationCounts = new Map<string, number>();
-  for (const row of existing) {
-    const key = identity(row);
-    destinationCounts.set(key, (destinationCounts.get(key) ?? 0) + 1);
-  }
-  const sortedRows = rows.toSorted((left, right) => {
-    const byRun = left.run_id.localeCompare(right.run_id);
-    return byRun || left.seq - right.seq;
-  });
-  const unmatchedDestinationCounts = new Map(destinationCounts);
-  const representedRows = new Set<(typeof rows)[number]>();
-  const exactRepresentedRows = new Set<(typeof rows)[number]>();
-  for (const row of sortedRows) {
-    const key = identity(row);
-    const original = byKey.get(eventKey(row.run_id, row.seq));
-    const remaining = unmatchedDestinationCounts.get(key) ?? 0;
-    if (remaining > 0 && original && identity(original) === key) {
-      representedRows.add(row);
-      exactRepresentedRows.add(row);
-      unmatchedDestinationCounts.set(key, remaining - 1);
-    }
-  }
-  for (const row of sortedRows) {
-    const key = identity(row);
-    const remaining = unmatchedDestinationCounts.get(key) ?? 0;
-    if (!representedRows.has(row) && remaining > 0) {
-      representedRows.add(row);
-      unmatchedDestinationCounts.set(key, remaining - 1);
-    }
-  }
-  const nextSeqByRun = new Map<string, number>();
-  for (const row of existing) {
-    nextSeqByRun.set(row.run_id, Math.max(nextSeqByRun.get(row.run_id) ?? 0, row.seq + 1));
-  }
-  const remappedRuns = new Set<string>();
-  for (const row of sortedRows) {
-    const key = identity(row);
-    if (representedRows.has(row)) {
-      if (!exactRepresentedRows.has(row)) {
-        remappedRuns.add(row.run_id);
-      }
-      continue;
-    }
-    const original = byKey.get(eventKey(row.run_id, row.seq));
-    if (original && identity(original) !== key) {
-      remappedRuns.add(row.run_id);
-    }
-    if (byKey.has(eventKey(row.run_id, row.seq))) {
-      remappedRuns.add(row.run_id);
-    }
-    let nextSeq = nextSeqByRun.get(row.run_id) ?? 0;
-    if (remappedRuns.has(row.run_id)) {
-      while (byKey.has(eventKey(row.run_id, nextSeq))) {
-        nextSeq += 1;
-      }
-    }
-    const seq = remappedRuns.has(row.run_id) ? nextSeq : row.seq;
-    nextSeqByRun.set(row.run_id, Math.max(nextSeqByRun.get(row.run_id) ?? 0, seq + 1));
-    const merged = { ...row, seq };
-    executeSqliteQuerySync(
-      destination.db,
-      db.insertInto("acp_parent_stream_events").values(merged),
-    );
-    byKey.set(eventKey(row.run_id, seq), merged);
+  const runIds = new Set([...existing, ...rows].map((row) => row.run_id));
+  const merged = [...runIds].toSorted().flatMap((runId) =>
+    mergeOrderedEventRows(
+      existing.filter((row) => row.run_id === runId),
+      rows.filter((row) => row.run_id === runId),
+      identity,
+      sourceIsAuthoritative,
+    ),
+  );
+  executeSqliteQuerySync(
+    destination.db,
+    db.deleteFrom("acp_parent_stream_events").where("session_id", "=", sessionId),
+  );
+  for (const row of merged) {
+    executeSqliteQuerySync(destination.db, db.insertInto("acp_parent_stream_events").values(row));
   }
 }
 
@@ -643,8 +583,19 @@ function copySqliteSessionGenerationRows(params: {
       );
     }
   }
-  mergeTrajectoryRuntimeEvents(params.destination, trajectoryEvents, params.sessionId);
-  mergeAcpParentStreamEvents(params.destination, parentStreamEvents, params.sessionId);
+  const sourceEventsAreAuthoritative = params.preferSource && params.sourceIsAuthoritative;
+  mergeTrajectoryRuntimeEvents(
+    params.destination,
+    trajectoryEvents,
+    params.sessionId,
+    sourceEventsAreAuthoritative,
+  );
+  mergeAcpParentStreamEvents(
+    params.destination,
+    parentStreamEvents,
+    params.sessionId,
+    sourceEventsAreAuthoritative,
+  );
 }
 
 function hasSqliteSessionTranscriptContent(

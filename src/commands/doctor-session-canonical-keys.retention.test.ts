@@ -393,14 +393,14 @@ describe("doctor canonical session-key retention repair", () => {
             "SELECT seq FROM trajectory_runtime_events WHERE session_id = 'winner-previous' AND event_json = ? ORDER BY seq",
           )
           .all(JSON.stringify({ source: "overlap" })),
-      ).toEqual([{ seq: 2 }, { seq: 3 }]);
+      ).toEqual([{ seq: 0 }, { seq: 1 }]);
       expect(
         mainDatabase.db
           .prepare(
             "SELECT seq FROM acp_parent_stream_events WHERE session_id = 'winner-previous' AND event_json = ? ORDER BY seq",
           )
           .all(JSON.stringify({ source: "overlap" })),
-      ).toEqual([{ seq: 2 }, { seq: 3 }]);
+      ).toEqual([{ seq: 0 }, { seq: 1 }]);
       expect(
         mainDatabase.db
           .prepare(
@@ -415,10 +415,10 @@ describe("doctor canonical session-key retention repair", () => {
           )
           .all(),
       ).toEqual([
-        { seq: 0, event_json: JSON.stringify({ source: "destination" }) },
-        { seq: 2, event_json: JSON.stringify({ source: "destination-later" }) },
-        { seq: 3, event_json: JSON.stringify({ source: "winner" }) },
-        { seq: 4, event_json: JSON.stringify({ source: "winner" }) },
+        { seq: 0, event_json: JSON.stringify({ source: "winner" }) },
+        { seq: 1, event_json: JSON.stringify({ source: "winner" }) },
+        { seq: 2, event_json: JSON.stringify({ source: "destination" }) },
+        { seq: 3, event_json: JSON.stringify({ source: "destination-later" }) },
       ]);
       expect(
         mainDatabase.db
@@ -427,10 +427,10 @@ describe("doctor canonical session-key retention repair", () => {
           )
           .all(),
       ).toEqual([
-        { seq: 0, event_json: JSON.stringify({ source: "destination" }) },
-        { seq: 2, event_json: JSON.stringify({ source: "destination-later" }) },
-        { seq: 3, event_json: JSON.stringify({ source: "winner" }) },
-        { seq: 4, event_json: JSON.stringify({ source: "winner" }) },
+        { seq: 0, event_json: JSON.stringify({ source: "winner" }) },
+        { seq: 1, event_json: JSON.stringify({ source: "winner" }) },
+        { seq: 2, event_json: JSON.stringify({ source: "destination" }) },
+        { seq: 3, event_json: JSON.stringify({ source: "destination-later" }) },
       ]);
       expect(
         mainDatabase.db

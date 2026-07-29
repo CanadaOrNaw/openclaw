@@ -29,6 +29,7 @@ import {
   bindSqliteSessionRoot,
   deriveSqliteSessionTitle,
   normalizeSqliteSessionEntryTimestamp,
+  setSessionProjectedTitle,
 } from "./session-accessor.sqlite-session-row.js";
 import { parseSqliteSessionEntryJson as parseSessionEntryRow } from "./session-accessor.sqlite-status.js";
 import { readTranscriptMutationStateInTransaction } from "./session-accessor.sqlite-transcript-state.js";
@@ -66,6 +67,17 @@ class SqliteSessionMutationConflictError extends Error {
     super(`SQLite session state changed while preparing ${operationLabel}`);
     this.name = "SqliteSessionMutationConflictError";
   }
+}
+
+function parseProjectedSessionEntryRow(
+  row: Pick<SessionEntryRow, "current_session_id" | "display_name" | "entry_json" | "updated_at">,
+  hydratePromotedColumns = false,
+): SessionEntry | null {
+  const entry = parseSessionEntryRow(row, hydratePromotedColumns);
+  if (entry) {
+    setSessionProjectedTitle(entry, row.display_name);
+  }
+  return entry;
 }
 
 export function readSqliteSessionIdentitySnapshot(
@@ -123,7 +135,7 @@ function readSessionEntryRowUnchecked(
   ).rows;
   const entries = new Map<string, ResolvedSessionEntryRow>();
   for (const row of rows) {
-    const entry = parseSessionEntryRow(row, options.hydratePromotedColumns === true);
+    const entry = parseProjectedSessionEntryRow(row, options.hydratePromotedColumns === true);
     if (!entry) {
       continue;
     }
@@ -203,7 +215,7 @@ export function readExactSessionEntryRow(
   if (!row) {
     return undefined;
   }
-  const entry = parseSessionEntryRow(row, options.hydratePromotedColumns === true);
+  const entry = parseProjectedSessionEntryRow(row, options.hydratePromotedColumns === true);
   return entry ? { entry, legacyKeys: [], row } : undefined;
 }
 
@@ -239,11 +251,14 @@ export function readSqliteSessionEntryStore(
   const db = getSessionKysely(database.db);
   const rows = executeSqliteQuerySync(
     database.db,
-    db.selectFrom("session_nodes").select(["session_key", "entry_json"]).orderBy("session_key"),
+    db
+      .selectFrom("session_nodes")
+      .select(["current_session_id", "display_name", "entry_json", "session_key", "updated_at"])
+      .orderBy("session_key"),
   ).rows;
   const store: Record<string, SessionEntry> = {};
   for (const row of rows) {
-    const entry = parseSessionEntryRow(row);
+    const entry = parseProjectedSessionEntryRow(row);
     if (entry) {
       store[row.session_key] = entry;
     }
