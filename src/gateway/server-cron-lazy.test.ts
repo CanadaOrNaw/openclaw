@@ -275,7 +275,13 @@ describe("createLazyGatewayCronState", () => {
   });
 
   it("defers an in-flight adoption completion until reload preparation finishes", async () => {
-    const cron = createCronService();
+    const reloadForConfigAdoption = vi.fn(async () => {});
+    const completeConfigAdoption = vi.fn();
+    const cron = {
+      ...createCronService(),
+      reloadForConfigAdoption,
+      completeConfigAdoption,
+    };
     hoisted.setState(createCronState(cron));
     const lazy = createLazyGatewayCronState(createParams());
     const incomingConfig = { agents: { entries: { research: {} } } };
@@ -284,10 +290,10 @@ describe("createLazyGatewayCronState", () => {
     lazy.cron.completeConfigAdoption(incomingConfig);
     await reload;
 
-    expect(cron["reloadForConfigAdoption"]).toHaveBeenCalledWith(incomingConfig);
-    expect(cron["completeConfigAdoption"]).toHaveBeenCalledWith(incomingConfig);
-    expect(vi.mocked(cron.reloadForConfigAdoption).mock.invocationCallOrder[0]).toBeLessThan(
-      vi.mocked(cron.completeConfigAdoption).mock.invocationCallOrder[0]!,
+    expect(reloadForConfigAdoption).toHaveBeenCalledWith(incomingConfig);
+    expect(completeConfigAdoption).toHaveBeenCalledWith(incomingConfig);
+    expect(reloadForConfigAdoption.mock.invocationCallOrder[0]).toBeLessThan(
+      completeConfigAdoption.mock.invocationCallOrder[0]!,
     );
   });
 
