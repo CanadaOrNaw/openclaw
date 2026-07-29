@@ -337,7 +337,12 @@ export function listSqliteSessionEntriesForCanonicalRepair(
         .select(["session_key", "current_session_id", "entry_json", "updated_at"]),
     ).rows.flatMap((row) => {
       const entry = parseSqliteSessionEntryJson(row, true);
-      return entry ? [{ sessionKey: row.session_key, entry }] : [];
+      return [
+        {
+          sessionKey: row.session_key,
+          entry: entry ?? { sessionId: row.current_session_id, updatedAt: row.updated_at },
+        },
+      ];
     });
   }, toDatabaseOptions(resolved));
   return result.found ? result.value : [];

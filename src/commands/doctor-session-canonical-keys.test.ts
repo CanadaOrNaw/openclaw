@@ -168,6 +168,13 @@ describe("doctor canonical session-key repair", () => {
         sessionKey: "agent:main:main",
         storePath,
       });
+      openOpenClawAgentDatabase({
+        agentId: "main",
+        env,
+        path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "main", env }).path,
+      })
+        .db.prepare("UPDATE session_nodes SET entry_json = 'not-json' WHERE session_key = ?")
+        .run("agent:main:main");
 
       expect(await repairCanonicalSessionKeys({ apply: true, cfg, env })).toMatchObject({
         foundGroups: 1,

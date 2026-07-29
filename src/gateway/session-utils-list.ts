@@ -294,6 +294,10 @@ function filterResidualSessionEntries(params: {
       if (!spawnedBy) {
         return true;
       }
+      if (key === "global" || key === "unknown") {
+        // Reserved canonical sentinels cannot be children of a logical session.
+        return false;
+      }
       if (lineage.excludeLineageSessionKeys?.includes(key)) {
         return lineage.includeLineageSessionKeys?.includes(key) === true;
       }

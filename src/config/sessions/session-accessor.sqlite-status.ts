@@ -184,6 +184,9 @@ function buildSessionListPredicate(
   );
   conditions.push(eb.or([eb(reservedPlaceholderKey, "=", 0), eb("entry_json", "!=", "{}")]));
   if (query.spawnedBy) {
+    // Canonical sentinels are valid rows, but they never participate in child lineage.
+    conditions.push(eb("session_key", "!=", "global"));
+    conditions.push(eb("session_key", "!=", "unknown"));
     const lineageKeys = query.lineageKeys?.length ? [...query.lineageKeys] : [query.spawnedBy];
     const storedLineage = eb.or([
       eb("parent_session_key", "in", lineageKeys),
