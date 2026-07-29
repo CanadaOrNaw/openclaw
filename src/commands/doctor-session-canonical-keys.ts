@@ -24,6 +24,7 @@ type CanonicalSessionCandidate = {
   agentId: string;
   canonicalKey: string;
   entry: SessionEntry;
+  rawEntryJson?: string;
   sessionKey: string;
   sqlitePath: string;
   storePath: string;
@@ -49,7 +50,7 @@ function collectCanonicalSessionCandidates(params: {
       continue;
     }
     seenDatabases.add(sqlitePath);
-    for (const { entry, sessionKey } of listSessionEntriesForCanonicalRepair({
+    for (const { entry, rawEntryJson, sessionKey } of listSessionEntriesForCanonicalRepair({
       agentId: target.agentId,
       clone: false,
       storePath: target.storePath,
@@ -62,6 +63,7 @@ function collectCanonicalSessionCandidates(params: {
           sessionKey,
         }),
         entry,
+        ...(rawEntryJson !== undefined ? { rawEntryJson } : {}),
         sessionKey,
         sqlitePath,
         storePath: target.storePath,
@@ -250,11 +252,17 @@ async function repairCanonicalSessionGroup(
       }
     },
     removals: destinationStore
-      .filter((candidate) => candidate.sessionKey !== winner.canonicalKey)
+      .filter(
+        (candidate) =>
+          candidate.sessionKey !== winner.canonicalKey || candidate.rawEntryJson !== undefined,
+      )
       .map((candidate) => ({
         archiveRemovedTranscript: !relatedSessionIds.has(candidate.entry.sessionId),
         exactStoredKey: true,
         expectedEntry: candidate.entry,
+        ...(candidate.rawEntryJson !== undefined
+          ? { expectedRawEntryJson: candidate.rawEntryJson }
+          : {}),
         sessionKey: candidate.sessionKey,
       })),
     skipMaintenance: true,
@@ -280,6 +288,9 @@ async function repairCanonicalSessionGroup(
         archiveRemovedTranscript: true,
         exactStoredKey: true,
         expectedEntry: candidate.entry,
+        ...(candidate.rawEntryJson !== undefined
+          ? { expectedRawEntryJson: candidate.rawEntryJson }
+          : {}),
         sessionKey: candidate.sessionKey,
       })),
       skipMaintenance: true,

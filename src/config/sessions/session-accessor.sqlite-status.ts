@@ -4,6 +4,7 @@ import {
   executeSqliteQueryTakeFirstSync,
   getNodeSqliteKysely,
 } from "../../infra/kysely-sync.js";
+import { runSqliteDeferredTransactionSync } from "../../infra/sqlite-transaction.js";
 import type { DB as OpenClawAgentKyselyDatabase } from "../../state/openclaw-agent-db.generated.js";
 import type { OpenClawAgentDatabase } from "../../state/openclaw-agent-db.js";
 import type {
@@ -215,6 +216,21 @@ export function querySqliteSessionEntries(
     projection?: "full" | "list";
     setProjectedTitle: (entry: SessionEntry, title: string | null) => void;
   },
+): SqliteSessionEntryListQueryResult {
+  return runSqliteDeferredTransactionSync(
+    database.db,
+    () => querySqliteSessionEntriesInSnapshot(database, query, options),
+    { operationLabel: "query session list" },
+  );
+}
+
+function querySqliteSessionEntriesInSnapshot(
+  database: SessionDatabaseReader,
+  query: SessionEntryListQuery,
+  options: {
+    projection?: "full" | "list";
+    setProjectedTitle: (entry: SessionEntry, title: string | null) => void;
+  },
   attempt = 0,
 ): SqliteSessionEntryListQueryResult {
   const validationToken = assertCanonicalSqliteSessionKeysCurrent(database, query.mainKey);
@@ -225,14 +241,14 @@ export function querySqliteSessionEntries(
     if (attempt >= 2) {
       throw new Error("SQLite session state changed repeatedly during list selection");
     }
-    return querySqliteSessionEntries(database, query, options, attempt + 1);
+    return querySqliteSessionEntriesInSnapshot(database, query, options, attempt + 1);
   };
   const included = query.includeLineageSessionKeys;
   if (included && included.length > 400) {
     const entries = new Map<string, SessionEntrySummary>();
     const creatorActors = new Map<string, NonNullable<SessionEntry["createdActor"]>>();
     for (let offset = 0; offset < included.length; offset += 400) {
-      const result = querySqliteSessionEntries(
+      const result = querySqliteSessionEntriesInSnapshot(
         database,
         {
           ...query,

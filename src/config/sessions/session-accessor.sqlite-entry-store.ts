@@ -205,6 +205,17 @@ export function readExactSessionEntryRow(
   return entry ? { entry, legacyKeys: [], row } : undefined;
 }
 
+export function readExactSessionEntryJson(
+  database: OpenClawAgentDatabaseReader,
+  sessionKey: string,
+): string | undefined {
+  const db = getSessionKysely(database.db);
+  return executeSqliteQueryTakeFirstSync(
+    database.db,
+    db.selectFrom("session_nodes").select("entry_json").where("session_key", "=", sessionKey),
+  )?.entry_json;
+}
+
 export function readExactSessionEntryRowValidated(
   database: OpenClawAgentDatabaseReader,
   sessionKey: string,
@@ -767,6 +778,137 @@ export function copySqliteSessionOwnedStateForRepair(params: {
   }
 }
 
+function mergeTrajectoryRuntimeEvents(
+  destination: OpenClawAgentDatabase,
+  rows: readonly Selectable<OpenClawAgentKyselyDatabase["trajectory_runtime_events"]>[],
+  sessionId: string,
+): void {
+  const db = getSessionKysely(destination.db);
+  const existing = executeSqliteQuerySync(
+    destination.db,
+    db.selectFrom("trajectory_runtime_events").selectAll().where("session_id", "=", sessionId),
+  ).rows;
+  const bySeq = new Map(existing.map((row) => [row.seq, row]));
+  const identity = (row: (typeof existing)[number]) =>
+    JSON.stringify([row.run_id, row.created_at, row.event_json]);
+  const destinationCounts = new Map<string, number>();
+  for (const row of existing) {
+    const key = identity(row);
+    destinationCounts.set(key, (destinationCounts.get(key) ?? 0) + 1);
+  }
+  const sourceCounts = new Map<string, number>();
+  for (const row of rows) {
+    const key = identity(row);
+    sourceCounts.set(key, (sourceCounts.get(key) ?? 0) + 1);
+  }
+  const remainingByIdentity = new Map(
+    [...sourceCounts].map(([key, count]) => [
+      key,
+      Math.max(0, count - (destinationCounts.get(key) ?? 0)),
+    ]),
+  );
+  let nextSeq = 0;
+  for (const row of existing) {
+    nextSeq = Math.max(nextSeq, row.seq + 1);
+  }
+  let remapping = false;
+  for (const row of rows.toSorted((left, right) => left.seq - right.seq)) {
+    const key = identity(row);
+    const original = bySeq.get(row.seq);
+    if (original && identity(original) !== key) {
+      remapping = true;
+    }
+    const remaining = remainingByIdentity.get(key) ?? 0;
+    if (remaining <= 0) {
+      continue;
+    }
+    remapping ||= bySeq.has(row.seq);
+    if (remapping) {
+      while (bySeq.has(nextSeq)) {
+        nextSeq += 1;
+      }
+    }
+    const seq = remapping ? nextSeq : row.seq;
+    const merged = { ...row, seq };
+    executeSqliteQuerySync(
+      destination.db,
+      db.insertInto("trajectory_runtime_events").values(merged),
+    );
+    bySeq.set(seq, merged);
+    remainingByIdentity.set(key, remaining - 1);
+    nextSeq = Math.max(nextSeq, seq + 1);
+  }
+}
+
+function mergeAcpParentStreamEvents(
+  destination: OpenClawAgentDatabase,
+  rows: readonly Selectable<OpenClawAgentKyselyDatabase["acp_parent_stream_events"]>[],
+  sessionId: string,
+): void {
+  const db = getSessionKysely(destination.db);
+  const existing = executeSqliteQuerySync(
+    destination.db,
+    db.selectFrom("acp_parent_stream_events").selectAll().where("session_id", "=", sessionId),
+  ).rows;
+  const eventKey = (runId: string, seq: number) => `${runId}\0${seq}`;
+  const byKey = new Map(existing.map((row) => [eventKey(row.run_id, row.seq), row]));
+  const identity = (row: (typeof existing)[number]) =>
+    JSON.stringify([row.run_id, row.created_at, row.event_json]);
+  const destinationCounts = new Map<string, number>();
+  for (const row of existing) {
+    const key = identity(row);
+    destinationCounts.set(key, (destinationCounts.get(key) ?? 0) + 1);
+  }
+  const sourceCounts = new Map<string, number>();
+  for (const row of rows) {
+    const key = identity(row);
+    sourceCounts.set(key, (sourceCounts.get(key) ?? 0) + 1);
+  }
+  const remainingByIdentity = new Map(
+    [...sourceCounts].map(([key, count]) => [
+      key,
+      Math.max(0, count - (destinationCounts.get(key) ?? 0)),
+    ]),
+  );
+  const nextSeqByRun = new Map<string, number>();
+  for (const row of existing) {
+    nextSeqByRun.set(row.run_id, Math.max(nextSeqByRun.get(row.run_id) ?? 0, row.seq + 1));
+  }
+  const remappedRuns = new Set<string>();
+  for (const row of rows.toSorted((left, right) => {
+    const byRun = left.run_id.localeCompare(right.run_id);
+    return byRun || left.seq - right.seq;
+  })) {
+    const key = identity(row);
+    const original = byKey.get(eventKey(row.run_id, row.seq));
+    if (original && identity(original) !== key) {
+      remappedRuns.add(row.run_id);
+    }
+    const remaining = remainingByIdentity.get(key) ?? 0;
+    if (remaining <= 0) {
+      continue;
+    }
+    if (byKey.has(eventKey(row.run_id, row.seq))) {
+      remappedRuns.add(row.run_id);
+    }
+    let nextSeq = nextSeqByRun.get(row.run_id) ?? 0;
+    if (remappedRuns.has(row.run_id)) {
+      while (byKey.has(eventKey(row.run_id, nextSeq))) {
+        nextSeq += 1;
+      }
+    }
+    const seq = remappedRuns.has(row.run_id) ? nextSeq : row.seq;
+    nextSeqByRun.set(row.run_id, Math.max(nextSeqByRun.get(row.run_id) ?? 0, seq + 1));
+    const merged = { ...row, seq };
+    executeSqliteQuerySync(
+      destination.db,
+      db.insertInto("acp_parent_stream_events").values(merged),
+    );
+    byKey.set(eventKey(row.run_id, seq), merged);
+    remainingByIdentity.set(key, remaining - 1);
+  }
+}
+
 function copySqliteSessionGenerationRows(params: {
   destination: OpenClawAgentDatabase;
   preferSource: boolean;
@@ -861,24 +1003,8 @@ function copySqliteSessionGenerationRows(params: {
         .onConflict((conflict) => conflict.doNothing()),
     );
   }
-  for (const row of trajectoryEvents) {
-    executeSqliteQuerySync(
-      params.destination.db,
-      destinationDb
-        .insertInto("trajectory_runtime_events")
-        .values(row)
-        .onConflict((conflict) => conflict.doNothing()),
-    );
-  }
-  for (const row of parentStreamEvents) {
-    executeSqliteQuerySync(
-      params.destination.db,
-      destinationDb
-        .insertInto("acp_parent_stream_events")
-        .values(row)
-        .onConflict((conflict) => conflict.doNothing()),
-    );
-  }
+  mergeTrajectoryRuntimeEvents(params.destination, trajectoryEvents, params.sessionId);
+  mergeAcpParentStreamEvents(params.destination, parentStreamEvents, params.sessionId);
 }
 
 function hasSqliteSessionGenerationContent(

@@ -342,6 +342,7 @@ export function listSqliteSessionEntriesForCanonicalRepair(
         {
           sessionKey: row.session_key,
           entry: entry ?? { sessionId: row.current_session_id, updatedAt: row.updated_at },
+          ...(!entry ? { rawEntryJson: row.entry_json } : {}),
         },
       ];
     });

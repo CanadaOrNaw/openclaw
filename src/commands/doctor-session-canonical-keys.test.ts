@@ -168,12 +168,13 @@ describe("doctor canonical session-key repair", () => {
         sessionKey: "agent:main:main",
         storePath,
       });
-      openOpenClawAgentDatabase({
+      const database = openOpenClawAgentDatabase({
         agentId: "main",
         env,
         path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "main", env }).path,
-      })
-        .db.prepare("UPDATE session_nodes SET entry_json = 'not-json' WHERE session_key = ?")
+      });
+      database.db
+        .prepare("UPDATE session_nodes SET entry_json = 'not-json' WHERE session_key = ?")
         .run("agent:main:main");
 
       expect(await repairCanonicalSessionKeys({ apply: true, cfg, env })).toMatchObject({
@@ -189,6 +190,11 @@ describe("doctor canonical session-key repair", () => {
           storePath,
         }),
       ).toBeUndefined();
+      expect(
+        database.db
+          .prepare("SELECT count(*) AS count FROM session_nodes WHERE session_key = ?")
+          .get("agent:main:main"),
+      ).toEqual({ count: 0 });
       expect(
         loadExactSessionEntryReadOnly({
           agentId: "main",
@@ -307,6 +313,26 @@ describe("doctor canonical session-key repair", () => {
         );
       staleDestinationDatabase.db
         .prepare(
+          "INSERT INTO trajectory_runtime_events (session_id, seq, run_id, event_json, created_at) VALUES ('winner', 0, 'run-1', ?, 10)",
+        )
+        .run(JSON.stringify({ source: "destination" }));
+      staleDestinationDatabase.db
+        .prepare(
+          "INSERT INTO trajectory_runtime_events (session_id, seq, run_id, event_json, created_at) VALUES ('winner', 2, 'run-1', ?, 11)",
+        )
+        .run(JSON.stringify({ source: "destination-later" }));
+      staleDestinationDatabase.db
+        .prepare(
+          "INSERT INTO acp_parent_stream_events (session_id, run_id, seq, event_json, created_at) VALUES ('winner', 'run-1', 0, ?, 10)",
+        )
+        .run(JSON.stringify({ source: "destination" }));
+      staleDestinationDatabase.db
+        .prepare(
+          "INSERT INTO acp_parent_stream_events (session_id, run_id, seq, event_json, created_at) VALUES ('winner', 'run-1', 2, ?, 11)",
+        )
+        .run(JSON.stringify({ source: "destination-later" }));
+      staleDestinationDatabase.db
+        .prepare(
           "INSERT INTO session_windows (session_id, session_key, reason, session_scope, created_at, updated_at) VALUES ('winner-previous', 'agent:main:shared', 'reset', 'conversation', 9, 9)",
         )
         .run();
@@ -357,6 +383,26 @@ describe("doctor canonical session-key repair", () => {
             type: "message",
           }),
         );
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO trajectory_runtime_events (session_id, seq, run_id, event_json, created_at) VALUES ('winner', 0, 'run-1', ?, 20)",
+        )
+        .run(JSON.stringify({ source: "winner" }));
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO trajectory_runtime_events (session_id, seq, run_id, event_json, created_at) VALUES ('winner', 1, 'run-1', ?, 20)",
+        )
+        .run(JSON.stringify({ source: "winner" }));
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO acp_parent_stream_events (session_id, run_id, seq, event_json, created_at) VALUES ('winner', 'run-1', 0, ?, 20)",
+        )
+        .run(JSON.stringify({ source: "winner" }));
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO acp_parent_stream_events (session_id, run_id, seq, event_json, created_at) VALUES ('winner', 'run-1', 1, ?, 20)",
+        )
+        .run(JSON.stringify({ source: "winner" }));
       opsDatabase.db
         .prepare(
           "INSERT INTO board_tabs (session_key, tab_id, title, position, created_by, revision) VALUES (?, 'tab-1', 'Board', 0, 'user', 1)",
@@ -452,6 +498,30 @@ describe("doctor canonical session-key repair", () => {
           )
           .get(),
       ).toEqual({ previous_session_id: "destination-only", updated_at: 20 });
+      expect(
+        mainDatabase.db
+          .prepare(
+            "SELECT seq, event_json FROM trajectory_runtime_events WHERE session_id = 'winner' ORDER BY seq",
+          )
+          .all(),
+      ).toEqual([
+        { seq: 0, event_json: JSON.stringify({ source: "destination" }) },
+        { seq: 2, event_json: JSON.stringify({ source: "destination-later" }) },
+        { seq: 3, event_json: JSON.stringify({ source: "winner" }) },
+        { seq: 4, event_json: JSON.stringify({ source: "winner" }) },
+      ]);
+      expect(
+        mainDatabase.db
+          .prepare(
+            "SELECT seq, event_json FROM acp_parent_stream_events WHERE session_id = 'winner' AND run_id = 'run-1' ORDER BY seq",
+          )
+          .all(),
+      ).toEqual([
+        { seq: 0, event_json: JSON.stringify({ source: "destination" }) },
+        { seq: 2, event_json: JSON.stringify({ source: "destination-later" }) },
+        { seq: 3, event_json: JSON.stringify({ source: "winner" }) },
+        { seq: 4, event_json: JSON.stringify({ source: "winner" }) },
+      ]);
       expect(
         mainDatabase.db
           .prepare("SELECT display_name FROM session_nodes WHERE session_key = 'agent:main:shared'")
