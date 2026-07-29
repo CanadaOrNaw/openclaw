@@ -112,31 +112,33 @@ function loadGatewayStoreEntries(params: {
         : [],
     ),
   ];
-  const dependencies: SessionEntrySummary[] = [];
+  const dependencies = new Map<string, SessionEntrySummary>();
   for (let offset = 0; offset < dependencyKeys.length; offset += 400) {
-    dependencies.push(
-      ...queryEntries({
-        agentId: params.agentId,
-        clone: false,
-        projection: params.projection,
-        query: {
-          archived: "all",
-          includeGlobal: true,
-          includeHidden: true,
-          includeUnknown: true,
-          lineageKeys: dependencyKeys.slice(offset, offset + 400),
-          spawnedBy: "__row-context__",
-        },
-        storePath: params.storePath,
-      }).entries,
-    );
+    for (const dependency of queryEntries({
+      agentId: params.agentId,
+      clone: false,
+      projection: params.projection,
+      query: {
+        archived: "all",
+        includeGlobal: true,
+        includeHidden: true,
+        includeUnknown: true,
+        lineageKeys: dependencyKeys.slice(offset, offset + 400),
+        spawnedBy: "__row-context__",
+      },
+      storePath: params.storePath,
+    }).entries) {
+      dependencies.set(dependency.sessionKey, dependency);
+    }
   }
   const selectedKeys = new Set(entries.map(({ sessionKey }) => sessionKey));
   return {
     creatorActors: result?.creatorActors ?? [],
-    ...(dependencies.length > 0
+    ...(dependencies.size > 0
       ? {
-          dependencies: dependencies.filter(({ sessionKey }) => !selectedKeys.has(sessionKey)),
+          dependencies: [...dependencies.values()].filter(
+            ({ sessionKey }) => !selectedKeys.has(sessionKey),
+          ),
         }
       : {}),
     entries,

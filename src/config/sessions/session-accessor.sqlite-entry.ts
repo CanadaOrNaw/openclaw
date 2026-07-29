@@ -1,8 +1,5 @@
 import type { MsgContext } from "../../auto-reply/templating.js";
-import {
-  executeSqliteQuerySync,
-  executeSqliteQueryTakeFirstSync,
-} from "../../infra/kysely-sync.js";
+import { executeSqliteQueryTakeFirstSync } from "../../infra/kysely-sync.js";
 import type { ChannelRouteRef } from "../../plugin-sdk/channel-route.js";
 import { parseAgentSessionKey } from "../../routing/session-key.js";
 import { withOpenClawAgentDatabaseReadOnly } from "../../state/openclaw-agent-db-readonly.js";
@@ -16,10 +13,6 @@ import {
 import type { DeliveryContext } from "../../utils/delivery-context.types.js";
 import { isInternalSessionEffectsKey } from "./internal-session-key.js";
 import { deriveLastRoutePatch, deriveSessionMetaPatch } from "./metadata.js";
-import {
-  copySqliteSessionOwnedStateForRepair,
-  resolveSqliteCanonicalRepairLookupKeys,
-} from "./session-accessor.sqlite-canonical-repair.js";
 import type {
   ExactSessionEntry,
   SessionAccessScope,
@@ -51,7 +44,6 @@ import {
 } from "./session-accessor.sqlite-entry-store.js";
 import { listSqliteTranscriptInstancesFromDatabase } from "./session-accessor.sqlite-history.js";
 import { emitCommittedSessionIdentityDiff } from "./session-accessor.sqlite-identity.js";
-import { readSqliteSessionGenerationIdsForKeys } from "./session-accessor.sqlite-lifecycle-state.js";
 import type { SqliteSessionEntryMaintenancePlan } from "./session-accessor.sqlite-lifecycle-types.js";
 import {
   applySqliteSessionEntryMaintenance,
@@ -74,7 +66,6 @@ import {
 } from "./session-accessor.sqlite-scope.js";
 import { setSessionProjectedTitle } from "./session-accessor.sqlite-session-row.js";
 import {
-  parseSqliteSessionEntryJson,
   querySqliteSessionEntries as querySqliteSessionEntriesFromDatabase,
   readSqliteSessionEntriesByStatus,
   type SqliteSessionEntryListQueryResult,
@@ -285,49 +276,6 @@ export function listSqliteSessionEntries(scope: SessionEntryListScope = {}): Ses
   return listSqliteSessionEntriesFromDatabase(database, resolved, scope);
 }
 
-/** Doctor-only cross-store copy; the source node remains until lifecycle archival succeeds. */
-export function copySqliteSessionOwnedStateForCanonicalRepair(params: {
-  canonicalKey: string;
-  destinationDatabase: OpenClawAgentDatabase;
-  preferSource: boolean;
-  preferredEntry?: SessionEntry;
-  preferredSessionKey?: string;
-  source: { agentId: string; storePath: string };
-  sourceEntries: readonly SessionEntry[];
-  sourceKeys: readonly string[];
-}): void {
-  const source = resolveSqliteStoreScope(params.source.storePath, {
-    agentId: params.source.agentId,
-  });
-  const sourceDatabase = openOpenClawAgentDatabase(toDatabaseOptions(source));
-  copySqliteSessionOwnedStateForRepair({
-    canonicalKey: params.canonicalKey,
-    destination: params.destinationDatabase,
-    preferSource: params.preferSource,
-    ...(params.preferredEntry ? { preferredEntry: params.preferredEntry } : {}),
-    ...(params.preferredSessionKey ? { preferredSessionKey: params.preferredSessionKey } : {}),
-    source: sourceDatabase,
-    sourceEntries: params.sourceEntries,
-    sourceKeys: params.sourceKeys,
-  });
-}
-
-/** Doctor-only inventory of every generation copied for one canonical-key group. */
-export function listSqliteSessionGenerationIdsForCanonicalRepair(params: {
-  agentId: string;
-  canonicalKey: string;
-  sourceKeys: readonly string[];
-  storePath: string;
-}): string[] {
-  const source = resolveSqliteStoreScope(params.storePath, { agentId: params.agentId });
-  const database = openOpenClawAgentDatabase(toDatabaseOptions(source));
-  return readSqliteSessionGenerationIdsForKeys(
-    database,
-    resolveSqliteCanonicalRepairLookupKeys(params.canonicalKey, params.sourceKeys),
-    { exactStoredKeys: true },
-  );
-}
-
 /**
  * Lists session entries without opening the agent database writable.
  * Transient lock errors propagate: only the caller knows whether "empty" is an
@@ -341,32 +289,6 @@ export function listSqliteSessionEntriesReadOnly(
     (database) => listSqliteSessionEntriesFromDatabase(database, resolved, scope),
     toDatabaseOptions(resolved),
   );
-  return result.found ? result.value : [];
-}
-
-/** Doctor inventory hydrates legacy blobs from promoted identity/timestamp columns. */
-export function listSqliteSessionEntriesForCanonicalRepair(
-  scope: SessionEntryListScope = {},
-): Array<SessionEntrySummary & { rawEntryJson?: string }> {
-  const resolved = resolveSqliteScope({ ...scope, sessionKey: "" });
-  const result = withOpenClawAgentDatabaseReadOnly((database) => {
-    const db = getSessionKysely(database.db);
-    return executeSqliteQuerySync(
-      database.db,
-      db
-        .selectFrom("session_nodes")
-        .select(["session_key", "current_session_id", "entry_json", "updated_at"]),
-    ).rows.flatMap((row) => {
-      const entry = parseSqliteSessionEntryJson(row, true);
-      return [
-        {
-          sessionKey: row.session_key,
-          entry: entry ?? { sessionId: row.current_session_id, updatedAt: row.updated_at },
-          ...(!entry ? { rawEntryJson: row.entry_json } : {}),
-        },
-      ];
-    });
-  }, toDatabaseOptions(resolved));
   return result.found ? result.value : [];
 }
 

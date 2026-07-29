@@ -1458,6 +1458,74 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
     });
   });
 
+  test("deduplicates row-context children returned by multiple lineage batches", async () => {
+    await withStateDirEnv("openclaw-session-list-batched-context-", async ({ stateDir }) => {
+      const env = { OPENCLAW_STATE_DIR: stateDir };
+      const storePath = path.join(stateDir, "agents", "main", "sessions", "sessions.json");
+      const database = openOpenClawAgentDatabase({
+        agentId: "main",
+        env,
+        path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "main", env }).path,
+      });
+      const insert = database.db.prepare(
+        "INSERT INTO session_nodes (session_key, current_session_id, entry_json, updated_at, label, parent_session_key, spawned_by) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      );
+      const parentKeys = Array.from({ length: 401 }, (_, index) => `agent:main:parent-${index}`);
+      database.db.exec("BEGIN");
+      try {
+        for (const [index, sessionKey] of parentKeys.entries()) {
+          const sessionId = `parent-session-${index}`;
+          insert.run(
+            sessionKey,
+            sessionId,
+            JSON.stringify({ label: "selected", sessionId, updatedAt: index + 1 }),
+            index + 1,
+            "selected",
+            null,
+            null,
+          );
+        }
+        insert.run(
+          "agent:main:child",
+          "child-session",
+          JSON.stringify({
+            label: "child",
+            parentSessionKey: parentKeys[0],
+            sessionId: "child-session",
+            spawnedBy: parentKeys.at(-1),
+            updatedAt: 500,
+          }),
+          500,
+          "child",
+          parentKeys[0],
+          parentKeys.at(-1),
+        );
+        database.db.exec("COMMIT");
+      } catch (error) {
+        database.db.exec("ROLLBACK");
+        throw error;
+      }
+
+      const loaded = loadCombinedSessionStoreForGateway(
+        { agents: { list: [{ id: "main", default: true }] } } as OpenClawConfig,
+        {
+          agentId: "main",
+          includeRowContext: true,
+          projection: "list",
+          query: {
+            archived: false,
+            includeGlobal: false,
+            includeUnknown: false,
+            label: "selected",
+            sortBy: "updatedAt",
+          },
+        },
+      );
+      expect(Object.keys(loaded.store)).toHaveLength(parentKeys.length);
+      expect(loaded.rowContextStore?.["agent:main:child"]?.sessionId).toBe("child-session");
+    });
+  });
+
   test("fails loud when a misplaced row would be hidden by owner pushdown", async () => {
     await withStateDirEnv("openclaw-session-list-misplaced-page-", async ({ stateDir }) => {
       const storeTemplate = path.join(stateDir, "agents", "{agentId}", "sessions.json");

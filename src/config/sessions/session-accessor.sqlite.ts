@@ -1,9 +1,6 @@
 // Stable SQLite accessor surface. Domain owners live in the focused modules below.
 export {
-  copySqliteSessionOwnedStateForCanonicalRepair,
-  listSqliteSessionGenerationIdsForCanonicalRepair,
   listSqliteSessionEntries,
-  listSqliteSessionEntriesForCanonicalRepair,
   listSqliteSessionChildEntriesReadOnly,
   listSqliteSessionEntriesReadOnly,
   listSqliteSessionEntryKeysReadOnly,
@@ -24,6 +21,11 @@ export {
   updateSqliteSessionLastRoute,
   upsertSqliteSessionEntry,
 } from "./session-accessor.sqlite-entry.js";
+export {
+  copySqliteSessionOwnedStateForCanonicalRepair,
+  listSqliteSessionEntriesForCanonicalRepair,
+  listSqliteSessionGenerationIdsForCanonicalRepair,
+} from "./session-accessor.sqlite-canonical-repair.js";
 export {
   cleanupSqliteSessionLifecycleArtifacts,
   deleteSqliteSessionEntryLifecycle,

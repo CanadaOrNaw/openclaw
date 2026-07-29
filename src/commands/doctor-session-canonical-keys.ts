@@ -263,6 +263,10 @@ async function repairCanonicalSessionGroup(
       (value): value is string => typeof value === "string" && value.length > 0,
     ),
   );
+  setCanonicalSqliteSessionMainKey(
+    openOpenClawAgentDatabase({ agentId: destination.agentId, path: destination.sqlitePath }),
+    params.cfg.session?.mainKey,
+  );
   const winnerResult = await applySessionEntryLifecycleMutation({
     agentId: destination.agentId,
     allowCanonicalRepair: true,

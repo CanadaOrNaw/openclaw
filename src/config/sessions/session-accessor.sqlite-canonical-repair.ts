@@ -4,18 +4,33 @@ import {
   executeSqliteQuerySync,
   executeSqliteQueryTakeFirstSync,
 } from "../../infra/kysely-sync.js";
+import { withOpenClawAgentDatabaseReadOnly } from "../../state/openclaw-agent-db-readonly.js";
 import type { DB as OpenClawAgentKyselyDatabase } from "../../state/openclaw-agent-db.generated.js";
-import type { OpenClawAgentDatabase } from "../../state/openclaw-agent-db.js";
+import {
+  openOpenClawAgentDatabase,
+  type OpenClawAgentDatabase,
+} from "../../state/openclaw-agent-db.js";
+import type {
+  SessionEntryListScope,
+  SessionEntrySummary,
+} from "./session-accessor.sqlite-contract.js";
+import { readSqliteSessionGenerationIdsForKeys } from "./session-accessor.sqlite-lifecycle-state.js";
 import {
   copySessionNodeArtifactsForRepair,
   deleteSessionNodeArtifacts,
 } from "./session-accessor.sqlite-node-artifacts.js";
 import { collectSqliteSessionStateIdsForEntry } from "./session-accessor.sqlite-references.js";
-import { getSessionKysely } from "./session-accessor.sqlite-scope.js";
+import {
+  getSessionKysely,
+  resolveSqliteScope,
+  resolveSqliteStoreScope,
+  toDatabaseOptions,
+} from "./session-accessor.sqlite-scope.js";
 import {
   deriveSqliteSessionTitle,
   refreshSqliteSessionTitleProjection,
 } from "./session-accessor.sqlite-session-row.js";
+import { parseSqliteSessionEntryJson } from "./session-accessor.sqlite-status.js";
 import {
   deleteSessionTranscriptIndexInTransaction,
   reconcileSessionTranscriptIndexInTransaction,
@@ -37,6 +52,78 @@ export function resolveSqliteCanonicalRepairLookupKeys(
       return [trimmedKey, normalizeStoreSessionKey(trimmedKey)];
     }),
   ]).filter(Boolean);
+}
+
+/** Doctor-only cross-store copy; the source node remains until lifecycle archival succeeds. */
+export function copySqliteSessionOwnedStateForCanonicalRepair(params: {
+  canonicalKey: string;
+  destinationDatabase: OpenClawAgentDatabase;
+  preferSource: boolean;
+  preferredEntry?: SessionEntry;
+  preferredSessionKey?: string;
+  source: { agentId: string; storePath: string };
+  sourceEntries: readonly SessionEntry[];
+  sourceKeys: readonly string[];
+}): void {
+  const source = resolveSqliteStoreScope(params.source.storePath, {
+    agentId: params.source.agentId,
+  });
+  const sourceDatabase = openOpenClawAgentDatabase(toDatabaseOptions(source));
+  copySqliteSessionOwnedStateForRepair({
+    canonicalKey: params.canonicalKey,
+    destination: params.destinationDatabase,
+    preferSource: params.preferSource,
+    ...(params.preferredEntry ? { preferredEntry: params.preferredEntry } : {}),
+    ...(params.preferredSessionKey ? { preferredSessionKey: params.preferredSessionKey } : {}),
+    source: sourceDatabase,
+    sourceEntries: params.sourceEntries,
+    sourceKeys: params.sourceKeys,
+  });
+}
+
+/** Doctor-only inventory of every generation copied for one canonical-key group. */
+export function listSqliteSessionGenerationIdsForCanonicalRepair(params: {
+  agentId: string;
+  canonicalKey: string;
+  sourceKeys: readonly string[];
+  storePath: string;
+}): string[] {
+  const source = resolveSqliteStoreScope(params.storePath, { agentId: params.agentId });
+  const database = openOpenClawAgentDatabase(toDatabaseOptions(source));
+  return readSqliteSessionGenerationIdsForKeys(
+    database,
+    resolveSqliteCanonicalRepairLookupKeys(params.canonicalKey, params.sourceKeys),
+    { exactStoredKeys: true },
+  );
+}
+
+/** Doctor inventory hydrates legacy blobs from promoted identity/timestamp columns. */
+export function listSqliteSessionEntriesForCanonicalRepair(
+  scope: SessionEntryListScope = {},
+): Array<SessionEntrySummary & { rawEntryJson?: string }> {
+  const resolved = resolveSqliteScope({ ...scope, sessionKey: "" });
+  const result = withOpenClawAgentDatabaseReadOnly((database) => {
+    const db = getSessionKysely(database.db);
+    return executeSqliteQuerySync(
+      database.db,
+      db
+        .selectFrom("session_nodes")
+        .select(["session_key", "current_session_id", "entry_json", "updated_at"]),
+    ).rows.flatMap((row) => {
+      const persistedEntry = parseSqliteSessionEntryJson(row);
+      const entry = parseSqliteSessionEntryJson(row, true);
+      const rawCompareRequired =
+        !persistedEntry || JSON.stringify(persistedEntry) !== JSON.stringify(entry);
+      return [
+        {
+          sessionKey: row.session_key,
+          entry: entry ?? { sessionId: row.current_session_id, updatedAt: row.updated_at },
+          ...(rawCompareRequired ? { rawEntryJson: row.entry_json } : {}),
+        },
+      ];
+    });
+  }, toDatabaseOptions(resolved));
+  return result.found ? result.value : [];
 }
 
 export function copySqliteSessionOwnedStateForRepair(params: {

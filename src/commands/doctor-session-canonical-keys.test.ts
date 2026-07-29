@@ -126,15 +126,18 @@ describe("doctor canonical session-key repair", () => {
         sessionKey: "agent:main:main",
         storePath,
       });
-
-      const first = await repairCanonicalSessionKeys({ apply: true, cfg, env });
-      expect(first).toMatchObject({ foundGroups: 1, removedRows: 1, repairedGroups: 1 });
-      expect(first.archivedTranscriptDirectories).toEqual([]);
       const database = openOpenClawAgentDatabase({
         agentId: "main",
         env,
         path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "main", env }).path,
       });
+      database.db
+        .prepare("UPDATE session_nodes SET entry_json = ? WHERE session_key = ?")
+        .run(JSON.stringify({ sessionId: "older", subject: "preserved" }), "agent:main:main");
+
+      const first = await repairCanonicalSessionKeys({ apply: true, cfg, env });
+      expect(first).toMatchObject({ foundGroups: 1, removedRows: 1, repairedGroups: 1 });
+      expect(first.archivedTranscriptDirectories).toEqual([]);
       expect(
         database.db
           .prepare("SELECT session_key FROM session_windows WHERE session_id = ?")
@@ -220,7 +223,7 @@ describe("doctor canonical session-key repair", () => {
       const opsStore = resolveStorePath(storeTemplate, { agentId: "ops", env });
       const cfg = {
         agents: { list: [{ id: "main", default: true }, { id: "ops" }] },
-        session: { store: storeTemplate },
+        session: { mainKey: "work", store: storeTemplate },
       } as OpenClawConfig;
       insertLegacySession({
         agentId: "ops",
@@ -252,6 +255,12 @@ describe("doctor canonical session-key repair", () => {
           storePath: opsStore,
         }),
       ).toBeUndefined();
+      expect(() =>
+        replaceSessionEntrySync(
+          { agentId: "main", env, sessionKey: "agent:main:main", storePath: mainStore },
+          { sessionId: "new-destination-alias", updatedAt: 20 },
+        ),
+      ).toThrow("openclaw doctor --fix");
       await expect(
         loadTranscriptEvents({
           agentId: "main",
