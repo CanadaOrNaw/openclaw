@@ -142,6 +142,21 @@ describe("resolveSessionKeyFromResolveParams", () => {
     await expectResolveToCanonicalKey({ key: canonicalKey });
   });
 
+  it("applies agent scope before resolving an exact key", async () => {
+    targetStore = {
+      [canonicalKey]: { sessionId: "sess-scoped", updatedAt: 1 },
+    };
+    await expect(
+      resolveSessionKeyFromResolveParams({
+        cfg: {},
+        p: { agentId: "ops", key: canonicalKey },
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCodes.INVALID_REQUEST, message: `No session found: ${canonicalKey}` },
+    });
+  });
+
   it("rejects legacy keys with doctor repair guidance", async () => {
     const store = {
       [legacyKey]: { sessionId: "sess-legacy", spawnedBy: "controller-1", updatedAt: Date.now() },

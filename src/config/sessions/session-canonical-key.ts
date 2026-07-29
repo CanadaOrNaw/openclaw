@@ -56,9 +56,15 @@ export function mergeCanonicalSessionEntryCandidates<T>(
       selected = { entry: structuredClone(candidate.entry), winner: candidate.value };
       continue;
     }
+    const incomingUpdatedAt = Number.isFinite(candidate.entry.updatedAt)
+      ? candidate.entry.updatedAt
+      : 0;
+    const selectedUpdatedAt = Number.isFinite(selected.entry.updatedAt)
+      ? selected.entry.updatedAt
+      : 0;
     const incomingWins =
-      candidate.entry.updatedAt > selected.entry.updatedAt ||
-      (candidate.entry.updatedAt === selected.entry.updatedAt &&
+      incomingUpdatedAt > selectedUpdatedAt ||
+      (incomingUpdatedAt === selectedUpdatedAt &&
         JSON.stringify(candidate.entry).localeCompare(JSON.stringify(selected.entry)) > 0);
     if (incomingWins) {
       selected = { entry: structuredClone(candidate.entry), winner: candidate.value };

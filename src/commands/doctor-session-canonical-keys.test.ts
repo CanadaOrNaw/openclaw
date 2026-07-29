@@ -8,6 +8,7 @@ import {
   loadExactSessionEntryReadOnly,
   replaceSessionEntrySync,
 } from "../config/sessions/session-accessor.js";
+import { mergeCanonicalSessionEntryCandidates } from "../config/sessions/session-canonical-key.js";
 import { resolveSqliteTargetFromSessionStorePath } from "../config/sessions/session-sqlite-target.js";
 import type { SessionEntry } from "../config/sessions/types.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
@@ -70,6 +71,15 @@ function insertLegacySession(params: {
 }
 
 describe("doctor canonical session-key repair", () => {
+  it("selects a finite updatedAt over a legacy missing timestamp", () => {
+    expect(
+      mergeCanonicalSessionEntryCandidates([
+        { entry: { sessionId: "legacy" } as SessionEntry, value: "legacy" },
+        { entry: { sessionId: "newer", updatedAt: 10 }, value: "newer" },
+      ])?.winner,
+    ).toBe("newer");
+  });
+
   it("is a no-op for fresh stores and remains idempotent after repair", async () => {
     await withStateDirEnv("openclaw-doctor-canonical-fresh-", async ({ stateDir }) => {
       const env = { ...process.env, OPENCLAW_STATE_DIR: stateDir };

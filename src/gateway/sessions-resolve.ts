@@ -67,23 +67,34 @@ function isResolvedSessionKeyVisible(params: {
   if (!entry) {
     return false;
   }
-  const spawnedBy = normalizeOptionalString(params.p.spawnedBy);
-  if (!spawnedBy) {
-    return true;
-  }
-  if (entry.archivedAt !== undefined || isCronRunSessionKey(params.key)) {
+  const specialKey = params.key === "global" || params.key === "unknown";
+  if (params.key === "global" && params.p.includeGlobal !== true) {
     return false;
   }
-  if (params.key === "global" || params.key === "unknown") {
+  if (params.key === "unknown" && (params.p.agentId || params.p.includeUnknown !== true)) {
     return false;
   }
   const parsed = parseAgentSessionKey(params.key);
   if (
-    (parsed?.rest === "sessions" &&
-      !normalizeOptionalString(entry.sessionId) &&
-      entry.updatedAt == null) ||
-    (params.p.agentId &&
-      (!parsed || normalizeAgentId(parsed.agentId) !== normalizeAgentId(params.p.agentId)))
+    params.p.agentId &&
+    (!parsed || normalizeAgentId(parsed.agentId) !== normalizeAgentId(params.p.agentId))
+  ) {
+    return false;
+  }
+  const spawnedBy = normalizeOptionalString(params.p.spawnedBy);
+  if (!spawnedBy) {
+    return true;
+  }
+  if (specialKey) {
+    return false;
+  }
+  if (entry.archivedAt !== undefined || isCronRunSessionKey(params.key)) {
+    return false;
+  }
+  if (
+    parsed?.rest === "sessions" &&
+    !normalizeOptionalString(entry.sessionId) &&
+    entry.updatedAt == null
   ) {
     return false;
   }
