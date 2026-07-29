@@ -204,6 +204,7 @@ describe("doctor canonical session-key repair", () => {
 
       expect(await repairCanonicalSessionKeys({ apply: true, cfg, env })).toMatchObject({
         foundGroups: 1,
+        removedRows: 1,
         repairedGroups: 1,
       });
       expect(
@@ -283,6 +284,23 @@ describe("doctor canonical session-key repair", () => {
           JSON.stringify({
             id: "stale-winner-message",
             message: { content: "stale destination history", role: "user" },
+            parentId: null,
+            type: "message",
+          }),
+        );
+      staleDestinationDatabase.db
+        .prepare(
+          "INSERT INTO session_windows (session_id, session_key, reason, session_scope, created_at, updated_at) VALUES ('winner-previous', 'agent:main:shared', 'reset', 'conversation', 9, 9)",
+        )
+        .run();
+      staleDestinationDatabase.db
+        .prepare(
+          "INSERT INTO transcript_events (session_id, seq, event_json, created_at) VALUES ('winner-previous', 0, ?, 9)",
+        )
+        .run(
+          JSON.stringify({
+            id: "stale-winner-previous-message",
+            message: { content: "stale previous destination history", role: "user" },
             parentId: null,
             type: "message",
           }),
@@ -450,13 +468,14 @@ describe("doctor canonical session-key repair", () => {
       const archiveContents = report.archivedTranscriptDirectories.flatMap((archiveDirectory) =>
         fs
           .readdirSync(archiveDirectory)
-          .filter((name) => name.startsWith("winner.jsonl"))
+          .filter((name) => name.startsWith("winner"))
           .map((name) => readSessionArchiveContentSync(path.join(archiveDirectory, name))),
       );
       expect(archiveContents).toEqual(
         expect.arrayContaining([
           expect.stringContaining("cross-store history"),
           expect.stringContaining("stale destination history"),
+          expect.stringContaining("stale previous destination history"),
         ]),
       );
 

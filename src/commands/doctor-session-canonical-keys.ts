@@ -5,6 +5,7 @@ import {
   applySessionEntryLifecycleMutation,
   copySessionOwnedStateForCanonicalRepair,
   listSessionEntriesReadOnly,
+  listSessionGenerationIdsForCanonicalRepair,
   loadTranscriptEvents,
 } from "../config/sessions/session-accessor.js";
 import { writeSqliteTranscriptArchive } from "../config/sessions/session-accessor.sqlite-archive.js";
@@ -115,16 +116,24 @@ function groupRepairCandidates(
   });
 }
 
-function countRemovedRows(candidates: readonly CanonicalSessionCandidate[]): number {
+function countRemovedRows(
+  candidates: readonly CanonicalSessionCandidate[],
+  params: { cfg: OpenClawConfig; env: NodeJS.ProcessEnv },
+): number {
   const selected = mergeCanonicalSessionEntryCandidates(
     candidates.map((candidate) => ({ entry: candidate.entry, value: candidate })),
   );
   if (!selected) {
     return 0;
   }
+  const destination = resolveCanonicalDestination({
+    canonicalKey: selected.winner.canonicalKey,
+    cfg: params.cfg,
+    env: params.env,
+  });
   const canonicalRowSurvives = candidates.some(
     (candidate) =>
-      candidate.sqlitePath === selected.winner.sqlitePath &&
+      candidate.sqlitePath === destination.sqlitePath &&
       candidate.sessionKey === candidate.canonicalKey,
   );
   return candidates.length - (canonicalRowSurvives ? 1 : 0);
@@ -155,29 +164,48 @@ async function repairCanonicalSessionGroup(
 
   const destinationStore = byDatabase.get(destination.sqlitePath) ?? [];
   const preArchivedDirectories: string[] = [];
-  if (winner.sqlitePath !== destination.sqlitePath && winner.entry.sessionId) {
-    const destinationCollision = destinationStore.find(
-      (candidate) => candidate.entry.sessionId === winner.entry.sessionId,
-    );
-    const [destinationEvents, sourceEvents] = await Promise.all([
-      loadTranscriptEvents({
-        agentId: destinationCollision?.agentId ?? destination.agentId,
-        sessionId: winner.entry.sessionId,
-        sessionKey: destinationCollision?.sessionKey ?? winner.canonicalKey,
-        storePath: destinationCollision?.storePath ?? destination.storePath,
-      }),
-      loadTranscriptEvents({
+  if (winner.sqlitePath !== destination.sqlitePath) {
+    const winnerStore = byDatabase.get(winner.sqlitePath) ?? [winner];
+    const generationIds = new Set([
+      ...listSessionGenerationIdsForCanonicalRepair({
         agentId: winner.agentId,
-        sessionId: winner.entry.sessionId,
-        sessionKey: winner.sessionKey,
+        canonicalKey: winner.canonicalKey,
+        sourceKeys: winnerStore.map((candidate) => candidate.sessionKey),
         storePath: winner.storePath,
       }),
+      winner.entry.sessionId,
     ]);
-    const destinationContent = serializeJsonlLines(
-      destinationEvents.map((event) => JSON.stringify(event)),
-    );
-    const sourceContent = serializeJsonlLines(sourceEvents.map((event) => JSON.stringify(event)));
-    if (destinationContent && destinationContent !== sourceContent) {
+    for (const sessionId of generationIds) {
+      if (!sessionId) {
+        continue;
+      }
+      const destinationCollision = destinationStore.find(
+        (candidate) => candidate.entry.sessionId === sessionId,
+      );
+      const sourceCollision = winnerStore.find(
+        (candidate) => candidate.entry.sessionId === sessionId,
+      );
+      const [destinationEvents, sourceEvents] = await Promise.all([
+        loadTranscriptEvents({
+          agentId: destinationCollision?.agentId ?? destination.agentId,
+          sessionId,
+          sessionKey: destinationCollision?.sessionKey ?? winner.canonicalKey,
+          storePath: destinationCollision?.storePath ?? destination.storePath,
+        }),
+        loadTranscriptEvents({
+          agentId: sourceCollision?.agentId ?? winner.agentId,
+          sessionId,
+          sessionKey: sourceCollision?.sessionKey ?? winner.sessionKey,
+          storePath: sourceCollision?.storePath ?? winner.storePath,
+        }),
+      ]);
+      const destinationContent = serializeJsonlLines(
+        destinationEvents.map((event) => JSON.stringify(event)),
+      );
+      const sourceContent = serializeJsonlLines(sourceEvents.map((event) => JSON.stringify(event)));
+      if (!destinationContent || destinationContent === sourceContent) {
+        continue;
+      }
       const sqliteDirectory = path.dirname(destination.sqlitePath);
       const archiveDirectory =
         path.basename(sqliteDirectory) === "agent"
@@ -187,9 +215,11 @@ async function repairCanonicalSessionGroup(
         archiveDirectory,
         content: destinationContent,
         reason: "deleted",
-        sessionId: winner.entry.sessionId,
+        sessionId,
       });
-      preArchivedDirectories.push(archiveDirectory);
+      if (!preArchivedDirectories.includes(archiveDirectory)) {
+        preArchivedDirectories.push(archiveDirectory);
+      }
     }
   }
   const relatedSessionIds = new Set(
@@ -291,7 +321,10 @@ export async function repairCanonicalSessionKeys(params: {
   return {
     archivedTranscriptDirectories: [...archivedTranscriptDirectories].toSorted(),
     foundGroups: repairGroups.length,
-    removedRows: repairGroups.reduce((total, group) => total + countRemovedRows(group), 0),
+    removedRows: repairGroups.reduce(
+      (total, group) => total + countRemovedRows(group, { cfg: params.cfg, env }),
+      0,
+    ),
     repairedGroups,
     scannedStores,
   };

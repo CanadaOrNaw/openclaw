@@ -510,6 +510,20 @@ export function rehomeSqliteSessionWindows(
 }
 
 /** Copy every durable generation before doctor removes a cross-database duplicate node. */
+export function resolveSqliteCanonicalRepairLookupKeys(
+  canonicalKey: string,
+  storedKeys: readonly string[],
+): string[] {
+  return uniqueStrings([
+    canonicalKey,
+    ...storedKeys.filter((key) => key.length > 0),
+    ...storedKeys.flatMap((key) => {
+      const trimmedKey = key.trim();
+      return [trimmedKey, normalizeStoreSessionKey(trimmedKey)];
+    }),
+  ]).filter(Boolean);
+}
+
 export function copySqliteSessionOwnedStateForRepair(params: {
   canonicalKey: string;
   destination: OpenClawAgentDatabase;
@@ -524,15 +538,7 @@ export function copySqliteSessionOwnedStateForRepair(params: {
   if (storedSourceKeys.length === 0) {
     return;
   }
-  const sourceKeys = uniqueStrings([
-    params.canonicalKey,
-    ...storedSourceKeys,
-    ...storedSourceKeys.flatMap((key) => {
-      const trimmedKey = key.trim();
-      const normalizedKey = normalizeStoreSessionKey(trimmedKey);
-      return [trimmedKey, normalizedKey];
-    }),
-  ]).filter(Boolean);
+  const sourceKeys = resolveSqliteCanonicalRepairLookupKeys(params.canonicalKey, storedSourceKeys);
   const sourceDb = getSessionKysely(params.source.db);
   const destinationDb = getSessionKysely(params.destination.db);
   const entrySessionIds = uniqueStrings(

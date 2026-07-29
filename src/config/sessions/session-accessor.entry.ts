@@ -11,6 +11,7 @@ import { resolveStorePath } from "./paths.js";
 import { clearPluginOwnedSessionState } from "./plugin-host-cleanup.js";
 import {
   copySqliteSessionOwnedStateForCanonicalRepair as copySessionOwnedStateForCanonicalRepair,
+  listSqliteSessionGenerationIdsForCanonicalRepair as listSessionGenerationIdsForCanonicalRepair,
   listSqliteSessionChildEntriesReadOnly as listSessionChildEntriesReadOnly,
   listSqliteSessionEntries,
   listSqliteSessionEntriesReadOnly as listSessionEntriesReadOnly,
@@ -58,6 +59,7 @@ export { clearPluginOwnedSessionState };
 // operations directly instead of maintaining a second pass-through layer.
 export {
   copySessionOwnedStateForCanonicalRepair,
+  listSessionGenerationIdsForCanonicalRepair,
   listSessionChildEntriesReadOnly,
   listSessionEntriesReadOnly,
   listSessionEntryKeysReadOnly,

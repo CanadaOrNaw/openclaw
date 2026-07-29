@@ -120,6 +120,7 @@ export type {
 } from "./session-accessor.entry-mutation.js";
 export {
   copySessionOwnedStateForCanonicalRepair,
+  listSessionGenerationIdsForCanonicalRepair,
   clearPluginOwnedSessionState,
   listSessionChildEntriesReadOnly,
   listSessionEntries,

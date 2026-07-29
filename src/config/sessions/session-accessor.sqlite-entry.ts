@@ -39,11 +39,13 @@ import {
   readSqliteSessionEntrySelectionSnapshot,
   readSqliteSessionIdentitySnapshot,
   copySqliteSessionOwnedStateForRepair,
+  resolveSqliteCanonicalRepairLookupKeys,
   rehomeSqliteSessionWindows,
   writeSessionEntry,
 } from "./session-accessor.sqlite-entry-store.js";
 import { listSqliteTranscriptInstancesFromDatabase } from "./session-accessor.sqlite-history.js";
 import { emitCommittedSessionIdentityDiff } from "./session-accessor.sqlite-identity.js";
+import { readSqliteSessionGenerationIdsForKeys } from "./session-accessor.sqlite-lifecycle-state.js";
 import type { SqliteSessionEntryMaintenancePlan } from "./session-accessor.sqlite-lifecycle-types.js";
 import {
   applySqliteSessionEntryMaintenance,
@@ -286,6 +288,21 @@ export function copySqliteSessionOwnedStateForCanonicalRepair(params: {
     sourceEntries: params.sourceEntries,
     sourceKeys: params.sourceKeys,
   });
+}
+
+/** Doctor-only inventory of every generation copied for one canonical-key group. */
+export function listSqliteSessionGenerationIdsForCanonicalRepair(params: {
+  agentId: string;
+  canonicalKey: string;
+  sourceKeys: readonly string[];
+  storePath: string;
+}): string[] {
+  const source = resolveSqliteStoreScope(params.storePath, { agentId: params.agentId });
+  const database = openOpenClawAgentDatabase(toDatabaseOptions(source));
+  return readSqliteSessionGenerationIdsForKeys(
+    database,
+    resolveSqliteCanonicalRepairLookupKeys(params.canonicalKey, params.sourceKeys),
+  );
 }
 
 /**
