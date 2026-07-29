@@ -1468,38 +1468,38 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
         path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "main", env }).path,
       });
       const insert = database.db.prepare(
-        "INSERT INTO session_nodes (session_key, current_session_id, entry_json, updated_at, label, parent_session_key, spawned_by) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO session_nodes (session_key, current_session_id, entry_json, updated_at, label, parent_session_key, spawned_by) VALUES ($sessionKey, $sessionId, $entryJson, $updatedAt, $label, $parentSessionKey, $spawnedBy)",
       );
       const parentKeys = Array.from({ length: 401 }, (_, index) => `agent:main:parent-${index}`);
       database.db.exec("BEGIN");
       try {
         for (const [index, sessionKey] of parentKeys.entries()) {
           const sessionId = `parent-session-${index}`;
-          insert.run(
-            sessionKey,
-            sessionId,
-            JSON.stringify({ label: "selected", sessionId, updatedAt: index + 1 }),
-            index + 1,
-            "selected",
-            null,
-            null,
-          );
+          insert.run({
+            $sessionKey: sessionKey,
+            $sessionId: sessionId,
+            $entryJson: JSON.stringify({ label: "selected", sessionId, updatedAt: index + 1 }),
+            $updatedAt: index + 1,
+            $label: "selected",
+            $parentSessionKey: null,
+            $spawnedBy: null,
+          });
         }
-        insert.run(
-          "agent:main:child",
-          "child-session",
-          JSON.stringify({
+        insert.run({
+          $sessionKey: "agent:main:child",
+          $sessionId: "child-session",
+          $entryJson: JSON.stringify({
             label: "child",
             parentSessionKey: parentKeys[0],
             sessionId: "child-session",
             spawnedBy: parentKeys.at(-1),
             updatedAt: 500,
           }),
-          500,
-          "child",
-          parentKeys[0],
-          parentKeys.at(-1),
-        );
+          $updatedAt: 500,
+          $label: "child",
+          $parentSessionKey: parentKeys[0] ?? null,
+          $spawnedBy: parentKeys.at(-1) ?? null,
+        });
         database.db.exec("COMMIT");
       } catch (error) {
         database.db.exec("ROLLBACK");
