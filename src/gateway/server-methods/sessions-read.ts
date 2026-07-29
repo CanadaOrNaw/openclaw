@@ -24,7 +24,6 @@ import {
 } from "../../config/sessions.js";
 import { listSessionEntriesReadOnly } from "../../config/sessions/session-accessor.js";
 import { searchSessionTranscripts } from "../../config/sessions/session-transcript-search.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { buildProjectedAgentRunIndex } from "../../infra/agent-events.js";
 import {
   measureDiagnosticsTimelineSpan,
@@ -79,18 +78,14 @@ import {
   resolveVisibleActiveSessionRunState,
 } from "./session-active-runs.js";
 import { emitSessionsChanged } from "./session-change-event.js";
+import { sessionListInflightMap } from "./sessions-list-inflight.js";
 import {
   filterSessionStoreToConfiguredAgents,
   loadSessionEntriesForTarget,
   requireSessionKey,
 } from "./sessions-shared.js";
-import type { GatewayClient, GatewayRequestContext, GatewayRequestHandlers } from "./types.js";
+import type { GatewayClient, GatewayRequestHandlers } from "./types.js";
 import { assertValidParams } from "./validation.js";
-
-const sessionListsByContext = new WeakMap<
-  GatewayRequestContext,
-  { config: OpenClawConfig; inFlight: Map<string, Promise<unknown>> }
->();
 
 function sessionListVisibilityIdentity(client: GatewayClient | null): string {
   if (isGatewayAdmin(client)) {
@@ -105,18 +100,6 @@ function sessionListWorkKey(params: SessionsListParams, client: GatewayClient | 
     sessionListVisibilityIdentity(client),
     Object.entries(params).toSorted(([left], [right]) => left.localeCompare(right)),
   ]);
-}
-
-function sessionListInflightMap(
-  context: GatewayRequestContext,
-  config: OpenClawConfig,
-): Map<string, Promise<unknown>> {
-  let state = sessionListsByContext.get(context);
-  if (!state || state.config !== config) {
-    state = { config, inFlight: new Map() };
-    sessionListsByContext.set(context, state);
-  }
-  return state.inFlight;
 }
 
 export const sessionReadHandlers: GatewayRequestHandlers = {
