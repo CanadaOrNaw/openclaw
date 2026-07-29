@@ -834,22 +834,6 @@ function copySqliteSessionGenerationRows(params: {
         .where("session_id", "=", params.sessionId),
     );
   }
-  if (params.preferSource && params.sourceIsAuthoritative && trajectoryEvents.length > 0) {
-    executeSqliteQuerySync(
-      params.destination.db,
-      destinationDb
-        .deleteFrom("trajectory_runtime_events")
-        .where("session_id", "=", params.sessionId),
-    );
-  }
-  if (params.preferSource && params.sourceIsAuthoritative && parentStreamEvents.length > 0) {
-    executeSqliteQuerySync(
-      params.destination.db,
-      destinationDb
-        .deleteFrom("acp_parent_stream_events")
-        .where("session_id", "=", params.sessionId),
-    );
-  }
   for (const row of transcriptEvents) {
     executeSqliteQuerySync(
       params.destination.db,
