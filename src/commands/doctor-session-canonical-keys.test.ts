@@ -80,6 +80,19 @@ describe("doctor canonical session-key repair", () => {
     ).toBe("newer");
   });
 
+  it("prefers the canonical destination when repair timestamps tie", () => {
+    expect(
+      mergeCanonicalSessionEntryCandidates([
+        { entry: { sessionId: "wrong-store", updatedAt: 10 }, value: "wrong-store" },
+        {
+          entry: { sessionId: "canonical", updatedAt: 10 },
+          preferred: true,
+          value: "canonical",
+        },
+      ])?.winner,
+    ).toBe("canonical");
+  });
+
   it("is a no-op for fresh stores and remains idempotent after repair", async () => {
     await withStateDirEnv("openclaw-doctor-canonical-fresh-", async ({ stateDir }) => {
       const env = { ...process.env, OPENCLAW_STATE_DIR: stateDir };
@@ -314,6 +327,62 @@ describe("doctor canonical session-key repair", () => {
           .prepare("SELECT display_name FROM session_nodes WHERE session_key = ?")
           .get("agent:main:shared"),
       ).toEqual({ display_name: "loser transcript title" });
+    });
+  });
+
+  it("keeps canonical destination history when cross-store timestamps tie", async () => {
+    await withStateDirEnv("openclaw-doctor-canonical-tied-stores-", async ({ stateDir }) => {
+      const env = { ...process.env, OPENCLAW_STATE_DIR: stateDir };
+      const storeTemplate = path.join(stateDir, "agents", "{agentId}", "sessions.json");
+      const mainStore = resolveStorePath(storeTemplate, { agentId: "main", env });
+      const opsStore = resolveStorePath(storeTemplate, { agentId: "ops", env });
+      const cfg = {
+        agents: { list: [{ id: "main", default: true }, { id: "ops" }] },
+        session: { mainKey: "shared", store: storeTemplate },
+      } as OpenClawConfig;
+      insertLegacySession({
+        agentId: "main",
+        entry: { sessionId: "canonical", updatedAt: 10 },
+        env,
+        eventText: "canonical history",
+        sessionKey: "agent:main:shared",
+        storePath: mainStore,
+      });
+      insertLegacySession({
+        agentId: "ops",
+        entry: { sessionId: "wrong-store", updatedAt: 10 },
+        env,
+        eventText: "wrong-store history",
+        sessionKey: "agent:main:main ",
+        storePath: opsStore,
+      });
+
+      expect(await repairCanonicalSessionKeys({ apply: true, cfg, env })).toMatchObject({
+        foundGroups: 1,
+        removedRows: 1,
+        repairedGroups: 1,
+      });
+      expect(
+        loadExactSessionEntryReadOnly({
+          agentId: "main",
+          env,
+          sessionKey: "agent:main:shared",
+          storePath: mainStore,
+        })?.entry,
+      ).toMatchObject({ sessionId: "canonical", updatedAt: 10 });
+      await expect(
+        loadTranscriptEvents({
+          agentId: "main",
+          env,
+          sessionId: "canonical",
+          sessionKey: "agent:main:shared",
+          storePath: mainStore,
+        }),
+      ).resolves.toEqual([
+        expect.objectContaining({
+          message: expect.objectContaining({ content: "canonical history" }),
+        }),
+      ]);
     });
   });
 

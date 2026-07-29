@@ -198,12 +198,16 @@ export function canonicalSqliteSessionKeyTokenIsCurrent(
 }
 
 export function mergeCanonicalSessionEntryCandidates<T>(
-  candidates: readonly { entry: SessionEntry; value: T }[],
+  candidates: readonly { entry: SessionEntry; preferred?: boolean; value: T }[],
 ): { entry: SessionEntry; winner: T } | undefined {
-  let selected: { entry: SessionEntry; winner: T } | undefined;
+  let selected: { entry: SessionEntry; preferred: boolean; winner: T } | undefined;
   for (const candidate of candidates) {
     if (!selected) {
-      selected = { entry: structuredClone(candidate.entry), winner: candidate.value };
+      selected = {
+        entry: structuredClone(candidate.entry),
+        preferred: candidate.preferred === true,
+        winner: candidate.value,
+      };
       continue;
     }
     const incomingUpdatedAt = Number.isFinite(candidate.entry.updatedAt)
@@ -215,9 +219,16 @@ export function mergeCanonicalSessionEntryCandidates<T>(
     const incomingWins =
       incomingUpdatedAt > selectedUpdatedAt ||
       (incomingUpdatedAt === selectedUpdatedAt &&
-        JSON.stringify(candidate.entry).localeCompare(JSON.stringify(selected.entry)) > 0);
+        (candidate.preferred === true
+          ? !selected.preferred
+          : !selected.preferred &&
+            JSON.stringify(candidate.entry).localeCompare(JSON.stringify(selected.entry)) > 0));
     if (incomingWins) {
-      selected = { entry: structuredClone(candidate.entry), winner: candidate.value };
+      selected = {
+        entry: structuredClone(candidate.entry),
+        preferred: candidate.preferred === true,
+        winner: candidate.value,
+      };
     }
   }
   return selected;

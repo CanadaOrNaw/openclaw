@@ -123,6 +123,31 @@ function resolveCanonicalDestination(params: {
   };
 }
 
+function selectCanonicalSessionCandidate(
+  candidates: readonly CanonicalSessionCandidate[],
+  params: { cfg: OpenClawConfig; env: NodeJS.ProcessEnv },
+) {
+  const first = candidates[0];
+  if (!first) {
+    return undefined;
+  }
+  const destination = resolveCanonicalDestination({
+    canonicalKey: first.canonicalKey,
+    cfg: params.cfg,
+    env: params.env,
+  });
+  const selected = mergeCanonicalSessionEntryCandidates(
+    candidates.map((candidate) => ({
+      entry: candidate.entry,
+      preferred:
+        candidate.sqlitePath === destination.sqlitePath &&
+        candidate.sessionKey === candidate.canonicalKey,
+      value: candidate,
+    })),
+  );
+  return selected ? { ...selected, destination } : undefined;
+}
+
 function groupRepairCandidates(
   candidates: readonly CanonicalSessionCandidate[],
   params: { cfg: OpenClawConfig; env: NodeJS.ProcessEnv },
@@ -158,19 +183,12 @@ function countRemovedRows(
   candidates: readonly CanonicalSessionCandidate[],
   params: { cfg: OpenClawConfig; env: NodeJS.ProcessEnv },
 ): number {
-  const selected = mergeCanonicalSessionEntryCandidates(
-    candidates.map((candidate) => ({ entry: candidate.entry, value: candidate })),
-  );
+  const selected = selectCanonicalSessionCandidate(candidates, params);
   if (!selected) {
     return 0;
   }
-  const destination = resolveCanonicalDestination({
-    canonicalKey: selected.winner.canonicalKey,
-    cfg: params.cfg,
-    env: params.env,
-  });
   const canonicalRowSurvives =
-    selected.winner.sqlitePath === destination.sqlitePath &&
+    selected.winner.sqlitePath === selected.destination.sqlitePath &&
     selected.winner.sessionKey === selected.winner.canonicalKey;
   return candidates.length - (canonicalRowSurvives ? 1 : 0);
 }
@@ -179,18 +197,12 @@ async function repairCanonicalSessionGroup(
   candidates: readonly CanonicalSessionCandidate[],
   params: { cfg: OpenClawConfig; env: NodeJS.ProcessEnv },
 ): Promise<string[]> {
-  const selected = mergeCanonicalSessionEntryCandidates(
-    candidates.map((candidate) => ({ entry: candidate.entry, value: candidate })),
-  );
+  const selected = selectCanonicalSessionCandidate(candidates, params);
   if (!selected) {
     return [];
   }
   const winner = selected.winner;
-  const destination = resolveCanonicalDestination({
-    canonicalKey: winner.canonicalKey,
-    cfg: params.cfg,
-    env: params.env,
-  });
+  const destination = selected.destination;
   const byDatabase = new Map<string, CanonicalSessionCandidate[]>();
   for (const candidate of candidates) {
     const group = byDatabase.get(candidate.sqlitePath) ?? [];
