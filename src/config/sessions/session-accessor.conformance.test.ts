@@ -1776,29 +1776,27 @@ describe("sqlite session normalization", () => {
     ).toEqual([]);
   });
 
-  it("resolves confirmed lowercased legacy SQLite session aliases", async () => {
+  it("does not resolve lowercased legacy SQLite session aliases", () => {
     const env = { ...process.env, OPENCLAW_STATE_DIR: paths.stateDir };
     const canonicalKey = "agent:main:matrix:channel:!MixedCase:example.org";
     const legacyKey = canonicalKey.toLowerCase();
-    await upsertSqliteSessionEntry(
-      {
-        agentId: "main",
-        env,
-        sessionKey: legacyKey,
-        storePath: paths.sqlitePath,
-      },
-      {
-        delivery: normalizeSessionDeliveryState({
-          context: {
-            accountId: "acct-1",
-            channel: "matrix",
-            to: "!MixedCase:example.org",
-          },
-        }),
-        sessionId: "legacy-alias-session",
-        updatedAt: 10,
-      },
-    );
+    const entry = {
+      delivery: normalizeSessionDeliveryState({
+        context: {
+          accountId: "acct-1",
+          channel: "matrix",
+          to: "!MixedCase:example.org",
+        },
+      }),
+      sessionId: "legacy-alias-session",
+      updatedAt: 10,
+    };
+    const database = openOpenClawAgentDatabase({ agentId: "main", env, path: paths.sqlitePath });
+    database.db
+      .prepare(
+        "INSERT INTO session_nodes (session_key, current_session_id, entry_json, updated_at) VALUES (?, ?, ?, ?)",
+      )
+      .run(legacyKey, entry.sessionId, JSON.stringify(entry), entry.updatedAt);
 
     expect(
       loadSqliteSessionEntry({
@@ -1807,7 +1805,7 @@ describe("sqlite session normalization", () => {
         sessionKey: canonicalKey,
         storePath: paths.sqlitePath,
       }),
-    ).toMatchObject({ sessionId: "legacy-alias-session" });
+    ).toBeUndefined();
     const legacyEntry = loadExactSqliteSessionEntry({
       agentId: "main",
       env,
@@ -1822,55 +1820,14 @@ describe("sqlite session normalization", () => {
         sessionKey: canonicalKey,
         storePath: paths.sqlitePath,
       }),
-    ).toBe(legacyEntry?.entry.updatedAt);
-
-    await patchSqliteSessionEntry(
-      {
-        agentId: "main",
-        env,
-        sessionKey: canonicalKey,
-        storePath: paths.sqlitePath,
-      },
-      () => ({ model: "gpt-5.5", updatedAt: 20 }),
-    );
-
-    expect(
-      loadExactSqliteSessionEntry({
-        agentId: "main",
-        env,
-        sessionKey: legacyKey,
-        storePath: paths.sqlitePath,
-      }),
     ).toBeUndefined();
-    const canonicalEntry = loadExactSqliteSessionEntry({
-      agentId: "main",
-      env,
-      sessionKey: canonicalKey,
-      storePath: paths.sqlitePath,
-    });
-    expect(canonicalEntry).toMatchObject({
-      entry: {
-        model: "gpt-5.5",
-        sessionId: "legacy-alias-session",
-        updatedAt: expect.any(Number),
-      },
-      sessionKey: canonicalKey,
-    });
-    expect(
-      readSqliteSessionUpdatedAt({
-        agentId: "main",
-        env,
-        sessionKey: canonicalKey,
-        storePath: paths.sqlitePath,
-      }),
-    ).toBe(canonicalEntry?.entry.updatedAt);
     expect(
       listSqliteSessionEntries({
         agentId: "main",
         env,
         storePath: paths.sqlitePath,
       }).map((summary) => summary.sessionKey),
-    ).toEqual([canonicalKey]);
+    ).toEqual([legacyKey]);
   });
 
   it("normalizes missing entry updatedAt before writing root and entry rows", async () => {

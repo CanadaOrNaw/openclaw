@@ -4,6 +4,7 @@ import {
   executeSqliteQueryTakeFirstSync,
 } from "../../infra/kysely-sync.js";
 import type { ChannelRouteRef } from "../../plugin-sdk/channel-route.js";
+import { parseAgentSessionKey } from "../../routing/session-key.js";
 import { withOpenClawAgentDatabaseReadOnly } from "../../state/openclaw-agent-db-readonly.js";
 import {
   isIncognitoOpenClawAgentSqlitePath,
@@ -77,7 +78,10 @@ import {
   type SqliteSessionEntryListQueryResult,
 } from "./session-accessor.sqlite-status.js";
 import type { SessionEntryListQuery, SessionEntryListScope } from "./session-accessor.types.js";
-import { assertCanonicalSqliteSessionKeysCurrent } from "./session-canonical-key.js";
+import {
+  assertCanonicalSessionKeyWrite,
+  assertCanonicalSqliteSessionKeysCurrent,
+} from "./session-canonical-key.js";
 import { preserveSqliteSameKeySessionRolloverLineage } from "./session-entry-lineage.js";
 import { buildSessionCreationStamp } from "./session-entry-provenance.js";
 import { kickSessionHistoryDiskBudgetMaintenance } from "./session-history-eviction.js";
@@ -101,6 +105,19 @@ const childSessionKeysByEntrySnapshot = new WeakMap<
   Map<string, SessionEntry>,
   Map<string, string[]>
 >();
+
+function assertCanonicalSessionWriteScope(scope: SessionAccessScope): void {
+  const sessionKey = scope.sessionKey;
+  const trimmed = sessionKey.trim();
+  const parsed = parseAgentSessionKey(trimmed);
+  if (
+    !trimmed ||
+    sessionKey !== trimmed ||
+    (parsed !== null && !trimmed.startsWith(`agent:${parsed.agentId}:`))
+  ) {
+    assertCanonicalSessionKeyWrite(sessionKey, scope.agentId);
+  }
+}
 
 function getChildSessionKeysByParent(entries: Map<string, SessionEntry>): Map<string, string[]> {
   const cached = childSessionKeysByEntrySnapshot.get(entries);
@@ -481,6 +498,7 @@ export function replaceSqliteSessionEntrySync(
   scope: SessionAccessScope,
   entry: SessionEntry,
 ): void {
+  assertCanonicalSessionWriteScope(scope);
   const resolved = resolveSqliteScope(scope);
   let previous = new Map<string, SessionEntry>();
   let current = new Map<string, SessionEntry>();
@@ -502,6 +520,7 @@ export async function patchSqliteSessionEntry(
   ) => Promise<Partial<SessionEntry> | null> | Partial<SessionEntry> | null,
   options: SqliteSessionEntryPatchOptions = {},
 ): Promise<SessionEntry | null> {
+  assertCanonicalSessionWriteScope(scope);
   const resolved = resolveSqliteScope(scope);
   return await patchSqliteSessionEntrySnapshot<
     ReturnType<typeof readSqliteSessionEntrySelectionSnapshot>

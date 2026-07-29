@@ -1664,41 +1664,24 @@ describe("session accessor seam", () => {
     expect(persisted?.pendingFinalDelivery).toBeUndefined();
   });
 
-  it("commits reply session initialization from a guarded legacy alias snapshot", async () => {
-    const sessionKey = "agent:main:main";
-    await applySessionEntryLifecycleMutation({
-      storePath,
-      upserts: [
-        {
-          sessionKey: "Agent:Main:Main",
-          entry: {
-            sessionId: "legacy-alias-session",
-            updatedAt: 10,
+  it("rejects reply session initialization writes to a legacy alias", async () => {
+    await expect(
+      applySessionEntryLifecycleMutation({
+        storePath,
+        upserts: [
+          {
+            sessionKey: "Agent:Main:Main",
+            entry: {
+              sessionId: "legacy-alias-session",
+              updatedAt: 10,
+            },
           },
-        },
-      ],
+        ],
+      }),
+    ).rejects.toMatchObject({
+      code: "SESSION_CANONICAL_KEY_MIGRATION_REQUIRED",
+      message: expect.stringContaining("openclaw doctor --fix"),
     });
-
-    const snapshot = loadMainInitializationSnapshot(sessionKey);
-    const committed = await commitReplySessionInitialization({
-      activeSessionKey: sessionKey,
-      agentId: "main",
-      expectedRevision: snapshot.revision,
-      previousEntry: snapshot.currentEntry,
-      sessionEntry: {
-        sessionId: "next-session",
-        updatedAt: 20,
-      },
-      sessionKey,
-      storePath,
-    });
-
-    expect(committed.ok).toBe(true);
-    if (!committed.ok) {
-      throw new Error("expected reply session initialization to commit");
-    }
-    expect(committed.sessionEntry.sessionId).toBe("next-session");
-    expect(loadSessionEntry({ sessionKey, storePath })?.sessionId).toBe("next-session");
   });
 
   it("rejects a reply initialization key scoped to another explicit agent", () => {
