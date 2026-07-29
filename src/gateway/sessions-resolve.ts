@@ -71,10 +71,10 @@ function isResolvedSessionKeyVisible(params: {
   }
   const effectiveKey = params.canonicalKey ?? params.key;
   const specialKey = effectiveKey === "global" || effectiveKey === "unknown";
-  if (params.key === "global" && params.p.includeGlobal !== true) {
+  if (effectiveKey === "global" && params.p.includeGlobal !== true) {
     return false;
   }
-  if (params.key === "unknown" && (params.p.agentId || params.p.includeUnknown !== true)) {
+  if (effectiveKey === "unknown" && (params.p.agentId || params.p.includeUnknown !== true)) {
     return false;
   }
   const parsed = parseAgentSessionKey(effectiveKey);
@@ -82,6 +82,13 @@ function isResolvedSessionKeyVisible(params: {
     !specialKey &&
     params.p.agentId &&
     (!parsed || normalizeAgentId(parsed.agentId) !== normalizeAgentId(params.p.agentId))
+  ) {
+    return false;
+  }
+  if (
+    parsed?.rest === "sessions" &&
+    !normalizeOptionalString(entry.sessionId) &&
+    entry.updatedAt == null
   ) {
     return false;
   }
@@ -93,13 +100,6 @@ function isResolvedSessionKeyVisible(params: {
     return false;
   }
   if (entry.archivedAt !== undefined || isCronRunSessionKey(effectiveKey)) {
-    return false;
-  }
-  if (
-    parsed?.rest === "sessions" &&
-    !normalizeOptionalString(entry.sessionId) &&
-    entry.updatedAt == null
-  ) {
     return false;
   }
   const lineage = resolveSessionListLineageSqlQuery(

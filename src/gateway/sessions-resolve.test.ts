@@ -114,6 +114,46 @@ describe("resolveSessionKeyFromResolveParams", () => {
     });
   });
 
+  it("hides a legacy alias whose canonical key is a reserved session", async () => {
+    targetStore = {
+      main: { sessionId: "global-session", updatedAt: 1 },
+    };
+    hoisted.resolveGatewaySessionStoreTargetWithStoreMock.mockReturnValue({
+      canonicalKey: "global",
+      storeKeys: ["global", "main"],
+      storePath,
+      store: targetStore,
+    });
+
+    await expect(
+      resolveSessionKeyFromResolveParams({ cfg: {}, p: { key: "main" } }),
+    ).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCodes.INVALID_REQUEST, message: "No session found: main" },
+    });
+  });
+
+  it("does not resolve phantom agent store placeholder rows", async () => {
+    const placeholderKey = "agent:main:sessions";
+    targetStore = { [placeholderKey]: {} as SessionEntry };
+    hoisted.resolveGatewaySessionStoreTargetWithStoreMock.mockReturnValue({
+      canonicalKey: placeholderKey,
+      storeKeys: [placeholderKey],
+      storePath,
+      store: targetStore,
+    });
+
+    await expect(
+      resolveSessionKeyFromResolveParams({ cfg: {}, p: { key: placeholderKey } }),
+    ).resolves.toEqual({
+      ok: false,
+      error: {
+        code: ErrorCodes.INVALID_REQUEST,
+        message: `No session found: ${placeholderKey}`,
+      },
+    });
+  });
+
   it("resolves an explicitly included global key within an agent scope", async () => {
     targetStore = {
       global: { sessionId: "global-session", updatedAt: 1 },
