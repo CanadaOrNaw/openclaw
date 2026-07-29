@@ -314,7 +314,12 @@ describe("doctor canonical session-key repair", () => {
       } as OpenClawConfig;
       insertLegacySession({
         agentId: "ops",
-        entry: { sessionId: "misplaced", updatedAt: 10 },
+        entry: {
+          parentSessionKey: "main",
+          sessionId: "misplaced",
+          spawnedBy: "controller",
+          updatedAt: 10,
+        },
         env,
         eventText: "misplaced history",
         sessionKey: "agent:main:misplaced",
@@ -332,8 +337,12 @@ describe("doctor canonical session-key repair", () => {
           env,
           sessionKey: "agent:main:misplaced",
           storePath: mainStore,
-        })?.entry.sessionId,
-      ).toBe("misplaced");
+        })?.entry,
+      ).toMatchObject({
+        parentSessionKey: "agent:main:work",
+        sessionId: "misplaced",
+        spawnedBy: "agent:main:controller",
+      });
       expect(
         loadExactSessionEntryReadOnly({
           agentId: "ops",

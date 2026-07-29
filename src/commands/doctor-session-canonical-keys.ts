@@ -93,11 +93,17 @@ function collectCanonicalSessionCandidates(
       clone: false,
       storePath: target.storePath,
     })) {
+      const canonicalKey = resolveStoredSessionKeyForAgentStore({
+        cfg: params.cfg,
+        agentId: target.agentId,
+        sessionKey,
+      });
+      const canonicalAgentId = resolveSessionStoreAgentId(params.cfg, canonicalKey);
       const canonicalizeLineageKey = (value: string | undefined) =>
         value
           ? resolveStoredSessionKeyForAgentStore({
               cfg: params.cfg,
-              agentId: target.agentId,
+              agentId: canonicalAgentId,
               sessionKey: value,
             })
           : undefined;
@@ -118,11 +124,7 @@ function collectCanonicalSessionCandidates(
         parentSessionKey !== entry.parentSessionKey || spawnedBy !== entry.spawnedBy;
       candidates.push({
         agentId: target.agentId,
-        canonicalKey: resolveStoredSessionKeyForAgentStore({
-          cfg: params.cfg,
-          agentId: target.agentId,
-          sessionKey,
-        }),
+        canonicalKey,
         entry: normalizedEntry,
         expectedEntry: entry,
         lineageRepairRequired,
