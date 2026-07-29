@@ -1727,6 +1727,16 @@ describe("session accessor seam", () => {
           { sessionId: "new-session", updatedAt: 10 },
         ),
       ).rejects.toMatchObject({ code: "SESSION_CANONICAL_KEY_MIGRATION_REQUIRED" });
+      const canonicalSessionId = `${canonicalKey}-canonical-session`;
+      insert.run(
+        canonicalKey,
+        canonicalSessionId,
+        JSON.stringify({ sessionId: canonicalSessionId, updatedAt: 6 }),
+        6,
+      );
+      expect(() =>
+        loadSessionEntry({ agentId: "ops", sessionKey: canonicalKey, storePath }),
+      ).toThrow("openclaw doctor --fix");
     }
   });
 

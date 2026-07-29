@@ -100,6 +100,7 @@ export function readSessionEntryRow(
   database: OpenClawAgentDatabaseReader,
   sessionKey: string,
 ): ResolvedSessionEntryRow | undefined {
+  assertNoPaddedSqliteSessionKeyRow(database, sessionKey);
   const db = getSessionKysely(database.db);
   const lookupKeys = collectSessionEntryLookupKeys(database, sessionKey);
   if (lookupKeys.length === 0) {
@@ -113,9 +114,6 @@ export function readSessionEntryRow(
       .where("session_key", "in", lookupKeys)
       .orderBy("session_key", "asc"),
   ).rows;
-  if (rows.length === 0) {
-    assertNoPaddedSqliteSessionKeyRow(database, sessionKey);
-  }
   const entries = new Map<string, ResolvedSessionEntryRow>();
   for (const row of rows) {
     const entry = parseSessionEntryRow(row);
@@ -760,7 +758,7 @@ export function copySqliteSessionOwnedStateForRepair(params: {
     copySessionNodeArtifactsForRepair(
       params.source,
       params.destination,
-      sourceKeys,
+      params.preferredSessionKey ? [params.preferredSessionKey] : sourceKeys,
       params.canonicalKey,
     );
     if (params.preferredEntry && params.preferredSessionKey) {
@@ -949,9 +947,7 @@ export function writeSessionEntry(
 ): void {
   assertCanonicalSessionKeyWrite(sessionKey);
   const db = getSessionKysely(database.db);
-  if (!readExactSessionEntryRow(database, sessionKey)) {
-    assertNoPaddedSqliteSessionKeyRow(database, sessionKey);
-  }
+  assertNoPaddedSqliteSessionKeyRow(database, sessionKey);
   const normalizedEntry = normalizeSqliteSessionEntryTimestamp(entry);
   const updatedAt = normalizedEntry.updatedAt;
   const canonicalPreviousEntry = readExactSessionEntryRow(database, sessionKey)?.entry;
