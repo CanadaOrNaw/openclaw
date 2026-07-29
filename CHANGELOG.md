@@ -2,7 +2,15 @@
 
 Docs: https://docs.openclaw.ai
 
-## Unreleased
+## 2026.7.2
+
+### Highlights
+
+- **Fish Audio speech:** add hosted S2.1 synthesis with streaming, voice notes, voice discovery, and telephony, plus local Fish S2 Pro reference-voice streaming in native macOS Talk. Thanks @Conan-Scott for the earlier community-plugin implementation.
+- **Control UI collaboration and recovery:** make cloud-workspace conflicts actionable, recover cleanly across Gateway updates, improve sender identity and online rosters, and add trusted-proxy profile and pairing controls.
+- **External Gateway supervision:** add an explicit external lifecycle-owner mode with verified restart handoffs and blocked native service mutation, while preserving safe self-update boundaries. Thanks @shakkernerd.
+- **Durable plugin ingress:** add a shared admission, polling, pruning, claim, handoff, and shutdown lifecycle for channel plugins, with IRC, Synology Chat, and Google Chat migrated to it.
+- **Reliability and safety:** harden SQLite corruption recovery and snapshots, isolate realtime Talk sessions, preserve reconnect ordering, repair package-to-git updates, and tighten approval and execution fallbacks.
 
 ### Changes
 
