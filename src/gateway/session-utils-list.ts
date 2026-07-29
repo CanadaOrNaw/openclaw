@@ -18,6 +18,7 @@ import { normalizeAgentId, parseAgentSessionKey } from "../routing/session-key.j
 import { resolveStoredSessionKeyForAgentStore } from "./session-store-key.js";
 import { readSessionTitleFieldsFromTranscriptAsync as readScopedSessionTitleFieldsFromTranscriptAsync } from "./session-transcript-title-reader.js";
 import type {
+  SessionActorProfileIdentity,
   SessionListRowContext,
   SessionListRowContextProvider,
 } from "./session-utils-contracts.js";
@@ -387,32 +388,42 @@ function selectSessionEntries(params: {
 
 function listSessionCreatorIdentities(
   entries: readonly SessionEntryPair[],
-  userProfileLabelById: Map<string, string | undefined>,
+  userProfileIdentityById: Map<string, SessionActorProfileIdentity | undefined>,
   creatorActors?: readonly NonNullable<SessionEntry["createdActor"]>[],
-): Array<{ id: string; label?: string }> {
-  const creators = new Map<string, { id: string; label?: string }>();
-  for (const creator of creatorActors ?? []) {
-    const actor = projectSessionActor(creator, userProfileLabelById);
+): Array<{ id: string; label?: string; avatarUrl?: string }> {
+  const creators = new Map<string, { id: string; label?: string; avatarUrl?: string }>();
+  const addCreator = (creator: NonNullable<SessionEntry["createdActor"]>) => {
+    const actor = projectSessionActor(creator, userProfileIdentityById);
     const id = normalizeOptionalString(actor?.id);
     if (!id) {
-      continue;
+      return;
     }
     const label = normalizeOptionalString(actor?.label);
+    const avatarUrl = normalizeOptionalString(actor?.avatarUrl);
     const existing = creators.get(id);
-    if (!existing || (label && (!existing.label || label.localeCompare(existing.label) < 0))) {
-      creators.set(id, { id, ...(label ? { label } : {}) });
+    const preferredLabel =
+      label && (!existing?.label || label.localeCompare(existing.label) < 0)
+        ? label
+        : existing?.label;
+    const preferredAvatarUrl = avatarUrl ?? existing?.avatarUrl;
+    if (
+      !existing ||
+      preferredLabel !== existing.label ||
+      preferredAvatarUrl !== existing.avatarUrl
+    ) {
+      creators.set(id, {
+        id,
+        ...(preferredLabel ? { label: preferredLabel } : {}),
+        ...(preferredAvatarUrl ? { avatarUrl: preferredAvatarUrl } : {}),
+      });
     }
+  };
+  for (const creator of creatorActors ?? []) {
+    addCreator(creator);
   }
   for (const [, entry] of entries) {
-    const actor = projectSessionActor(entry.createdActor, userProfileLabelById);
-    const id = normalizeOptionalString(actor?.id);
-    if (!id) {
-      continue;
-    }
-    const label = normalizeOptionalString(actor?.label);
-    const existing = creators.get(id);
-    if (!existing || (label && (!existing.label || label.localeCompare(existing.label) < 0))) {
-      creators.set(id, { id, ...(label ? { label } : {}) });
+    if (entry.createdActor) {
+      addCreator(entry.createdActor);
     }
   }
   return [...creators.values()].toSorted((a, b) => {
@@ -425,14 +436,14 @@ function prepareSessionList(params: SessionListBuildParams) {
   const { cfg, store, opts } = params;
   const contextStore = params.rowContextStore ?? store;
   const now = Date.now();
-  // Creator facets and rows share one profile-label snapshot for the whole response.
-  const userProfileLabelById = new Map<string, string | undefined>();
+  // Creator facets and rows share one profile identity snapshot for the whole response.
+  const userProfileIdentityById = new Map<string, SessionActorProfileIdentity | undefined>();
   let rowContext: SessionListRowContext | undefined;
   const getRowContext = () =>
     (rowContext ??= buildSessionListRowContext({
       store: contextStore,
       now,
-      userProfileLabelById,
+      userProfileIdentityById,
     }));
   const hasSpawnedByFilter = Boolean(normalizeOptionalString(opts.spawnedBy));
   const filteredSessionKeys = new Set<string>();
@@ -492,7 +503,7 @@ function prepareSessionList(params: SessionListBuildParams) {
   const sharedRowContext =
     fullRowContext ??
     (selection.entries.length > 0
-      ? buildSessionListRowMetadataContext({ now, userProfileLabelById })
+      ? buildSessionListRowMetadataContext({ now, userProfileIdentityById })
       : undefined);
   populateSessionListAcpMetadata({
     cfg,
@@ -519,7 +530,7 @@ function buildSessionsListResult(
     hasMore: prepared.hasMore,
     creators: listSessionCreatorIdentities(
       prepared.creatorEntries,
-      prepared.sharedRowContext?.userProfileLabelById ?? new Map(),
+      prepared.sharedRowContext?.userProfileIdentityById ?? new Map(),
       params.sqlSelection.creatorActors,
     ),
     defaults: getSessionDefaults(params.cfg, params.modelCatalog, {

@@ -209,7 +209,7 @@ describe("doctor canonical session-key repair", () => {
       );
       insertLegacySession({
         agentId: "main",
-        entry: { sessionId: "shared-session", updatedAt: 20 },
+        entry: { sessionId: "alias-winner-session", updatedAt: 20 },
         env,
         sessionKey: "agent:main:main",
         storePath,
