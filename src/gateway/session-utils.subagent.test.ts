@@ -1417,6 +1417,17 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
       });
       expect(result.sessions[0]?.childSessions).toEqual([childKey]);
 
+      const hiddenChild = await listSqlSelectedSessions({
+        cfg,
+        entryFilter: (key) => key !== childKey,
+        storePath: loaded.storePath,
+        store: loaded.store,
+        opts: { agentId: "main", limit: 1 },
+        ...(loaded.rowContextStore ? { rowContextStore: loaded.rowContextStore } : {}),
+        sqlSelection: { ordered: true, totalCount: 2 },
+      });
+      expect(hiddenChild.sessions[0]?.childSessions).toBeUndefined();
+
       const onPage = loadCombinedSessionStoreForGateway(cfg, {
         agentId: "main",
         includeRowContext: true,

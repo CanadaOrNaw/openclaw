@@ -66,8 +66,8 @@ function loadGatewayStoreEntries(params: {
   storePath: string;
 }): {
   creatorActors: NonNullable<SessionEntry["createdActor"]>[];
-  dependencies?: Record<string, SessionEntry>;
-  store: Record<string, SessionEntry>;
+  dependencies?: SessionEntrySummary[];
+  entries: SessionEntrySummary[];
   totalCount: number;
 } {
   const queryEntries = params.incognito
@@ -136,14 +136,10 @@ function loadGatewayStoreEntries(params: {
     creatorActors: result?.creatorActors ?? [],
     ...(dependencies.length > 0
       ? {
-          dependencies: Object.fromEntries(
-            dependencies
-              .filter(({ sessionKey }) => !selectedKeys.has(sessionKey))
-              .map(({ sessionKey, entry }) => [sessionKey, entry]),
-          ),
+          dependencies: dependencies.filter(({ sessionKey }) => !selectedKeys.has(sessionKey)),
         }
       : {}),
-    store: Object.fromEntries(entries.map(({ sessionKey, entry }) => [sessionKey, entry])),
+    entries,
     totalCount: result?.totalCount ?? entries.length,
   };
 }
@@ -185,16 +181,16 @@ function projectCombinedSessionEntry(params: {
   return projected;
 }
 
-function mergeGatewayStore(params: {
+function mergeGatewayEntries(params: {
   agentId: string;
   cfg: OpenClawConfig;
   combined: Record<string, SessionEntry>;
   configuredAgentIds?: ReadonlySet<string>;
+  entries: readonly SessionEntrySummary[];
   requestedAgentId?: string;
-  store: Record<string, SessionEntry>;
 }): boolean {
   let exact = true;
-  for (const [key, entry] of Object.entries(params.store)) {
+  for (const { sessionKey: key, entry } of params.entries) {
     const canonicalKey = resolveStoredSessionKeyForAgentStore({
       cfg: params.cfg,
       agentId: params.agentId,
@@ -256,9 +252,12 @@ function mergeOpenIncognitoStores(params: {
       ...(params.query ? { query: params.query } : {}),
       storePath: target.storePath,
     });
-    const merge = (store: Record<string, SessionEntry>, combined: Record<string, SessionEntry>) => {
+    const merge = (
+      entries: readonly SessionEntrySummary[],
+      combined: Record<string, SessionEntry>,
+    ) => {
       let found = false;
-      for (const [sessionKey, entry] of Object.entries(store)) {
+      for (const { sessionKey, entry } of entries) {
         if (!isIncognitoSessionKey(sessionKey) || entry.incognito !== true) {
           continue;
         }
@@ -275,8 +274,8 @@ function mergeOpenIncognitoStores(params: {
       }
       return found;
     };
-    const merged = merge(loaded.store, params.combined);
-    merge(loaded.store, params.rowContextCombined);
+    const merged = merge(loaded.entries, params.combined);
+    merge(loaded.entries, params.rowContextCombined);
     if (loaded.dependencies) {
       merge(loaded.dependencies, params.rowContextCombined);
     }
@@ -406,19 +405,19 @@ export function loadCombinedSessionStoreForGateway(
       creatorActors.set(`${actor.type}\0${actor.id ?? ""}`, actor);
     }
     const merge = (
-      store: Record<string, SessionEntry>,
+      entries: readonly SessionEntrySummary[],
       destination: Record<string, SessionEntry>,
     ) =>
-      mergeGatewayStore({
+      mergeGatewayEntries({
         agentId,
         cfg,
         combined: destination,
         ...(configuredAgentIds ? { configuredAgentIds } : {}),
+        entries,
         ...(requestedAgentId ? { requestedAgentId } : {}),
-        store,
       });
-    selectionExact = merge(loaded.store, combined) && selectionExact;
-    merge(loaded.store, rowContextCombined);
+    selectionExact = merge(loaded.entries, combined) && selectionExact;
+    merge(loaded.entries, rowContextCombined);
     if (loaded.dependencies) {
       merge(loaded.dependencies, rowContextCombined);
     }

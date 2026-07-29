@@ -50,16 +50,6 @@ const SESSIONS_LIST_DEFAULT_LIMIT = 100;
 const SESSIONS_LIST_TRANSCRIPT_FIELD_ROWS = 100;
 const SESSIONS_LIST_TRANSCRIPT_USAGE_MAX_BYTES = 64 * 1024;
 
-type ListSessionsFromStoreParams = {
-  cfg: OpenClawConfig;
-  durableStorePath?: string;
-  entryFilter?: (key: string, entry: SessionEntry) => boolean;
-  storePath: string;
-  store: Record<string, SessionEntry>;
-  modelCatalog?: ModelCatalogEntry[];
-  opts: SessionsListParams;
-};
-
 type SessionEntryPair = [string, SessionEntry];
 
 function compareSessionEntries(
@@ -95,6 +85,7 @@ type SqlSessionEntrySelection = {
 
 type SessionListBuildParams = {
   cfg: OpenClawConfig;
+  entryFilter?: (key: string, entry: SessionEntry) => boolean;
   storePath: string;
   store: Record<string, SessionEntry>;
   modelCatalog?: ModelCatalogEntry[];
@@ -280,6 +271,7 @@ function filterResidualSessionEntries(params: {
   now: number;
   rowContext?: SessionListRowContext;
   getRowContext?: SessionListRowContextProvider;
+  entryFilter?: (key: string, entry: SessionEntry) => boolean;
   sqlSelection: SqlSessionEntrySelection;
 }): SessionEntryPair[] {
   const { cfg, store, opts } = params;
@@ -291,6 +283,7 @@ function filterResidualSessionEntries(params: {
     resolveSessionListLineageSqlQuery(spawnedBy, params.now, params.cfg.session?.mainKey);
 
   let entries = Object.entries(store)
+    .filter(([key, entry]) => !params.entryFilter || params.entryFilter(key, entry))
     .filter(([key, entry]) => {
       if (!spawnedBy) {
         return true;
@@ -360,6 +353,7 @@ function selectSessionEntries(params: {
   rowContext?: SessionListRowContext;
   getRowContext?: SessionListRowContextProvider;
   defaultLimit?: number;
+  entryFilter?: (key: string, entry: SessionEntry) => boolean;
   sqlSelection: SqlSessionEntrySelection;
 }): SessionEntrySelection {
   const creatorEntries = filterResidualSessionEntries(params);
@@ -436,22 +430,60 @@ function prepareSessionList(params: SessionListBuildParams) {
       userProfileLabelById,
     }));
   const hasSpawnedByFilter = Boolean(normalizeOptionalString(opts.spawnedBy));
+  const filteredSessionKeys = new Set<string>();
+  const entryFilter = params.entryFilter
+    ? (key: string, entry: SessionEntry) => {
+        const keep = params.entryFilter?.(key, entry) ?? true;
+        if (!keep) {
+          filteredSessionKeys.add(key);
+        }
+        return keep;
+      }
+    : undefined;
+  if (entryFilter && contextStore !== store) {
+    for (const [key, entry] of Object.entries(contextStore)) {
+      entryFilter(key, entry);
+    }
+  }
+  let childLinksPruned = false;
+  const pruneFilteredChildLinks = (context: SessionListRowContext) => {
+    if (childLinksPruned || filteredSessionKeys.size === 0) {
+      return;
+    }
+    for (const [parentKey, childKeys] of context.storeChildSessionsByKey) {
+      context.storeChildSessionsByKey.set(
+        parentKey,
+        childKeys.filter((key) => !filteredSessionKeys.has(key)),
+      );
+    }
+    childLinksPruned = true;
+  };
+  const needsFilterAwareContext =
+    hasSpawnedByFilter || Boolean(normalizeOptionalString(opts.search));
+  if (entryFilter && filteredSessionKeys.size > 0 && needsFilterAwareContext) {
+    pruneFilteredChildLinks(getRowContext());
+  }
   const selection = selectSessionEntries({
     cfg,
     store,
     opts,
     now,
-    getRowContext:
-      hasSpawnedByFilter || Boolean(normalizeOptionalString(opts.search))
-        ? getRowContext
-        : undefined,
+    getRowContext: needsFilterAwareContext ? getRowContext : undefined,
     defaultLimit: SESSIONS_LIST_DEFAULT_LIMIT,
+    ...(entryFilter ? { entryFilter } : {}),
     sqlSelection: params.sqlSelection,
   });
   const fullRowContext =
-    rowContext || hasSpawnedByFilter || selection.entries.length > SESSIONS_LIST_YIELD_BATCH_SIZE
+    rowContext ||
+    hasSpawnedByFilter ||
+    filteredSessionKeys.size > 0 ||
+    selection.entries.length > SESSIONS_LIST_YIELD_BATCH_SIZE
       ? getRowContext()
       : undefined;
+  if (fullRowContext && filteredSessionKeys.size > 0) {
+    // The predicate replaces a filtered-store object; hidden rows must not survive as child links.
+    pruneFilteredChildLinks(fullRowContext);
+  }
   const sharedRowContext =
     fullRowContext ??
     (selection.entries.length > 0
@@ -554,7 +586,7 @@ export async function listSessionsFromStoreAsync(
           sessionEntry: entry,
           sessionId: entry.sessionId,
           sessionKey: key,
-          storePath: list.storePath,
+          storePath,
         });
         if (includeLastMessage && fields.lastMessagePreview) {
           row.lastMessagePreview = fields.lastMessagePreview;

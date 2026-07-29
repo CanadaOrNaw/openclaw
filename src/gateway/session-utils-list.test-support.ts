@@ -18,6 +18,9 @@ export async function listSessionsFromStoreForTest(
   const lineage = resolveSessionListLineageSqlQuery(spawnedBy, now, params.cfg.session?.mainKey);
   const creatorActors = new Map<string, NonNullable<SessionEntry["createdActor"]>>();
   const beforeCreator = Object.entries(params.store).filter(([key, entry]) => {
+    if (params.entryFilter && !params.entryFilter(key, entry)) {
+      return false;
+    }
     if (
       isCronRunSessionKey(key) ||
       (parseAgentSessionKey(key)?.rest === "sessions" && !entry.sessionId && !entry.updatedAt) ||

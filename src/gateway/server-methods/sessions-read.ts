@@ -237,7 +237,7 @@ export const sessionReadHandlers: GatewayRequestHandlers = {
     const now = Date.now();
     const identity = gatewayClientSessionCreator(client);
     const hasOpenIncognito = listOpenIncognitoAgentDatabases().length > 0;
-    // This is exactly when filterDraftSessionsForClient can remove rows after SQL selection.
+    // This is exactly when createSessionListEntryFilter can remove rows after SQL selection.
     const requiresClientVisibilityFilter = !isGatewayAdmin(client) && Boolean(identity);
     const hasFacetResidualFilters =
       Boolean(normalizeOptionalString(p.search)) ||
@@ -282,27 +282,23 @@ export const sessionReadHandlers: GatewayRequestHandlers = {
             },
           },
         );
-        const visibleStore = filterDraftSessionsForClient({ client, store: loaded.store });
-        const visibilityFiltered = visibleStore !== loaded.store;
+        const entryFilter = createSessionListEntryFilter({ client });
         const listStore = configuredAgentsOnly
-          ? filterSessionStoreToConfiguredAgents(cfg, visibleStore)
-          : visibleStore;
-        let listRowContextStore = loaded.rowContextStore
-          ? filterDraftSessionsForClient({ client, store: loaded.rowContextStore })
-          : undefined;
+          ? filterSessionStoreToConfiguredAgents(cfg, loaded.store)
+          : loaded.store;
+        let listRowContextStore = loaded.rowContextStore;
         if (configuredAgentsOnly && listRowContextStore) {
           listRowContextStore = filterSessionStoreToConfiguredAgents(cfg, listRowContextStore);
         }
         const includesIncognito = Object.entries(listStore).some(
-          ([sessionKey, entry]) => entry.incognito === true || isIncognitoSessionKey(sessionKey),
+          ([sessionKey, entry]) =>
+            (!entryFilter || entryFilter(sessionKey, entry)) &&
+            (entry.incognito === true || isIncognitoSessionKey(sessionKey)),
         );
         const exactSqlSelection =
-          loaded.selectionExact && !hasResidualFilters && !includesIncognito && !visibilityFiltered;
+          loaded.selectionExact && !hasResidualFilters && !includesIncognito && !entryFilter;
         const canUseCreatorActors =
-          !hasFacetResidualFilters &&
-          !hasResidualFilters &&
-          !includesIncognito &&
-          !visibilityFiltered;
+          !hasFacetResidualFilters && !hasResidualFilters && !includesIncognito && !entryFilter;
         const visibleStorePath = includesIncognito
           ? loaded.storePath
           : (loaded.durableStorePath ?? loaded.storePath);
@@ -324,9 +320,8 @@ export const sessionReadHandlers: GatewayRequestHandlers = {
           () =>
             listSessionsFromStoreAsync({
               cfg,
-              durableStorePath,
               ...(entryFilter ? { entryFilter } : {}),
-              storePath,
+              storePath: visibleStorePath,
               store: listStore,
               modelCatalog,
               opts: p,

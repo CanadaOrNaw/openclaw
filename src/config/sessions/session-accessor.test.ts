@@ -5,7 +5,10 @@ import { expectDefined } from "@openclaw/normalization-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { withTestTimeout } from "../../../test/helpers/promise.js";
 import type { MsgContext } from "../../auto-reply/templating.js";
-import { onSessionTranscriptUpdate } from "../../sessions/transcript-events.js";
+import {
+  onInternalSessionTranscriptUpdate,
+  onSessionTranscriptUpdate,
+} from "../../sessions/transcript-events.js";
 import {
   closeOpenClawAgentDatabasesForTest,
   openOpenClawAgentDatabase,
