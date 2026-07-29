@@ -37,7 +37,7 @@ import {
   setPreRestartDeferralCheck,
 } from "../infra/restart.js";
 import { normalizeLegacySessionEntryDelivery } from "../infra/state-migrations.legacy-session-store.js";
-import { drainSystemEvents } from "../infra/system-events.js";
+import { drainSystemEvents, peekSystemEvents } from "../infra/system-events.js";
 import { rawDataToString } from "../infra/ws.js";
 import { resetLogger, setLoggerOverride } from "../logging.js";
 import type { ChannelRouteRef } from "../plugin-sdk/channel-route.js";
@@ -1301,6 +1301,23 @@ export async function rpcReq<T extends Record<string, unknown>>(
   );
   ws.send(JSON.stringify({ type: "req", id, method, params }));
   return await responsePromise;
+}
+
+export async function waitForSystemEvent(timeoutMs = 2000) {
+  const sessionKeys = resolveGatewayTestMainSessionKeys();
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    for (const sessionKey of sessionKeys) {
+      const events = peekSystemEvents(sessionKey);
+      if (events.length > 0) {
+        return events;
+      }
+    }
+    await new Promise((resolve) => {
+      setTimeout(resolve, 10);
+    });
+  }
+  throw new Error("timeout waiting for system event");
 }
 
 /* oxlint-disable max-lines -- TODO: split this grandfathered oversized file. */
