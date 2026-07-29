@@ -660,7 +660,10 @@ async function onAdmittedTimer(state: CronServiceState) {
               log: state.deps.log,
             });
           } catch (err) {
-            state.deps.log.warn({ err: String(err), storePath }, "cron: session reaper sweep failed");
+            state.deps.log.warn(
+              { err: String(err), storePath },
+              "cron: session reaper sweep failed",
+            );
           }
         }
       }

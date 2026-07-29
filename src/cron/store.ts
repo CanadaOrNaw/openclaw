@@ -15,10 +15,10 @@ import { resolveOpenClawStateSqlitePath } from "../state/openclaw-state-db.paths
 import { resolveConfigDir } from "../utils.js";
 import { parseJsonWithJson5Fallback } from "../utils/parse-json-compat.js";
 import { readCronStoreStatePath } from "./store/config-state.js";
+import { deleteStaleCronJobFamilyRows, type CronJobFamilyIdentity } from "./store/job-family.js";
 import { cronStoreKey } from "./store/key.js";
 import {
   assertCronStoreCanPersist,
-  deleteStaleCronJobFamilyRows,
   CronRuntimeRevisionMismatchError,
   CronStoreEpochMismatchError,
   loadedCronStoreFromRows,
@@ -29,7 +29,6 @@ import {
   replaceCronRows,
   updateCronRuntimeRows,
 } from "./store/row-codec.js";
-import type { CronJobFamilyIdentity } from "./store/row-codec.js";
 import type {
   CronQuarantineFile,
   LoadedCronStore,
