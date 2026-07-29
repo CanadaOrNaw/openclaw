@@ -217,9 +217,10 @@ export function querySqliteSessionEntries(
     setProjectedTitle: (entry: SessionEntry, title: string | null) => void;
   },
 ): SqliteSessionEntryListQueryResult {
+  const validationToken = assertCanonicalSqliteSessionKeysCurrent(database, query.mainKey);
   return runSqliteDeferredTransactionSync(
     database.db,
-    () => querySqliteSessionEntriesInSnapshot(database, query, options),
+    () => querySqliteSessionEntriesInSnapshot(database, query, options, validationToken),
     { operationLabel: "query session list" },
   );
 }
@@ -231,9 +232,9 @@ function querySqliteSessionEntriesInSnapshot(
     projection?: "full" | "list";
     setProjectedTitle: (entry: SessionEntry, title: string | null) => void;
   },
+  validationToken: ReturnType<typeof assertCanonicalSqliteSessionKeysCurrent>,
   attempt = 0,
 ): SqliteSessionEntryListQueryResult {
-  const validationToken = assertCanonicalSqliteSessionKeysCurrent(database, query.mainKey);
   const finish = (result: SqliteSessionEntryListQueryResult) => {
     if (canonicalSqliteSessionKeyTokenIsCurrent(database, validationToken)) {
       return result;
@@ -241,7 +242,13 @@ function querySqliteSessionEntriesInSnapshot(
     if (attempt >= 2) {
       throw new Error("SQLite session state changed repeatedly during list selection");
     }
-    return querySqliteSessionEntriesInSnapshot(database, query, options, attempt + 1);
+    return querySqliteSessionEntriesInSnapshot(
+      database,
+      query,
+      options,
+      assertCanonicalSqliteSessionKeysCurrent(database, query.mainKey),
+      attempt + 1,
+    );
   };
   const included = query.includeLineageSessionKeys;
   if (included && included.length > 400) {
@@ -256,6 +263,7 @@ function querySqliteSessionEntriesInSnapshot(
           limit: undefined,
         },
         options,
+        validationToken,
       );
       for (const entry of result.entries) {
         entries.set(entry.sessionKey, entry);

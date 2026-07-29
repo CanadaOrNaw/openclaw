@@ -304,6 +304,16 @@ describe("doctor canonical session-key repair", () => {
         { agentId: "main", env, sessionKey: "agent:main:shared", storePath: mainStore },
         { sessionId: "shared-session", updatedAt: 20 },
       );
+      const mainDatabase = openOpenClawAgentDatabase({
+        agentId: "main",
+        env,
+        path: resolveSqliteTargetFromSessionStorePath(mainStore, { agentId: "main", env }).path,
+      });
+      mainDatabase.db
+        .prepare(
+          "INSERT INTO trajectory_runtime_events (session_id, seq, run_id, event_json, created_at) VALUES ('shared-session', 0, 'run-1', '{}', 20)",
+        )
+        .run();
       insertLegacySession({
         agentId: "ops",
         entry: { sessionId: "shared-session", updatedAt: 10 },

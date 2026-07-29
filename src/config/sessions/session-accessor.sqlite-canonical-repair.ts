@@ -306,7 +306,7 @@ function copySqliteSessionOwnedStateForRepair(params: {
     const copyTranscripts = !(
       existingDestinationSessionIds.has(sessionId) &&
       (!params.preferSource || !sourceIsAuthoritative) &&
-      hasSqliteSessionGenerationContent(params.destination, sessionId)
+      hasSqliteSessionTranscriptContent(params.destination, sessionId)
     );
     copySqliteSessionGenerationRows({
       copyTranscripts,
@@ -590,7 +590,7 @@ function copySqliteSessionGenerationRows(params: {
   mergeAcpParentStreamEvents(params.destination, parentStreamEvents, params.sessionId);
 }
 
-function hasSqliteSessionGenerationContent(
+function hasSqliteSessionTranscriptContent(
   database: OpenClawAgentDatabase,
   sessionId: string,
 ): boolean {
@@ -599,22 +599,6 @@ function hasSqliteSessionGenerationContent(
     executeSqliteQueryTakeFirstSync(
       database.db,
       db.selectFrom("transcript_events").select("seq").where("session_id", "=", sessionId).limit(1),
-    ) !== undefined ||
-    executeSqliteQueryTakeFirstSync(
-      database.db,
-      db
-        .selectFrom("trajectory_runtime_events")
-        .select("seq")
-        .where("session_id", "=", sessionId)
-        .limit(1),
-    ) !== undefined ||
-    executeSqliteQueryTakeFirstSync(
-      database.db,
-      db
-        .selectFrom("acp_parent_stream_events")
-        .select("seq")
-        .where("session_id", "=", sessionId)
-        .limit(1),
     ) !== undefined
   );
 }

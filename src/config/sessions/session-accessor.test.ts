@@ -4,6 +4,7 @@ import path from "node:path";
 import { expectDefined } from "@openclaw/normalization-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { withTestTimeout } from "../../../test/helpers/promise.js";
+import { trackSqliteStatementExecutions } from "../../../test/helpers/sqlite-statement-execution-counter.js";
 import type { MsgContext } from "../../auto-reply/templating.js";
 import {
   onInternalSessionTranscriptUpdate,
@@ -62,7 +63,10 @@ import {
   readSqliteSessionEntryCount,
   readSqliteSessionEntryKeys,
 } from "./session-accessor.sqlite-entry-store.js";
-import { querySqliteSessionEntriesReadOnly } from "./session-accessor.sqlite-entry.js";
+import {
+  querySqliteSessionEntries,
+  querySqliteSessionEntriesReadOnly,
+} from "./session-accessor.sqlite-entry.js";
 import { getSessionProjectedTitle } from "./session-accessor.sqlite-session-row.js";
 import {
   applySqliteSessionEntryLifecycleMutation,
@@ -273,6 +277,36 @@ describe("session accessor seam", () => {
         storePath,
       }).entries.map(({ sessionKey }) => sessionKey),
     ).toEqual(["agent:main:child"]);
+  });
+
+  it("caches canonical-key validation across transactional list reads", () => {
+    replaceSqliteSessionEntrySync(
+      { agentId: "main", sessionKey: "agent:main:main", storePath },
+      { sessionId: "session-1", updatedAt: 10 },
+    );
+    const database = openOpenClawAgentDatabase({
+      agentId: "main",
+      path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "main" }).path,
+    });
+    const { counts, restore } = trackSqliteStatementExecutions(
+      database.db,
+      ["validations"],
+      (sqlText) =>
+        sqlText.trim() === 'select "session_key" from "session_nodes"' ? "validations" : null,
+    );
+    const scope = {
+      agentId: "main",
+      projection: "list" as const,
+      query: { archived: "all" as const, includeGlobal: true, includeUnknown: true },
+      storePath,
+    };
+    try {
+      expect(querySqliteSessionEntries(scope).entries).toHaveLength(1);
+      expect(querySqliteSessionEntries(scope).entries).toHaveLength(1);
+      expect(counts.validations).toBe(1);
+    } finally {
+      restore();
+    }
   });
 
   it("orders zero-valued promoted timestamps like absent values", () => {
