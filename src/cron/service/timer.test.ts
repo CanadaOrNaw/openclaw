@@ -319,7 +319,8 @@ describe("cron service timer seam coverage", () => {
         if (reservedAt === undefined && typeof marker === "number") {
           reservedAt = marker;
         }
-        await save(...args);
+        const persisted = await save(...args);
+        return persisted;
       });
 
     try {
@@ -357,7 +358,7 @@ describe("cron service timer seam coverage", () => {
     const saveSpy = vi
       .spyOn(cronStoreModule, "saveCronJobsStore")
       .mockImplementation(async (...args) => {
-        await save(...args);
+        const persisted = await save(...args);
         const persistedJob = args[1].jobs.find((entry) => entry.id === job.id);
         if (
           persistedJob?.state.runningAtMs === undefined &&
@@ -365,6 +366,7 @@ describe("cron service timer seam coverage", () => {
         ) {
           terminalStatePersisted = true;
         }
+        return persisted;
       });
     const finalizeSpy = vi
       .spyOn(taskExecutor, "finalizeTaskRunByRunId")
