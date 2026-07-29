@@ -190,6 +190,22 @@ describe("resolveSessionKeyFromResolveParams", () => {
     ).rejects.toThrow("openclaw doctor --fix");
   });
 
+  it("hides a legacy-only row that fails the spawnedBy visibility filter", async () => {
+    targetStore = {
+      [legacyKey]: { sessionId: "sess-legacy", spawnedBy: "other-controller", updatedAt: 1 },
+    };
+
+    await expect(
+      resolveSessionKeyFromResolveParams({
+        cfg: {},
+        p: { key: canonicalKey, spawnedBy: "controller-1" },
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      error: { code: ErrorCodes.INVALID_REQUEST, message: `No session found: ${canonicalKey}` },
+    });
+  });
+
   it("rejects a legacy alias even when the canonical row exists", async () => {
     targetStore = {
       [canonicalKey]: { sessionId: "sess-canonical", updatedAt: 2 },
@@ -342,6 +358,51 @@ describe("resolveSessionKeyFromResolveParams", () => {
       }),
     );
     expect(hoisted.listSessionsFromStoreMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a noncanonical sessionId match", async () => {
+    const aliasKey = "agent:main:main";
+    hoisted.loadCombinedSessionStoreForGatewayMock.mockReturnValue({
+      storePath,
+      store: { [aliasKey]: { sessionId: "sess-alias", updatedAt: 1 } },
+    });
+
+    await expect(
+      resolveSessionKeyFromResolveParams({
+        cfg: { session: { mainKey: "work" } },
+        p: { sessionId: "sess-alias" },
+      }),
+    ).rejects.toThrow("openclaw doctor --fix");
+  });
+
+  it("rejects a noncanonical label match", async () => {
+    const aliasKey = "agent:main:main";
+    hoisted.loadCombinedSessionStoreForGatewayMock.mockReturnValue({
+      storePath,
+      store: { [aliasKey]: { label: "alias", sessionId: "sess-alias", updatedAt: 1 } },
+    });
+
+    await expect(
+      resolveSessionKeyFromResolveParams({
+        cfg: { session: { mainKey: "work" } },
+        p: { label: "alias" },
+      }),
+    ).rejects.toThrow("openclaw doctor --fix");
+  });
+
+  it("ignores unrelated noncanonical rows during label resolution", async () => {
+    const canonicalLabelKey = "agent:main:target";
+    hoisted.loadCombinedSessionStoreForGatewayMock.mockReturnValue({
+      storePath,
+      store: {
+        [canonicalLabelKey]: { label: "target", sessionId: "sess-target", updatedAt: 2 },
+        main: { label: "other", sessionId: "sess-other", updatedAt: 1 },
+      },
+    });
+
+    await expect(
+      resolveSessionKeyFromResolveParams({ cfg: {}, p: { label: "target" } }),
+    ).resolves.toEqual({ ok: true, key: canonicalLabelKey });
   });
 
   it("rejects sessions belonging to a deleted agent (label-based lookup)", async () => {

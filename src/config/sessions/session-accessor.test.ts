@@ -323,6 +323,15 @@ describe("session accessor seam", () => {
       { agentId: "main", sessionKey: "agent:main:a-unpinned", storePath },
       { sessionId: "unpinned-session", updatedAt: 20 },
     );
+    const database = openOpenClawAgentDatabase({
+      agentId: "main",
+      path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "main" }).path,
+    });
+    database.db
+      .prepare(
+        "UPDATE session_nodes SET last_interaction_at = 0, pinned_at = 0 WHERE session_key = ?",
+      )
+      .run("agent:main:z-zero");
 
     const query = (sortBy: "lastInteractionAt" | "updatedAt") =>
       querySqliteSessionEntriesReadOnly({

@@ -154,6 +154,7 @@ function findCanonicalSessionEntryMatch(
   scope: Omit<SessionAccessScope, "sessionKey">,
   canonicalKey: string,
   candidateKeys: readonly string[],
+  options: { readOnly?: boolean } = {},
 ): SessionEntrySummary | undefined {
   let selected: SessionEntrySummary | undefined;
   for (const candidate of candidateKeys) {
@@ -161,7 +162,9 @@ function findCanonicalSessionEntryMatch(
     if (!trimmed) {
       continue;
     }
-    const match = loadExactSessionEntryReadOnly({ ...scope, sessionKey: trimmed });
+    const loadExact =
+      options.readOnly === false ? loadExactSessionEntry : loadExactSessionEntryReadOnly;
+    const match = loadExact({ ...scope, sessionKey: trimmed });
     if (!match) {
       continue;
     }
@@ -263,6 +266,7 @@ function resolveSessionEntryStoreTarget(
       { agentId: incognitoAgentId, ...(scope.env ? { env: scope.env } : {}), storePath },
       canonicalKey,
       scanTargets,
+      { readOnly: false },
     );
     return {
       agentId: incognitoAgentId,
@@ -379,7 +383,11 @@ export function openSessionEntryReadView(
 ): SessionEntryReadView {
   return {
     get: (sessionKey) =>
-      loadExactSessionEntryReadOnly({ ...scope, clone: false, sessionKey })?.entry,
+      (isIncognitoSessionKey(sessionKey) ? loadExactSessionEntry : loadExactSessionEntryReadOnly)({
+        ...scope,
+        clone: false,
+        sessionKey,
+      })?.entry,
     entries: () => listSqliteSessionEntries({ ...scope, clone: false }),
   };
 }

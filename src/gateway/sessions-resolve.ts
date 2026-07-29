@@ -14,6 +14,7 @@ import { normalizeAgentId, parseAgentSessionKey } from "../routing/session-key.j
 import { resolveSessionIdMatchSelection } from "../sessions/session-id-resolution.js";
 import { isCronRunSessionKey } from "../sessions/session-key-utils.js";
 import { parseSessionLabel } from "../sessions/session-label.js";
+import { resolveSessionStoreKey } from "./session-store-key.js";
 import { shouldKeepStoreOnlyChildLink } from "./session-utils-core.js";
 import {
   loadCombinedSessionStoreForGateway,
@@ -116,6 +117,20 @@ function isResolvedSessionKeyVisible(params: {
   );
 }
 
+function assertCanonicalResolveMatches(
+  cfg: OpenClawConfig,
+  matches: readonly [string, SessionEntry][],
+): void {
+  const canonicalKeys = new Set<string>();
+  for (const [sessionKey] of matches) {
+    const canonicalKey = resolveSessionStoreKey({ cfg, sessionKey });
+    if (canonicalKey !== sessionKey || canonicalKeys.has(canonicalKey)) {
+      throw nonCanonicalSessionKeyRowError(canonicalKey);
+    }
+    canonicalKeys.add(canonicalKey);
+  }
+}
+
 export async function resolveSessionKeyFromResolveParams(params: {
   cfg: OpenClawConfig;
   p: SessionsResolveParams;
@@ -162,6 +177,8 @@ export async function resolveSessionKeyFromResolveParams(params: {
         (candidate) => candidate !== target.canonicalKey && store[candidate],
       );
       if (legacyKey) {
+        // The canonical row is visible, so any coexisting alias is a session-integrity
+        // failure even when the alias carries different lineage metadata.
         throw nonCanonicalSessionKeyRowError(target.canonicalKey);
       }
       return (
@@ -174,6 +191,10 @@ export async function resolveSessionKeyFromResolveParams(params: {
       (candidate) => candidate !== target.canonicalKey && store[candidate],
     );
     if (legacyKey) {
+      if (!isResolvedSessionKeyVisible({ cfg, p, store, key: legacyKey })) {
+        // With no canonical row, a hidden alias must not reveal that repair state exists.
+        return noSessionFoundResult({ p, message: `No session found: ${key}` });
+      }
       throw nonCanonicalSessionKeyRowError(target.canonicalKey);
     }
     if (!store[target.canonicalKey]) {
@@ -211,6 +232,7 @@ export async function resolveSessionKeyFromResolveParams(params: {
         (entry.sessionId === sessionId || matchKey === sessionId) &&
         isResolvedSessionKeyVisible({ cfg, key: matchKey, p, store }),
     );
+    assertCanonicalResolveMatches(cfg, matches);
     const selection = resolveSessionIdMatchSelection(matches, sessionId);
     if (selection.kind === "none") {
       return noSessionFoundResult({ p, message: `No session found: ${sessionId}` });
@@ -263,9 +285,12 @@ export async function resolveSessionKeyFromResolveParams(params: {
       ...labelLineageSqlQuery,
     },
   });
-  const matches = Object.entries(store).filter(([matchKey]) =>
-    isResolvedSessionKeyVisible({ cfg, key: matchKey, p, store }),
+  const matches = Object.entries(store).filter(
+    ([matchKey, entry]) =>
+      entry.label === parsedLabel.label &&
+      isResolvedSessionKeyVisible({ cfg, key: matchKey, p, store }),
   );
+  assertCanonicalResolveMatches(cfg, matches);
   if (matches.length === 0) {
     return noSessionFoundResult({
       p,

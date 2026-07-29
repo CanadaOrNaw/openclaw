@@ -295,14 +295,14 @@ function querySqliteSessionEntriesInSnapshot(
       ? executeSqliteQuerySync(
           database.db,
           (limit ? selected.limit(limit) : selected)
-            .orderBy("last_interaction_at", "desc")
+            .orderBy((eb) => eb.fn.coalesce("last_interaction_at", eb.val(0)), "desc")
             .orderBy("session_key", "asc"),
         ).rows
       : (() => {
           const pinned = executeSqliteQuerySync(
             database.db,
             (limit ? selected.limit(limit) : selected)
-              .where("pinned_at", "is not", null)
+              .where("pinned_at", ">", 0)
               .orderBy("pinned_at", "desc")
               .orderBy("updated_at", "desc")
               .orderBy("session_key", "asc"),
@@ -314,7 +314,7 @@ function querySqliteSessionEntriesInSnapshot(
           const unpinned = executeSqliteQuerySync(
             database.db,
             (remaining === undefined ? selected : selected.limit(remaining))
-              .where("pinned_at", "is", null)
+              .where((eb) => eb.or([eb("pinned_at", "is", null), eb("pinned_at", "<=", 0)]))
               .orderBy("updated_at", "desc")
               .orderBy("session_key", "asc"),
           ).rows;
