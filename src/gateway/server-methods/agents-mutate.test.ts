@@ -1319,7 +1319,6 @@ describe("agents.delete", () => {
         agents: { list: [{ id: "research", workspace: "/workspace/research" }] },
       },
       removedBindings: 0,
-      removedAllow: 0,
     });
 
     const { respond, promise } = makeCall("agents.delete", { agentId: "test-agent" });

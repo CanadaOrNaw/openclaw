@@ -133,7 +133,7 @@ describe("multi-agent ambient ownership warnings", () => {
   it("fails closed for a fresh explicitly owned fleet with no ambient targets", () => {
     const result = validateConfigObjectWithPlugins(
       { agents: { ownership: "explicit", entries: { ops: {}, research: {} } } },
-      { pluginValidation: "skip" },
+      { pluginValidation: "skip", env: {} },
     );
     expect(result.ok).toBe(true);
     if (result.ok) {
@@ -144,6 +144,17 @@ describe("multi-agent ambient ownership warnings", () => {
         "agents.defaults.systemAgent.agentId",
         "talk.agentId",
       ]);
+    }
+  });
+
+  it("warns for channels activated only by environment credentials", () => {
+    const result = validateConfigObjectWithPlugins(
+      { agents: { ownership: "explicit", entries: { ops: {}, research: {} } } },
+      { pluginValidation: "skip", env: { DISCORD_BOT_TOKEN: "test-token" } },
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.warnings).toContainEqual(expect.objectContaining({ path: "channels.discord" }));
     }
   });
 

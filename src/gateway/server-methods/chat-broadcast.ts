@@ -38,7 +38,9 @@ function resolveGlobalAwareNodeChatDeliveryKeys(params: {
     return [params.sessionKey];
   }
   const compatibilityAgentId = tryResolveLegacyCompatibilityAgentId(params.cfg);
-  const scopedAgentId = params.agentId ?? compatibilityAgentId ?? resolveDefaultAgentId(params.cfg);
+  const scopedAgentId = normalizeAgentId(
+    params.agentId ?? compatibilityAgentId ?? resolveDefaultAgentId(params.cfg),
+  );
   const keys = [`agent:${scopedAgentId}:global`];
   if (
     compatibilityAgentId &&

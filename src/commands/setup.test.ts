@@ -194,6 +194,28 @@ describe("setupCommand", () => {
     });
   });
 
+  it("writes a selected agent workspace across authored id casing", async () => {
+    await withTempHome(async (home) => {
+      const runtime = { log: vi.fn(), error: vi.fn(), exit: vi.fn() };
+      const configDir = path.join(home, ".openclaw");
+      const configPath = path.join(configDir, "openclaw.json");
+      const opsWorkspace = path.join(home, "ops-workspace");
+      await fs.mkdir(configDir, { recursive: true });
+      await fs.writeFile(
+        configPath,
+        JSON.stringify({
+          agents: { ownership: "explicit", entries: { Ops: {}, research: {} } },
+          gateway: { mode: "local" },
+        }),
+      );
+
+      await setupCommand({ agent: "ops", workspace: opsWorkspace }, runtime, createSetupDeps(home));
+
+      const config = JSON.parse(await fs.readFile(configPath, "utf8")) as OpenClawConfig;
+      expect(config.agents?.entries?.Ops?.workspace).toBe(opsWorkspace);
+    });
+  });
+
   it("writes an interactively selected fleet agent workspace without moving inherited peers", async () => {
     await withTempHome(async (home) => {
       const runtime = { log: vi.fn(), error: vi.fn(), exit: vi.fn() };

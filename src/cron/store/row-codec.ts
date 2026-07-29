@@ -635,6 +635,9 @@ export function replaceCronRows(
     bumpStoreEpoch?: boolean;
   },
 ): number {
+  // This primitive is exported for transactional migrations as well as the public
+  // save path; validate before DELETE so malformed preserved rows fail atomically.
+  assertCronStoreCanPersist(store);
   const currentRows = loadCronRows(db, storeKey);
   const currentStoreEpoch = readCronStoreEpoch(db, storeKey);
   const currentRuntimeRevision = readCronRuntimeRevision(db, storeKey);

@@ -221,7 +221,12 @@ function validateConfigObjectWithPluginsBase(
         manifestRegistry: registryInfo?.registry,
       })
     : base.config;
-  const ownershipWarnings = collectAgentOwnershipWarnings(config);
+  const ambientChannelIds = listChannelIdsForOwnershipMigration({
+    config,
+    env: opts.env,
+    ...(registryInfo?.registry.plugins ? { manifestRecords: registryInfo.registry.plugins } : {}),
+  });
+  const ownershipWarnings = collectAgentOwnershipWarnings(config, ambientChannelIds);
   if (opts.pluginValidation === "skip") {
     return { ok: true, config, warnings: ownershipWarnings };
   }

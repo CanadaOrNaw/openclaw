@@ -76,7 +76,7 @@ describe("global chat broadcast compatibility aliases", () => {
     });
 
     expect(context.broadcast).toHaveBeenCalledWith("chat", expect.anything(), {
-      sessionKeys: ["agent:OPS:global", "global"],
+      sessionKeys: ["agent:ops:global", "global"],
     });
   });
 

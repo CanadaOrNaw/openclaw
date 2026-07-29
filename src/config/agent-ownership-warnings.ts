@@ -4,13 +4,16 @@ import { listUnboundAmbientChannelIds } from "./legacy.default-agent-roles.js";
 import type { ConfigValidationIssue, OpenClawConfig } from "./types.openclaw.js";
 
 /** Reports ownerless ambient surfaces without making the whole multi-agent config invalid. */
-export function collectAgentOwnershipWarnings(cfg: OpenClawConfig): ConfigValidationIssue[] {
+export function collectAgentOwnershipWarnings(
+  cfg: OpenClawConfig,
+  ambientChannelIds: readonly string[] = [],
+): ConfigValidationIssue[] {
   const agents = listAgentEntries(cfg);
   if (agents.length <= 1) {
     return [];
   }
   const warnings: ConfigValidationIssue[] = [];
-  for (const channelId of listUnboundAmbientChannelIds(cfg)) {
+  for (const channelId of listUnboundAmbientChannelIds(cfg, ambientChannelIds)) {
     warnings.push({
       path: `channels.${channelId}`,
       message: `multi-agent inbound routing for ${channelId} has no channel-wide owner; run "openclaw agents bind --agent <id> --bind ${channelId}:*"`,

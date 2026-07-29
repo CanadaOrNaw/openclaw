@@ -21,6 +21,7 @@ import type { ConfigWriteOptions, ReadConfigFileSnapshotForWriteResult } from ".
 import { migratePersistedImplicitMainRoster } from "../config/legacy.js";
 import type { OptionalBootstrapFileName } from "../config/types.agent-defaults.js";
 import type { ConfigFileSnapshot, OpenClawConfig } from "../config/types.js";
+import { normalizeAgentId } from "../routing/session-key.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { defaultRuntime } from "../runtime.js";
 import { createLazyImportLoader } from "../shared/lazy-promise.js";
@@ -228,7 +229,7 @@ export async function setupCommand(
         (desiredWorkspace !== undefined && !writeInheritedWorkspaceOverride)
       ) {
         for (const entry of roster) {
-          if (entry.id === setupAgentId) {
+          if (normalizeAgentId(entry.id) === setupAgentId) {
             // Fresh bootstrap and explicitly entry-owned workspaces stay aligned.
             // Inherited defaults must not turn an include-owned roster into a roster write.
             entry.workspace = workspace;

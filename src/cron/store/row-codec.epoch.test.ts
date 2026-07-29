@@ -103,6 +103,14 @@ describe("cron store epoch", () => {
       const loaded = loadedCronStoreFromRows(loadCronRows(database, storeKey)).store.jobs[0];
       expect(loaded && Object.hasOwn(loaded, "agentId")).toBe(true);
       expect((loaded as unknown as { agentId: unknown }).agentId).toBeNull();
+      const beforeRejectedReplace = loadCronRows(database, storeKey)[0];
+      expect(() =>
+        replaceCronRows(database, storeKey, {
+          version: 1,
+          jobs: [loaded!],
+        }),
+      ).toThrow("Cannot persist cron store with 1 invalid job(s)");
+      expect(loadCronRows(database, storeKey)[0]).toEqual(beforeRejectedReplace);
       expect(materializeCronRowAgentOwners(database, storeKey, "ops")).toBe(0);
 
       const unchangedRow = loadCronRows(database, storeKey)[0];

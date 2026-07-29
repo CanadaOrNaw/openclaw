@@ -42,7 +42,12 @@ export function emitSessionsChanged(
   let defaultAgentId: string | undefined;
   if (sessionRow) {
     try {
-      defaultAgentId = resolveAgentIdFromSessionKey(sessionRow.key, compatibilityAgentId);
+      defaultAgentId = resolveAgentIdFromSessionKey(
+        sessionRow.key,
+        sessionRow.key === "global"
+          ? compatibilityAgentId
+          : (payload.agentId ?? compatibilityAgentId),
+      );
     } catch {
       defaultAgentId = undefined;
     }
