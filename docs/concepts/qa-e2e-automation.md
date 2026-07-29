@@ -418,6 +418,10 @@ coverage IDs, channel, driver actually used, and result. Channel and driver are
 report dimensions, not additional coverage-ID vocabularies or scenario
 eligibility axes.
 
+Channel evidence uses `driver`/`live` only for the transport resolved during setup.
+If setup is blocked before adapter creation, evidence may retain `requestedDriver` but never claims a driver ran.
+Summary driver/channel fields are set only for one resolved transport; mixed setup remains per-scenario.
+
 For a disposable Linux VM lane without bringing Docker into the QA path, run:
 
 ```bash

@@ -33,11 +33,23 @@ const qaEvidenceProviderSchema = z.strictObject({
   auth: nonEmptyStringSchema.optional(),
 });
 
-const qaEvidenceChannelSchema = z.strictObject({
+const qaEvidenceResolvedChannelSchema = z.strictObject({
   id: nonEmptyStringSchema,
   live: z.boolean(),
-  driver: nonEmptyStringSchema.optional(),
+  driver: nonEmptyStringSchema,
+  requestedDriver: nonEmptyStringSchema.optional(),
 });
+
+const qaEvidenceChannelSchema = z.union([
+  qaEvidenceResolvedChannelSchema,
+  z.strictObject({
+    id: nonEmptyStringSchema,
+    requestedDriver: nonEmptyStringSchema,
+  }),
+  z.strictObject({
+    id: nonEmptyStringSchema,
+  }),
+]);
 
 const qaEvidenceEnvironmentSchema = z.strictObject({
   ref: nullableStringSchema,
@@ -170,6 +182,7 @@ const qaEvidenceSummarySchema = z.strictObject({
 type QaEvidenceProfile = z.infer<typeof qaEvidenceProfileIdSchema>;
 export type QaEvidenceStatus = z.infer<typeof qaEvidenceStatusSchema>;
 export type QaEvidenceTiming = z.infer<typeof qaEvidenceTimingSchema>;
+type QaEvidenceChannel = z.infer<typeof qaEvidenceChannelSchema>;
 export type QaEvidencePackageSource = z.infer<typeof qaEvidencePackageSourceSchema>;
 export type QaEvidenceScorecardJson = z.infer<typeof qaEvidenceScorecardSchema>;
 export type QaEvidenceSummaryEntry = z.infer<typeof qaEvidenceSummaryEntrySchema>;
@@ -240,12 +253,16 @@ type QaEvidenceBuildBase = {
   generatedAt: string;
   primaryModel: string;
   providerMode: QaProviderMode;
-  channelDriver?: string;
   packageSource?: QaEvidencePackageSource;
   profile?: QaEvidenceProfile;
   repoRoot?: string;
   runner?: string;
 };
+
+type QaResolvedEvidenceChannel = z.infer<typeof qaEvidenceResolvedChannelSchema>;
+export type QaEvidenceChannelInput =
+  | Omit<QaResolvedEvidenceChannel, "live">
+  | Exclude<QaEvidenceChannel, QaResolvedEvidenceChannel>;
 
 function buildQaEvidenceRefs(params: {
   docsRefs?: readonly string[];
@@ -326,14 +343,6 @@ export function resolveQaEvidenceProfile(params: {
 
 function resolveQaEvidenceRunner(params: { env?: NodeJS.ProcessEnv; fallback?: string }) {
   return params.env?.OPENCLAW_QA_RUNNER?.trim() || params.fallback || "host";
-}
-
-function resolveQaEvidenceChannelDriver(params: { env?: NodeJS.ProcessEnv; fallback?: string }) {
-  const id =
-    params.fallback?.trim() ||
-    params.env?.OPENCLAW_QA_CHANNEL_DRIVER?.trim() ||
-    params.env?.OPENCLAW_E2E_CHANNEL_DRIVER?.trim();
-  return id ? { id } : undefined;
 }
 
 function resolveQaEvidencePackageSource(env: NodeJS.ProcessEnv | undefined) {
@@ -484,7 +493,7 @@ export function attachQaEvidenceScorecard(params: {
 
 export function buildQaSuiteEvidenceSummary(
   params: QaEvidenceBuildBase & {
-    channelId: string;
+    channel: QaEvidenceChannelInput;
     scenarioDefinitions: readonly QaEvidenceScenarioDefinitionInput[];
     scenarioResults: readonly QaEvidenceScenarioResultInput[];
   },
@@ -500,10 +509,13 @@ export function buildQaSuiteEvidenceSummary(
     env: params.env,
     explicit: params.profile,
   });
-  const channelDriver = resolveQaEvidenceChannelDriver({
-    env: params.env,
-    fallback: params.channelDriver,
-  });
+  const channel: QaEvidenceChannel =
+    "driver" in params.channel
+      ? {
+          ...params.channel,
+          live: params.channel.driver === "live",
+        }
+      : params.channel;
   const entries = params.scenarioResults.map((result, index): QaEvidenceSummaryEntry => {
     const scenario = params.scenarioDefinitions[index];
     const primaryCoverageIds = uniqueSortedStrings(scenario?.coverage?.primary ?? []);
@@ -537,11 +549,7 @@ export function buildQaSuiteEvidenceSummary(
         runner,
         environment,
         provider,
-        channel: {
-          id: params.channelId,
-          live: channelDriver?.id === "live",
-          driver: channelDriver?.id,
-        },
+        channel,
         packageSource,
         artifacts: buildQaEvidenceArtifacts(params.artifactPaths, "qa-suite"),
       },

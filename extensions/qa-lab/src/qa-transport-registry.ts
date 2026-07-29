@@ -11,6 +11,11 @@ import { createQaStateBackedTransportAdapter } from "./qa-transport.js";
 export type QaTransportId = "qa-channel";
 export type QaTransportDriver = QaTransportId | "crabline" | "live";
 
+export type QaResolvedTransport = Readonly<{
+  channelId: string;
+  driver: QaTransportDriver;
+}>;
+
 export type QaTransportFactoryContext = {
   adapterOptions?: Parameters<
     NonNullable<QaRunnerCliRegistration["adapterFactory"]>["create"]

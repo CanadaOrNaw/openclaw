@@ -128,6 +128,7 @@ async function makeSuiteResult(params: {
   return {
     outputDir: params.outputDir,
     evidencePath: path.join(params.outputDir, "qa-evidence.json"),
+    resolvedTransport: { channelId: "qa-channel", driver: "qa-channel" },
     reportPath: path.join(params.outputDir, "qa-suite-report.md"),
     summaryPath,
     report: "# report",

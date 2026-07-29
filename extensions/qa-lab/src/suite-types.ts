@@ -8,6 +8,7 @@ import type {
   QaTransportAdapterFactory,
   QaTransportFactoryContext,
   QaTransportId,
+  QaResolvedTransport,
 } from "./qa-transport-registry.js";
 import type { QaReportCheck } from "./report.js";
 import type { RuntimeId, RuntimeParityCell, RuntimeParityResult } from "./runtime-parity.js";
@@ -68,6 +69,7 @@ export type QaSuiteRunParams = {
 
 export type QaSuiteResult = {
   evidence?: QaEvidenceSummaryJson;
+  resolvedTransport: QaResolvedTransport;
   outputDir: string;
   evidencePath: string;
   reportPath: string;

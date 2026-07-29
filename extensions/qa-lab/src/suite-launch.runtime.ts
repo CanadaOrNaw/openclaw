@@ -10,6 +10,7 @@ import {
   QA_EVIDENCE_SUMMARY_SCHEMA_VERSION,
   buildQaSuiteEvidenceSummary,
   validateQaEvidenceSummaryJson,
+  type QaEvidenceChannelInput,
   type QaEvidenceSummaryJson,
 } from "./evidence-summary.js";
 import { isQaFastModeEnabled } from "./model-selection.js";
@@ -17,6 +18,7 @@ import { DEFAULT_QA_PROVIDER_MODE } from "./providers/index.js";
 import {
   defaultQaSuiteConcurrencyForTransport,
   normalizeQaTransportId,
+  type QaResolvedTransport,
 } from "./qa-transport-registry.js";
 import { renderQaMarkdownReport, type QaReportScenario } from "./report.js";
 import { defaultQaModelForMode, normalizeQaProviderMode } from "./run-config.js";
@@ -95,6 +97,7 @@ const CREDENTIAL_POOL_UNAVAILABLE_CODES = new Set(["NO_CREDENTIAL_AVAILABLE", "P
 
 type QaUnifiedPartitionResult = {
   evidenceSummaries: QaEvidenceSummaryJson[];
+  resolvedTransport?: QaResolvedTransport;
   scenarioResults: Array<{
     result: QaSuiteScenarioResult;
     scenarioId: string;
@@ -103,8 +106,35 @@ type QaUnifiedPartitionResult = {
   submittedScenarioIds: readonly string[];
 };
 
+function buildQaEvidenceChannelInput(params: {
+  channelId: string;
+  resolvedTransport?: QaResolvedTransport;
+  requestedDriver?: string;
+}): QaEvidenceChannelInput {
+  if (params.resolvedTransport) {
+    return {
+      id: params.resolvedTransport.channelId,
+      driver: params.resolvedTransport.driver,
+      requestedDriver:
+        params.requestedDriver === params.resolvedTransport.driver
+          ? undefined
+          : params.requestedDriver,
+    };
+  }
+  return params.requestedDriver
+    ? {
+        id: params.channelId,
+        requestedDriver: params.requestedDriver,
+      }
+    : {
+        id: params.channelId,
+      };
+}
+
 type QaUnifiedPartitionTask = {
+  channelId: string;
   exclusiveKey?: string;
+  requestedDriver?: string;
   run: () => Promise<QaUnifiedPartitionResult>;
   scenarios: readonly QaSeedScenarioWithSource[];
   weight: number;
@@ -613,7 +643,7 @@ function renderUnifiedQaSuiteReport(params: {
 
 async function writeUnifiedQaSuiteArtifacts(params: {
   alternateModel: string;
-  channelDriver: QaSuiteRunParams["channelDriver"];
+  resolvedTransports: readonly QaResolvedTransport[];
   concurrency: number;
   evidence: QaEvidenceSummaryJson;
   fastMode: boolean;
@@ -637,7 +667,7 @@ async function writeUnifiedQaSuiteArtifacts(params: {
   });
   const summary = buildQaSuiteSummaryJson({
     alternateModel: params.alternateModel,
-    channelDriver: params.channelDriver,
+    resolvedTransports: params.resolvedTransports,
     concurrency: params.concurrency,
     evidence: params.evidence,
     fastMode: params.fastMode,
@@ -817,10 +847,16 @@ async function runUnifiedQaSuite(params: {
               buildQaSuiteEvidenceSummary({
                 artifactPaths: [],
                 evidenceMode: params.runParams?.evidenceMode,
-                channelId: channelGroup.channelId ?? transportId,
-                channelDriver:
-                  params.runParams?.channelDriver ??
-                  channelGroup.channelDriverSelection?.channelDriver,
+                channel: buildQaEvidenceChannelInput({
+                  channelId:
+                    channelGroup.channelId ??
+                    channelGroup.channelDriverSelection?.channel ??
+                    channelGroup.channel ??
+                    transportId,
+                  requestedDriver:
+                    params.runParams?.channelDriver ??
+                    channelGroup.channelDriverSelection?.channelDriver,
+                }),
                 env: process.env,
                 generatedAt: new Date().toISOString(),
                 primaryModel,
@@ -847,11 +883,18 @@ async function runUnifiedQaSuite(params: {
           };
         };
         const task = {
+          channelId:
+            channelGroup.channelId ??
+            channelGroup.channelDriverSelection?.channel ??
+            channelGroup.channel ??
+            transportId,
           // One channel's credential and Gateway state stay serial unless each adapter create()
           // owns an isolated runtime. Distinct channels may always run together.
           exclusiveKey: channelDriverFlowRequiresExclusiveWorkers
             ? `channel:${channelGroup.channel ?? channelGroup.channelId ?? "default"}`
             : undefined,
+          requestedDriver:
+            params.runParams?.channelDriver ?? channelGroup.channelDriverSelection?.channelDriver,
           scenarios: partition.scenarios,
           weight: partition.concurrency,
           run: async () => {
@@ -933,6 +976,7 @@ async function runUnifiedQaSuite(params: {
                   repoRoot,
                 }),
               ],
+              resolvedTransport: result.resolvedTransport,
               scenarioResults,
               startedScenarioIds: partition.scenarios.map((scenario) => scenario.id),
               submittedScenarioIds: partition.scenarios.map((scenario) => scenario.id),
@@ -951,6 +995,8 @@ async function runUnifiedQaSuite(params: {
     scenariosByKind: ReadonlyMap<QaTestFileExecutionKind, QaTestFileScenario[]>,
   ) =>
     ({
+      channelId: transportId,
+      requestedDriver: params.runParams?.channelDriver,
       scenarios: [...scenariosByKind.values()].flat(),
       weight: 1,
       run: async () => {
@@ -1082,8 +1128,11 @@ async function runUnifiedQaSuite(params: {
             buildQaSuiteEvidenceSummary({
               artifactPaths: [],
               evidenceMode: params.runParams?.evidenceMode,
-              channelDriver: params.runParams?.channelDriver,
-              channelId: transportId,
+              channel: buildQaEvidenceChannelInput({
+                channelId: partition.resolvedTransport?.channelId ?? transportId,
+                resolvedTransport: partition.resolvedTransport,
+                requestedDriver: params.runParams?.channelDriver,
+              }),
               env: process.env,
               generatedAt: new Date().toISOString(),
               primaryModel,
@@ -1148,8 +1197,10 @@ async function runUnifiedQaSuite(params: {
         buildQaSuiteEvidenceSummary({
           artifactPaths: [],
           evidenceMode: params.runParams?.evidenceMode,
-          channelDriver: params.runParams?.channelDriver,
-          channelId: transportId,
+          channel: buildQaEvidenceChannelInput({
+            channelId: task.channelId,
+            requestedDriver: task.requestedDriver,
+          }),
           env: process.env,
           generatedAt: new Date().toISOString(),
           primaryModel,
@@ -1193,6 +1244,9 @@ async function runUnifiedQaSuite(params: {
       ? []
       : await runPartitionTasks(scriptPartitionTasks, 1);
   const partitionResults = [...concurrentPartitionResults, ...scriptPartitionResults];
+  const resolvedTransports = partitionResults.flatMap((partition) =>
+    partition.resolvedTransport ? [partition.resolvedTransport] : [],
+  );
   for (const partitionResult of partitionResults) {
     for (const scenarioResult of partitionResult.scenarioResults) {
       const results = scenarioResultsById.get(scenarioResult.scenarioId) ?? [];
@@ -1231,7 +1285,7 @@ async function runUnifiedQaSuite(params: {
   });
   const unifiedResult = await writeUnifiedQaSuiteArtifacts({
     alternateModel,
-    channelDriver: params.runParams?.channelDriver,
+    resolvedTransports,
     concurrency,
     evidence,
     fastMode,

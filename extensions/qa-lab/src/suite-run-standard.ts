@@ -370,6 +370,7 @@ export async function runQaFlowSuiteStandard(
         scenarioDefinitions: selectedScenarios,
         evidenceMode: params?.evidenceMode,
         transport,
+        resolvedTransport: transportFactoryResult.resolvedTransport,
         providerMode,
         primaryModel,
         alternateModel,
@@ -401,6 +402,7 @@ export async function runQaFlowSuiteStandard(
     return {
       outputDir,
       evidence,
+      resolvedTransport: transportFactoryResult.resolvedTransport,
       evidencePath,
       reportPath,
       summaryPath,
