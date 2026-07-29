@@ -940,6 +940,7 @@ export function createSessionsSendTool(opts?: {
                 : baselineReply;
             void runSessionsSendA2AFlow({
               targetSessionKey: flowTargetSessionKey,
+              targetAgentId,
               displayKey: flowDisplayKey,
               message,
               announceTimeoutMs,
@@ -947,6 +948,7 @@ export function createSessionsSendTool(opts?: {
               // requester turns, but the target-side announce still runs.
               maxPingPongTurns: isIsolatedCronRequester ? 0 : maxPingPongTurns,
               requesterSessionKey: replyRequesterSessionKey,
+              requesterAgentId,
               requesterChannel,
               baseline: flowBaseline,
               roundOneReply,

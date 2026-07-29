@@ -373,11 +373,13 @@ describe("runSessionsSendA2AFlow announce delivery", () => {
 
     await runSessionsSendA2AFlow({
       targetSessionKey: "agent:worker:discord:group:dev",
+      targetAgentId: "worker",
       displayKey: "agent:worker:discord:group:dev",
       message: "Test message",
       announceTimeoutMs: 10_000,
       maxPingPongTurns: 2,
       requesterSessionKey: "agent:main:discord:group:req",
+      requesterAgentId: "main",
       requesterChannel: "discord",
       notifyRequesterOnWaitFailure: true,
       baseline: {
@@ -390,6 +392,7 @@ describe("runSessionsSendA2AFlow announce delivery", () => {
     expect(readLatestAssistantReplySnapshot).not.toHaveBeenCalled();
     expect(runAgentStep).toHaveBeenCalledOnce();
     expect(firstMockArg(vi.mocked(runAgentStep), "agent step")).toMatchObject({
+      agentId: "main",
       sessionKey: "agent:main:discord:group:req",
       sourceSessionKey: "agent:worker:discord:group:dev",
       sourceTool: "sessions_send",
@@ -476,6 +479,7 @@ describe("runSessionsSendA2AFlow announce delivery", () => {
 
     await runSessionsSendA2AFlow({
       targetSessionKey,
+      targetAgentId: "other",
       displayKey: targetSessionKey,
       message: "Test message",
       announceTimeoutMs: 10_000,
@@ -487,6 +491,7 @@ describe("runSessionsSendA2AFlow announce delivery", () => {
 
     expect(runAgentStep).toHaveBeenCalledOnce();
     expect(firstMockArg(vi.mocked(runAgentStep), "agent step")).toMatchObject({
+      agentId: "other",
       sessionKey: targetSessionKey,
       message: "Agent-to-agent announce step.",
     });

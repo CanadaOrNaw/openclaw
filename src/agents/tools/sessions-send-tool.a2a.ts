@@ -84,11 +84,13 @@ async function deliverAnnounceReply(params: {
 
 export async function runSessionsSendA2AFlow(params: {
   targetSessionKey: string;
+  targetAgentId?: string;
   displayKey: string;
   message: string;
   announceTimeoutMs: number;
   maxPingPongTurns: number;
   requesterSessionKey?: string;
+  requesterAgentId?: string;
   requesterChannel?: GatewayMessageChannel;
   baseline?: AssistantReplySnapshot;
   roundOneReply?: string;
@@ -124,6 +126,7 @@ export async function runSessionsSendA2AFlow(params: {
           const error =
             typeof wait.error === "string" && wait.error.trim() ? `: ${wait.error.trim()}` : "";
           await runAgentStep({
+            agentId: params.requesterAgentId,
             sessionKey: params.requesterSessionKey,
             message:
               `sessions_send delivery to ${params.displayKey} failed${error}. ` +
@@ -182,6 +185,8 @@ export async function runSessionsSendA2AFlow(params: {
     ) {
       let currentSessionKey = params.requesterSessionKey;
       let nextSessionKey = params.targetSessionKey;
+      let currentAgentId = params.requesterAgentId;
+      let nextAgentId = params.targetAgentId;
       let incomingMessage = latestReply;
       for (let turn = 1; turn <= params.maxPingPongTurns; turn += 1) {
         const currentRole =
@@ -196,6 +201,7 @@ export async function runSessionsSendA2AFlow(params: {
           maxTurns: params.maxPingPongTurns,
         });
         const replyText = await runAgentStep({
+          agentId: currentAgentId,
           sessionKey: currentSessionKey,
           message: incomingMessage,
           extraSystemPrompt: replyPrompt,
@@ -214,6 +220,9 @@ export async function runSessionsSendA2AFlow(params: {
         const swap = currentSessionKey;
         currentSessionKey = nextSessionKey;
         nextSessionKey = swap;
+        const agentSwap = currentAgentId;
+        currentAgentId = nextAgentId;
+        nextAgentId = agentSwap;
       }
     }
 
@@ -227,6 +236,7 @@ export async function runSessionsSendA2AFlow(params: {
       latestReply,
     });
     const announceReply = await runAgentStep({
+      agentId: params.targetAgentId,
       sessionKey: params.targetSessionKey,
       message: "Agent-to-agent announce step.",
       extraSystemPrompt: announcePrompt,

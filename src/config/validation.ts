@@ -221,12 +221,19 @@ function validateConfigObjectWithPluginsBase(
         manifestRegistry: registryInfo?.registry,
       })
     : base.config;
-  const ambientChannelIds = listChannelIdsForOwnershipMigration({
-    config,
-    env: opts.env,
-    ...(registryInfo?.registry.plugins ? { manifestRecords: registryInfo.registry.plugins } : {}),
-  });
-  const ownershipWarnings = collectAgentOwnershipWarnings(config, ambientChannelIds);
+  const ownershipWarnings =
+    listAgentEntriesWithSource(config).length > 1
+      ? collectAgentOwnershipWarnings(
+          config,
+          listChannelIdsForOwnershipMigration({
+            config,
+            env: opts.env,
+            ...(registryInfo?.registry.plugins
+              ? { manifestRecords: registryInfo.registry.plugins }
+              : {}),
+          }),
+        )
+      : [];
   if (opts.pluginValidation === "skip") {
     return { ok: true, config, warnings: ownershipWarnings };
   }

@@ -7,6 +7,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { writeAcpSessionMetaForMigration } from "../acp/runtime/session-meta.js";
 import { resetConfigRuntimeState, setRuntimeConfigSnapshot } from "../config/config.js";
 import type { OpenClawConfig } from "../config/config.js";
+import { retainLegacyDefaultAgentId } from "../config/legacy.default-agent-owner.js";
 import type { SessionEntry } from "../config/sessions.js";
 import {
   appendTranscriptMessageSync,
@@ -1706,6 +1707,19 @@ describe("gateway session utils", () => {
     );
     expect(() => resolveSessionStoreKey({ cfg, sessionKey: "discord:group:123" })).toThrow(
       "Multiple agents are configured",
+    );
+  });
+
+  test("resolveSessionStoreKey preserves a retained roster owner", () => {
+    const cfg = retainLegacyDefaultAgentId(
+      {
+        session: { mainKey: "main" },
+        agents: { entries: { ops: {}, review: {} } },
+      },
+      "ops",
+    );
+    expect(resolveSessionStoreKey({ cfg, sessionKey: "discord:group:123" })).toBe(
+      "agent:ops:discord:group:123",
     );
   });
 
