@@ -10,6 +10,10 @@ import {
 } from "../config/sessions/session-accessor.js";
 import type { SessionEntryLifecycleRemoval } from "../config/sessions/session-accessor.lifecycle-types.js";
 import { writeSqliteTranscriptArchive } from "../config/sessions/session-accessor.sqlite-archive.js";
+import {
+  copySessionNodeArtifactsForRepair,
+  deleteSessionMembersForRepair,
+} from "../config/sessions/session-accessor.sqlite-node-artifacts.js";
 import { mergeCanonicalSessionEntryCandidates } from "../config/sessions/session-canonical-key.js";
 import { setCanonicalSqliteSessionMainKey } from "../config/sessions/session-canonical-key.js";
 import { resolveAllAgentSessionStoreTargetsSync } from "../config/sessions/targets.js";
@@ -328,6 +332,18 @@ async function repairCanonicalSessionGroup(
     agentId: destination.agentId,
     allowCanonicalRepair: true,
     afterUpsertsInTransaction: (destinationDatabase) => {
+      if (
+        winner.sqlitePath === destination.sqlitePath &&
+        winner.sessionKey !== winner.canonicalKey
+      ) {
+        deleteSessionMembersForRepair(destinationDatabase, winner.canonicalKey);
+        copySessionNodeArtifactsForRepair(
+          destinationDatabase,
+          destinationDatabase,
+          [winner.sessionKey],
+          winner.canonicalKey,
+        );
+      }
       for (const [sqlitePath, storeCandidates] of byDatabase) {
         if (sqlitePath === destination.sqlitePath) {
           continue;

@@ -194,6 +194,47 @@ describe("doctor canonical session-key repair", () => {
     });
   });
 
+  it("replaces same-store membership from the selected alias winner", async () => {
+    await withStateDirEnv("openclaw-doctor-canonical-members-", async ({ stateDir }) => {
+      const env = { ...process.env, OPENCLAW_STATE_DIR: stateDir };
+      const storeTemplate = path.join(stateDir, "agents", "{agentId}", "sessions.json");
+      const storePath = resolveStorePath(storeTemplate, { agentId: "main", env });
+      const cfg = {
+        agents: { list: [{ id: "main", default: true }] },
+        session: { mainKey: "work", store: storeTemplate },
+      } as OpenClawConfig;
+      replaceSessionEntrySync(
+        { agentId: "main", env, sessionKey: "agent:main:work", storePath },
+        { sessionId: "shared-session", updatedAt: 10 },
+      );
+      insertLegacySession({
+        agentId: "main",
+        entry: { sessionId: "shared-session", updatedAt: 20 },
+        env,
+        sessionKey: "agent:main:main",
+        storePath,
+      });
+      const database = openOpenClawAgentDatabase({
+        agentId: "main",
+        env,
+        path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "main", env }).path,
+      });
+      const insertMember = database.db.prepare(
+        "INSERT INTO session_members (session_key, identity_id, added_by, added_at) VALUES (?, ?, 'owner', 10)",
+      );
+      insertMember.run("agent:main:work", "canonical-member");
+      insertMember.run("agent:main:main", "winner-member");
+
+      expect(await repairCanonicalSessionKeys({ apply: true, cfg, env })).toMatchObject({
+        foundGroups: 1,
+        repairedGroups: 1,
+      });
+      expect(database.db.prepare("SELECT identity_id FROM session_members").all()).toEqual([
+        { identity_id: "winner-member" },
+      ]);
+    });
+  });
+
   it("keeps sentinel rows scoped to their owning agent stores", async () => {
     await withStateDirEnv("openclaw-doctor-canonical-sentinels-", async ({ stateDir }) => {
       const env = { ...process.env, OPENCLAW_STATE_DIR: stateDir };

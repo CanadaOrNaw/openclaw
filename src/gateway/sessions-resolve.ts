@@ -59,6 +59,7 @@ function validateSessionAgentExists(
 }
 
 function isResolvedSessionKeyVisible(params: {
+  canonicalKey?: string;
   cfg: OpenClawConfig;
   p: SessionsResolveParams;
   store: Record<string, SessionEntry>;
@@ -68,14 +69,15 @@ function isResolvedSessionKeyVisible(params: {
   if (!entry) {
     return false;
   }
-  const specialKey = params.key === "global" || params.key === "unknown";
+  const effectiveKey = params.canonicalKey ?? params.key;
+  const specialKey = effectiveKey === "global" || effectiveKey === "unknown";
   if (params.key === "global" && params.p.includeGlobal !== true) {
     return false;
   }
   if (params.key === "unknown" && (params.p.agentId || params.p.includeUnknown !== true)) {
     return false;
   }
-  const parsed = parseAgentSessionKey(params.key);
+  const parsed = parseAgentSessionKey(effectiveKey);
   if (
     !specialKey &&
     params.p.agentId &&
@@ -90,7 +92,7 @@ function isResolvedSessionKeyVisible(params: {
   if (specialKey) {
     return false;
   }
-  if (entry.archivedAt !== undefined || isCronRunSessionKey(params.key)) {
+  if (entry.archivedAt !== undefined || isCronRunSessionKey(effectiveKey)) {
     return false;
   }
   if (
@@ -191,7 +193,15 @@ export async function resolveSessionKeyFromResolveParams(params: {
       (candidate) => candidate !== target.canonicalKey && store[candidate],
     );
     if (legacyKey) {
-      if (!isResolvedSessionKeyVisible({ cfg, p, store, key: legacyKey })) {
+      if (
+        !isResolvedSessionKeyVisible({
+          canonicalKey: target.canonicalKey,
+          cfg,
+          p,
+          store,
+          key: legacyKey,
+        })
+      ) {
         // With no canonical row, a hidden alias must not reveal that repair state exists.
         return noSessionFoundResult({ p, message: `No session found: ${key}` });
       }
@@ -230,7 +240,17 @@ export async function resolveSessionKeyFromResolveParams(params: {
     const matches = Object.entries(store).filter(
       ([matchKey, entry]) =>
         (entry.sessionId === sessionId || matchKey === sessionId) &&
-        isResolvedSessionKeyVisible({ cfg, key: matchKey, p, store }),
+        isResolvedSessionKeyVisible({
+          canonicalKey: resolveSessionStoreKey({
+            cfg,
+            sessionKey: matchKey,
+            ...(p.agentId ? { storeAgentId: p.agentId } : {}),
+          }),
+          cfg,
+          key: matchKey,
+          p,
+          store,
+        }),
     );
     assertCanonicalResolveMatches(cfg, matches);
     const selection = resolveSessionIdMatchSelection(matches, sessionId);
@@ -288,7 +308,17 @@ export async function resolveSessionKeyFromResolveParams(params: {
   const matches = Object.entries(store).filter(
     ([matchKey, entry]) =>
       entry.label === parsedLabel.label &&
-      isResolvedSessionKeyVisible({ cfg, key: matchKey, p, store }),
+      isResolvedSessionKeyVisible({
+        canonicalKey: resolveSessionStoreKey({
+          cfg,
+          sessionKey: matchKey,
+          ...(p.agentId ? { storeAgentId: p.agentId } : {}),
+        }),
+        cfg,
+        key: matchKey,
+        p,
+        store,
+      }),
   );
   assertCanonicalResolveMatches(cfg, matches);
   if (matches.length === 0) {
