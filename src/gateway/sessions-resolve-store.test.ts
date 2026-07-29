@@ -202,7 +202,7 @@ describe("resolveSessionKeyFromResolveParams store canonicalization", () => {
     });
   });
 
-  it("does not adopt legacy main aliases from discovered deleted-agent stores", async () => {
+  it("rejects legacy main aliases from discovered deleted-agent stores", async () => {
     await withStateDirEnv("openclaw-sessions-resolve-discovered-main-", async () => {
       const cfg: OpenClawConfig = {
         agents: { list: [{ id: "ops", default: true }] },
@@ -221,26 +221,14 @@ describe("resolveSessionKeyFromResolveParams store canonicalization", () => {
           cfg,
           p: { sessionId: "sess-discovered-main" },
         }),
-      ).resolves.toEqual({
-        ok: false,
-        error: {
-          code: ErrorCodes.INVALID_REQUEST,
-          message: 'Agent "main" no longer exists in configuration',
-        },
-      });
+      ).rejects.toThrow("openclaw doctor --fix");
 
       await expect(
         resolveSessionKeyFromResolveParams({
           cfg,
           p: { label: "discovered-main" },
         }),
-      ).resolves.toEqual({
-        ok: false,
-        error: {
-          code: ErrorCodes.INVALID_REQUEST,
-          message: 'Agent "main" no longer exists in configuration',
-        },
-      });
+      ).rejects.toThrow("openclaw doctor --fix");
     });
   });
 
