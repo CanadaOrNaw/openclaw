@@ -304,21 +304,32 @@ describe("session accessor seam", () => {
   });
 
   it("matches owner agent segments exactly", () => {
-    replaceSqliteSessionEntrySync(
-      { agentId: "main", sessionKey: "agent:ops_team:own", storePath },
-      {
-        createdActor: {
-          type: "agent",
-          id: "agent:ops_team:owner",
-          label: { private: "data" },
-        } as unknown as NonNullable<SessionEntry["createdActor"]>,
+    const database = openOpenClawAgentDatabase({
+      agentId: "main",
+      path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "main" }).path,
+    });
+    const insert = database.db.prepare(
+      "INSERT INTO session_nodes (session_key, current_session_id, entry_json, updated_at, created_actor_id, created_actor_type) VALUES (?, ?, ?, ?, ?, ?)",
+    );
+    insert.run(
+      "agent:ops_team:own",
+      "own-session",
+      JSON.stringify({
+        createdActor: { type: "agent", id: "agent:ops_team:owner", label: { private: "data" } },
         sessionId: "own-session",
         updatedAt: 20,
-      },
+      }),
+      20,
+      "agent:ops_team:owner",
+      "agent",
     );
-    replaceSqliteSessionEntrySync(
-      { agentId: "main", sessionKey: "agent:opsXteam:other", storePath },
-      { sessionId: "other-session", updatedAt: 30 },
+    insert.run(
+      "agent:opsXteam:other",
+      "other-session",
+      JSON.stringify({ sessionId: "other-session", updatedAt: 30 }),
+      30,
+      null,
+      null,
     );
 
     const result = querySqliteSessionEntriesReadOnly({
@@ -1707,6 +1718,12 @@ describe("session accessor seam", () => {
         message: expect.stringContaining("openclaw doctor --fix"),
       });
     }
+    await expect(
+      upsertSessionEntry(
+        { agentId: "ops", sessionKey: "agent:main:wrong-owner", storePath },
+        { sessionId: "wrong-owner-session", updatedAt: 10 },
+      ),
+    ).rejects.toMatchObject({ code: "SESSION_CANONICAL_KEY_MIGRATION_REQUIRED" });
     const database = openOpenClawAgentDatabase({
       agentId: "ops",
       path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "ops" }).path,

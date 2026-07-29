@@ -227,6 +227,7 @@ async function repairCanonicalSessionGroup(
   );
   const winnerResult = await applySessionEntryLifecycleMutation({
     agentId: destination.agentId,
+    allowCanonicalRepair: true,
     afterUpsertsInTransaction: (destinationDatabase) => {
       for (const [sqlitePath, storeCandidates] of byDatabase) {
         if (sqlitePath === destination.sqlitePath) {

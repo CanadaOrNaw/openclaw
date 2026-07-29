@@ -943,11 +943,13 @@ export function writeSessionEntry(
   database: OpenClawAgentDatabase,
   sessionKey: string,
   entry: SessionEntry,
-  options: { previousEntry?: SessionEntry | null } = {},
+  options: { allowStoredAliases?: boolean; previousEntry?: SessionEntry | null } = {},
 ): void {
-  assertCanonicalSessionKeyWrite(sessionKey);
+  assertCanonicalSessionKeyWrite(sessionKey, database.agentId);
   const db = getSessionKysely(database.db);
-  assertNoPaddedSqliteSessionKeyRow(database, sessionKey);
+  if (!options.allowStoredAliases) {
+    assertNoPaddedSqliteSessionKeyRow(database, sessionKey);
+  }
   const normalizedEntry = normalizeSqliteSessionEntryTimestamp(entry);
   const updatedAt = normalizedEntry.updatedAt;
   const canonicalPreviousEntry = readExactSessionEntryRow(database, sessionKey)?.entry;

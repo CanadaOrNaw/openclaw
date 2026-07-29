@@ -296,6 +296,8 @@ export async function applySqliteSessionEntryLifecycleMutation(params: {
     nowMs?: number;
   };
   captureArtifactCleanupError?: boolean;
+  /** Doctor-only bypass while exact malformed rows are removed in the same transaction. */
+  allowCanonicalRepair?: boolean;
   /** Doctor-only synchronous state transfer that commits with the destination entry. */
   afterUpsertsInTransaction?: (database: OpenClawAgentDatabase) => void;
 }): Promise<SessionEntryLifecycleMutationResult> {
@@ -399,6 +401,7 @@ export async function applySqliteSessionEntryLifecycleMutation(params: {
           }
         }
         writeSessionEntry(transactionDb, sessionKey, entry, {
+          allowStoredAliases: params.allowCanonicalRepair === true,
           previousEntry: expectedCurrentEntry ?? null,
         });
         const relatedRemovalKeys = validatedRemovals.flatMap((removal) => {

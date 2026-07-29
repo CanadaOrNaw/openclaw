@@ -70,7 +70,7 @@ export function ensureTranscriptSessionRoot(
   scope: ResolvedTranscriptScope,
   updatedAt: number,
 ): void {
-  assertCanonicalSessionKeyWrite(scope.sessionKey);
+  assertCanonicalSessionKeyWrite(scope.sessionKey, database.agentId);
   const db = getSessionKysely(database.db);
   const insertedNode = executeSqliteQuerySync(
     database.db,

@@ -19,9 +19,11 @@ import {
   replaceSessionEntry,
   replaceSessionEntrySync,
 } from "../config/sessions/session-accessor.js";
+import { resolveSqliteTargetFromSessionStorePath } from "../config/sessions/session-sqlite-target.js";
 import { registerAgentRunContext, resetAgentEventsForTest } from "../infra/agent-events.js";
 import {
   closeOpenClawAgentDatabasesForTest,
+  openOpenClawAgentDatabase,
   resolveIncognitoOpenClawAgentSqlitePath,
 } from "../state/openclaw-agent-db.js";
 import { closeOpenClawStateDatabaseForTest } from "../state/openclaw-state-db.js";
@@ -1455,14 +1457,24 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
         agents: { list: [{ id: "main", default: true }, { id: "ops" }] },
         session: { store: storeTemplate },
       } as OpenClawConfig;
-      replaceSessionEntrySync(
-        {
+      const database = openOpenClawAgentDatabase({
+        agentId: "ops",
+        env: { OPENCLAW_STATE_DIR: stateDir },
+        path: resolveSqliteTargetFromSessionStorePath(opsStore, {
           agentId: "ops",
-          sessionKey: "agent:main:misplaced",
-          storePath: opsStore,
-        },
-        { sessionId: "misplaced", updatedAt: 30 },
-      );
+          env: { OPENCLAW_STATE_DIR: stateDir },
+        }).path,
+      });
+      database.db
+        .prepare(
+          "INSERT INTO session_nodes (session_key, current_session_id, entry_json, updated_at) VALUES (?, ?, ?, ?)",
+        )
+        .run(
+          "agent:main:misplaced",
+          "misplaced",
+          JSON.stringify({ sessionId: "misplaced", updatedAt: 30 }),
+          30,
+        );
       replaceSessionEntrySync(
         { agentId: "ops", sessionKey: "agent:ops:valid", storePath: opsStore },
         { sessionId: "valid", updatedAt: 20 },
