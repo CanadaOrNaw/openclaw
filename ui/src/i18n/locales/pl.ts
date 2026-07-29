@@ -2300,6 +2300,10 @@ export const pl: TranslationMap = {
     nameInvalid: "Nazwy serwerów mogą zawierać litery, cyfry, kropki, myślniki lub podkreślenia.",
     targetInvalid:
       "Wprowadź adres URL dla transportów HTTP lub prawidłowy wiersz poleceń dla stdio.",
+    sessionEnableFailed:
+      "Serwer został zapisany jako globalnie wyłączony, ale nie udało się go włączyć dla tej sesji: {error}",
+    sessionChanged: "Aktywna sesja zmieniła się, zanim można było włączyć serwer.",
+    sessionUnavailable: "Aktywna sesja jest niedostępna; odśwież i spróbuj ponownie.",
     nameTaken: "Serwer MCP o nazwie „{name}” już istnieje.",
     missing: "Nie znaleziono serwera MCP „{name}” w konfiguracji.",
     missingTransport: "brak transportu",
@@ -5125,6 +5129,14 @@ export const pl: TranslationMap = {
         manageSkills: "Zarządzaj umiejętnościami",
         browseConnectors: "Przeglądaj konektory",
         addMcpServer: "Dodaj serwer MCP…",
+        addMcpServerTitle: "Dodaj serwer MCP",
+        addMcpServerDescription: "Skonfiguruj serwer i wybierz, gdzie ma być włączony.",
+        scopeLabel: "Dostępność",
+        scopeSession: "Ta sesja",
+        scopeEverywhere: "Wszędzie",
+        scopeSessionHint:
+          "Serwer jest zapisany jako globalnie wyłączony i włączony tylko dla tej sesji.",
+        scopeEverywhereHint: "Serwer jest zapisany i włączony dla każdej sesji.",
         toolAccess: "Dostęp do narzędzi",
         enabledCount: "{count} wł.",
         loadingSkills: "Ładowanie umiejętności…",

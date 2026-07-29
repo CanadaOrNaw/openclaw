@@ -2307,6 +2307,11 @@ export const es: TranslationMap = {
     nameInvalid: "Los nombres de servidor usan letras, números, puntos, guiones o guiones bajos.",
     targetInvalid:
       "Introduce una URL para transportes HTTP o una línea de comandos válida para stdio.",
+    sessionEnableFailed:
+      "El servidor se guardó como deshabilitado globalmente, pero no se pudo habilitar para esta sesión: {error}",
+    sessionChanged: "La sesión activa cambió antes de que se pudiera habilitar.",
+    sessionUnavailable:
+      "La sesión activa no está disponible; actualiza la página e inténtalo de nuevo.",
     nameTaken: "Ya existe un servidor MCP llamado “{name}”.",
     missing: "No se encontró el servidor MCP “{name}” en la configuración.",
     missingTransport: "falta el transporte",
@@ -5147,6 +5152,14 @@ export const es: TranslationMap = {
         manageSkills: "Gestionar Skills",
         browseConnectors: "Explorar conectores",
         addMcpServer: "Añadir servidor MCP…",
+        addMcpServerTitle: "Añadir servidor MCP",
+        addMcpServerDescription: "Configura el servidor y elige dónde se habilita.",
+        scopeLabel: "Disponibilidad",
+        scopeSession: "Esta sesión",
+        scopeEverywhere: "En todas partes",
+        scopeSessionHint:
+          "El servidor se guarda como deshabilitado globalmente y se habilita solo para esta sesión.",
+        scopeEverywhereHint: "El servidor se guarda y se habilita para todas las sesiones.",
         toolAccess: "Acceso a herramientas",
         enabledCount: "{count} activadas",
         loadingSkills: "Cargando Skills…",

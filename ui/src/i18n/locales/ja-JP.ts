@@ -2293,6 +2293,11 @@ export const ja_JP: TranslationMap = {
     nameInvalid: "サーバー名には英字、数字、ドット、ダッシュ、またはアンダースコアを使用します。",
     targetInvalid:
       "HTTP トランスポートの場合は URL を、stdio の場合は有効なコマンドラインを入力してください。",
+    sessionEnableFailed:
+      "サーバーはグローバルでは無効として保存されましたが、このセッションでの有効化に失敗しました: {error}",
+    sessionChanged: "有効化する前に、アクティブなセッションが変更されました。",
+    sessionUnavailable:
+      "アクティブなセッションを利用できません。更新してからもう一度お試しください。",
     nameTaken: "「{name}」という名前の MCP サーバーは既に存在します。",
     missing: "MCP サーバー「{name}」が設定内に見つかりませんでした。",
     missingTransport: "トランスポートがありません",
@@ -5105,6 +5110,14 @@ export const ja_JP: TranslationMap = {
         manageSkills: "Skills を管理",
         browseConnectors: "コネクタを参照",
         addMcpServer: "MCP サーバーを追加…",
+        addMcpServerTitle: "MCPサーバーを追加",
+        addMcpServerDescription: "サーバーを設定し、有効にする範囲を選択します。",
+        scopeLabel: "利用範囲",
+        scopeSession: "このセッション",
+        scopeEverywhere: "すべてのセッション",
+        scopeSessionHint:
+          "サーバーはグローバルでは無効として保存され、このセッションでのみ有効になります。",
+        scopeEverywhereHint: "サーバーは保存され、すべてのセッションで有効になります。",
         toolAccess: "ツールアクセス",
         enabledCount: "{count} 個有効",
         loadingSkills: "Skills を読み込み中…",

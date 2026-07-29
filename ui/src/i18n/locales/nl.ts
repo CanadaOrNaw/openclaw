@@ -2294,6 +2294,11 @@ export const nl: TranslationMap = {
     targetLabel: "URL of opdracht",
     nameInvalid: "Servernamen gebruiken letters, cijfers, punten, streepjes of underscores.",
     targetInvalid: "Voer een URL in voor HTTP-transporten of een geldige opdrachtregel voor stdio.",
+    sessionEnableFailed:
+      "De server is globaal uitgeschakeld opgeslagen, maar het inschakelen voor deze sessie is mislukt: {error}",
+    sessionChanged: "De actieve sessie is gewijzigd voordat de server kon worden ingeschakeld.",
+    sessionUnavailable:
+      "De actieve sessie is niet beschikbaar; vernieuw de pagina en probeer het opnieuw.",
     nameTaken: "Er bestaat al een MCP-server met de naam “{name}”.",
     missing: "MCP-server “{name}” is niet gevonden in de configuratie.",
     missingTransport: "transport ontbreekt",
@@ -5119,6 +5124,14 @@ export const nl: TranslationMap = {
         manageSkills: "Skills beheren",
         browseConnectors: "Connectors doorbladeren",
         addMcpServer: "MCP-server toevoegen…",
+        addMcpServerTitle: "MCP-server toevoegen",
+        addMcpServerDescription: "Configureer de server en kies waar deze wordt ingeschakeld.",
+        scopeLabel: "Beschikbaarheid",
+        scopeSession: "Deze sessie",
+        scopeEverywhere: "Overal",
+        scopeSessionHint:
+          "De server is globaal uitgeschakeld opgeslagen en wordt alleen voor deze sessie ingeschakeld.",
+        scopeEverywhereHint: "De server wordt opgeslagen en voor elke sessie ingeschakeld.",
         toolAccess: "Toegang tot tools",
         enabledCount: "{count} aan",
         loadingSkills: "Skills laden…",

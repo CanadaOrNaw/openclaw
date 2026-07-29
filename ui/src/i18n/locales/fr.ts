@@ -2321,6 +2321,10 @@ export const fr: TranslationMap = {
       "Les noms de serveur utilisent des lettres, des chiffres, des points, des tirets ou des traits de soulignement.",
     targetInvalid:
       "Saisissez une URL pour les transports HTTP ou une ligne de commande valide pour stdio.",
+    sessionEnableFailed:
+      "Le serveur a été enregistré comme désactivé globalement, mais son activation pour cette session a échoué : {error}",
+    sessionChanged: "La session active a changé avant que le serveur puisse être activé.",
+    sessionUnavailable: "La session active n’est pas disponible ; actualisez la page et réessayez.",
     nameTaken: "Un serveur MCP nommé « {name} » existe déjà.",
     missing: "Le serveur MCP « {name} » est introuvable dans la configuration.",
     missingTransport: "transport manquant",
@@ -5188,6 +5192,14 @@ export const fr: TranslationMap = {
         manageSkills: "Gérer les Skills",
         browseConnectors: "Parcourir les connecteurs",
         addMcpServer: "Ajouter un serveur MCP…",
+        addMcpServerTitle: "Ajouter un serveur MCP",
+        addMcpServerDescription: "Configurez le serveur et choisissez où il est activé.",
+        scopeLabel: "Disponibilité",
+        scopeSession: "Cette session",
+        scopeEverywhere: "Partout",
+        scopeSessionHint:
+          "Le serveur est enregistré comme désactivé globalement et activé uniquement pour cette session.",
+        scopeEverywhereHint: "Le serveur est enregistré et activé pour toutes les sessions.",
         toolAccess: "Accès aux outils",
         enabledCount: "{count} activé(s)",
         loadingSkills: "Chargement des Skills…",
