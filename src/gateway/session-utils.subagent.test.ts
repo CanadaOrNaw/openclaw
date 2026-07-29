@@ -67,7 +67,7 @@ describe("listSessionsFromStore subagent metadata", () => {
     agents: { list: [{ id: "main", default: true }] },
   } as OpenClawConfig;
 
-  test("projects folded opaque child aliases into SQL lineage sets", async () => {
+  test("preserves opaque child case in SQL lineage sets", async () => {
     const now = Date.now();
     const parentKey = "agent:main:main";
     const childKey = "agent:main:matrix:group:!Room:Server";
@@ -84,16 +84,14 @@ describe("listSessionsFromStore subagent metadata", () => {
     });
 
     const query = resolveSessionListLineageSqlQuery(parentKey, now, "main");
-    expect(query.excludeLineageSessionKeys).toEqual(
-      expect.arrayContaining([childKey, childKey.toLowerCase()]),
-    );
-    expect(query.includeLineageSessionKeys).toEqual(
-      expect.arrayContaining([childKey, childKey.toLowerCase()]),
-    );
+    expect(query.excludeLineageSessionKeys).toContain(childKey);
+    expect(query.excludeLineageSessionKeys).not.toContain(childKey.toLowerCase());
+    expect(query.includeLineageSessionKeys).toContain(childKey);
+    expect(query.includeLineageSessionKeys).not.toContain(childKey.toLowerCase());
     expect(resolveSessionListLineageSqlQuery("agent:main:work", now, "work").lineageKeys).toEqual(
       expect.arrayContaining(["work", "main", "agent:main:main"]),
     );
-    for (let index = 0; index < 200; index += 1) {
+    for (let index = 0; index < 400; index += 1) {
       addSubagentRunForTests({
         runId: `run-large-lineage-${index}`,
         childSessionKey: `agent:main:matrix:group:!Room${index}:Server`,

@@ -11,10 +11,7 @@ import { buildSubagentRunReadIndex } from "../agents/subagent-registry-read.js";
 import { shouldKeepSubagentRunChildLink } from "../agents/subagent-run-liveness.js";
 import type { SessionEntry } from "../config/sessions.js";
 import type { SessionEntryListQuery } from "../config/sessions/session-accessor.types.js";
-import {
-  foldedSessionKeyAliasCandidates,
-  normalizeStoreSessionKey,
-} from "../config/sessions/store-entry.js";
+import { normalizeStoreSessionKey } from "../config/sessions/store-entry.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { withPinnedActivePluginRegistryWorkspaceDir } from "../plugins/runtime-workspace-state.js";
 import { normalizeAgentId, parseAgentSessionKey } from "../routing/session-key.js";
@@ -114,7 +111,7 @@ type SessionListLineageSqlQuery = {
 
 function sessionKeyAliasCandidates(sessionKey: string): string[] {
   const normalized = normalizeStoreSessionKey(sessionKey);
-  return [...new Set([sessionKey, normalized, ...foldedSessionKeyAliasCandidates(normalized)])];
+  return [...new Set([sessionKey, normalized])];
 }
 
 /** Converts the current runtime lineage snapshot into exact SQL include/exclude keys. */

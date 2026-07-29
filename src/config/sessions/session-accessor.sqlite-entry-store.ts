@@ -40,11 +40,7 @@ import {
   nonCanonicalSessionKeyRowError,
 } from "./session-canonical-key.js";
 import { deleteSessionTranscriptIndexInTransaction } from "./session-transcript-index.js";
-import {
-  foldedSessionKeyAliasCandidates,
-  normalizeStoreSessionKey,
-  resolveSessionEntryCandidates,
-} from "./store-entry.js";
+import { normalizeStoreSessionKey, resolveSessionEntryCandidates } from "./store-entry.js";
 import type { SessionEntry } from "./types.js";
 
 // Canonical owner for session_nodes row selection, alias snapshots, and writes.
@@ -207,14 +203,7 @@ export function collectSessionEntryLookupKeys(
   if (!trimmedKey) {
     return [];
   }
-  const normalizedKey = normalizeStoreSessionKey(trimmedKey);
-  // Folded opaque-id candidates retain the shipped case-preservation repair contract. Exact
-  // case-sensitive rows still win in resolveSessionEntryCandidates; arbitrary aliases use doctor.
-  return uniqueStrings([
-    trimmedKey,
-    normalizedKey,
-    ...foldedSessionKeyAliasCandidates(normalizedKey),
-  ]).filter(Boolean);
+  return [trimmedKey];
 }
 
 export function readExactSessionEntryRow(

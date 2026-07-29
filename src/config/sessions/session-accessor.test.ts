@@ -409,9 +409,8 @@ describe("session accessor seam", () => {
       8,
     );
     insert.run("agent:main:custom:sessions", "nested-session", "{}", 7);
-    insert.run("sessions", "placeholder", "{}", 7);
     insert.run(
-      "cron:job:run:one",
+      "agent:main:cron:job:run:one",
       "cron-run",
       JSON.stringify({ sessionId: "cron-run", updatedAt: 6 }),
       6,
@@ -448,7 +447,7 @@ describe("session accessor seam", () => {
         },
         storePath,
       }).entries.map(({ sessionKey }) => sessionKey),
-    ).toEqual(["cron:job:run:one"]);
+    ).toEqual(["agent:main:cron:job:run:one"]);
     expect(
       querySqliteSessionEntriesReadOnly({
         agentId: "main",
