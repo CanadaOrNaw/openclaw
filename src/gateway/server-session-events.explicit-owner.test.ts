@@ -179,6 +179,29 @@ describe("server session events without a compatibility owner", () => {
     );
   });
 
+  it("uses the selected owner to resolve a bare non-global session", () => {
+    loadGatewaySessionRowMock.mockReturnValue({
+      ...globalRow,
+      key: "incident-42",
+      kind: "other",
+    });
+    emitSessionsChanged(
+      {
+        broadcastToConnIds,
+        chatAbortControllers: new Map(),
+        getRuntimeConfig: () => ({
+          agents: { ownership: "explicit", entries: { main: {}, work: {} } },
+        }),
+        getSessionEventSubscriberConnIds: () => new Set(["conn-1"]),
+      } as never,
+      { sessionKey: "incident-42", agentId: "work", reason: "updated" },
+    );
+
+    expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ defaultAgentId: "work" }),
+    );
+  });
+
   it("does not project an ownerless unselected global run", () => {
     resolveVisibleActiveSessionRunStateMock.mockReturnValue({
       active: true,
