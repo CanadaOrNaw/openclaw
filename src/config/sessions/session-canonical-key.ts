@@ -1,8 +1,15 @@
+import type { DatabaseSync } from "node:sqlite";
+import { executeSqliteQuerySync, getNodeSqliteKysely } from "../../infra/kysely-sync.js";
 import { normalizeAgentId, parseAgentSessionKey } from "../../routing/session-key.js";
+import type { DB as OpenClawAgentKyselyDatabase } from "../../state/openclaw-agent-db.generated.js";
+import type { OpenClawAgentDatabase } from "../../state/openclaw-agent-db.js";
 import { normalizeStoreSessionKey } from "./store-entry.js";
 import type { SessionEntry } from "./types.js";
 
 const SESSION_CANONICAL_KEY_REPAIR_COMMAND = "openclaw doctor --fix";
+type CanonicalSessionDatabase = Pick<OpenClawAgentKyselyDatabase, "session_nodes">;
+export type CanonicalSessionKeyToken = { dataVersion: number; totalChanges: number };
+const validatedDatabases = new WeakMap<DatabaseSync, CanonicalSessionKeyToken>();
 
 class SessionCanonicalKeyMigrationRequiredError extends Error {
   readonly code = "SESSION_CANONICAL_KEY_MIGRATION_REQUIRED";
@@ -53,6 +60,61 @@ export function nonCanonicalSessionKeyRowError(
   canonicalKey: string,
 ): SessionCanonicalKeyMigrationRequiredError {
   return new SessionCanonicalKeyMigrationRequiredError(canonicalKey, "non-canonical-row");
+}
+
+function readCanonicalSessionKeyToken(database: DatabaseSync): CanonicalSessionKeyToken {
+  const dataVersion = database.prepare("PRAGMA data_version").get() as {
+    data_version?: unknown;
+  };
+  const totalChanges = database.prepare("SELECT total_changes() AS value").get() as {
+    value?: unknown;
+  };
+  if (typeof dataVersion.data_version !== "number" || typeof totalChanges.value !== "number") {
+    throw new Error("SQLite did not return canonical session-key validation counters");
+  }
+  return { dataVersion: dataVersion.data_version, totalChanges: totalChanges.value };
+}
+
+function canonicalSessionKeyTokensEqual(
+  left: CanonicalSessionKeyToken,
+  right: CanonicalSessionKeyToken,
+): boolean {
+  return left.dataVersion === right.dataVersion && left.totalChanges === right.totalChanges;
+}
+
+export function assertCanonicalSqliteSessionKeysCurrent(
+  database: Pick<OpenClawAgentDatabase, "agentId" | "db">,
+): CanonicalSessionKeyToken {
+  const token = readCanonicalSessionKeyToken(database.db);
+  const cached = validatedDatabases.get(database.db);
+  if (cached && canonicalSessionKeyTokensEqual(cached, token)) {
+    return token;
+  }
+  const db = getNodeSqliteKysely<CanonicalSessionDatabase>(database.db);
+  for (const row of executeSqliteQuerySync(
+    database.db,
+    db.selectFrom("session_nodes").select("session_key"),
+  ).rows) {
+    const trimmed = row.session_key.trim();
+    const parsed = parseAgentSessionKey(trimmed);
+    if (
+      row.session_key !== trimmed ||
+      normalizeStoreSessionKey(trimmed) !== trimmed ||
+      (!parsed && trimmed !== "global" && trimmed !== "unknown") ||
+      (parsed && parsed.agentId !== normalizeAgentId(database.agentId))
+    ) {
+      throw nonCanonicalSessionKeyRowError(trimmed || row.session_key);
+    }
+  }
+  validatedDatabases.set(database.db, token);
+  return token;
+}
+
+export function canonicalSqliteSessionKeyTokenIsCurrent(
+  database: Pick<OpenClawAgentDatabase, "db">,
+  token: CanonicalSessionKeyToken,
+): boolean {
+  return canonicalSessionKeyTokensEqual(token, readCanonicalSessionKeyToken(database.db));
 }
 
 export function mergeCanonicalSessionEntryCandidates<T>(

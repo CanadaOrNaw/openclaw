@@ -4,7 +4,7 @@ import { resolveStorePath } from "../config/sessions/paths.js";
 import {
   applySessionEntryLifecycleMutation,
   copySessionOwnedStateForCanonicalRepair,
-  listSessionEntriesReadOnly,
+  listSessionEntriesForCanonicalRepair,
   listSessionGenerationIdsForCanonicalRepair,
   loadTranscriptEvents,
 } from "../config/sessions/session-accessor.js";
@@ -49,7 +49,7 @@ function collectCanonicalSessionCandidates(params: {
       continue;
     }
     seenDatabases.add(sqlitePath);
-    for (const { entry, sessionKey } of listSessionEntriesReadOnly({
+    for (const { entry, sessionKey } of listSessionEntriesForCanonicalRepair({
       agentId: target.agentId,
       clone: false,
       storePath: target.storePath,

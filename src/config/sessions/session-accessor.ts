@@ -125,6 +125,7 @@ export {
   listSessionChildEntriesReadOnly,
   listSessionEntries,
   listSessionEntriesReadOnly,
+  listSessionEntriesForCanonicalRepair,
   listSessionEntryKeysReadOnly,
   loadExactSessionEntry,
   loadExactSessionEntryReadOnly,

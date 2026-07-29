@@ -35,7 +35,9 @@ import {
 import { parseSqliteSessionEntryJson as parseSessionEntryRow } from "./session-accessor.sqlite-status.js";
 import { readTranscriptMutationStateInTransaction } from "./session-accessor.sqlite-transcript-state.js";
 import {
+  assertCanonicalSqliteSessionKeysCurrent,
   assertCanonicalSessionKeyWrite,
+  canonicalSqliteSessionKeyTokenIsCurrent,
   duplicateCanonicalSessionKeyError,
   nonCanonicalSessionKeyRowError,
 } from "./session-canonical-key.js";
@@ -45,11 +47,7 @@ import type { SessionEntry } from "./types.js";
 
 // Canonical owner for session_nodes row selection, alias snapshots, and writes.
 
-type OpenClawAgentDatabaseReader = Pick<OpenClawAgentDatabase, "db">;
-const SQLITE_SESSION_KEY_TRIM_CODE_POINTS = [
-  9, 10, 11, 12, 13, 32, 160, 5760, 8192, 8193, 8194, 8195, 8196, 8197, 8198, 8199, 8200, 8201,
-  8202, 8232, 8233, 8239, 8287, 12288, 65279,
-] as const;
+type OpenClawAgentDatabaseReader = Pick<OpenClawAgentDatabase, "agentId" | "db">;
 type SessionEntryRow = Selectable<OpenClawAgentKyselyDatabase["session_nodes"]>;
 export type ResolvedSessionEntryRow = {
   entry: SessionEntry;
@@ -96,7 +94,20 @@ export function readSessionEntryRow(
   database: OpenClawAgentDatabaseReader,
   sessionKey: string,
 ): ResolvedSessionEntryRow | undefined {
-  assertNoPaddedSqliteSessionKeyRow(database, sessionKey);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const token = assertCanonicalSqliteSessionKeysCurrent(database);
+    const result = readSessionEntryRowUnchecked(database, sessionKey);
+    if (canonicalSqliteSessionKeyTokenIsCurrent(database, token)) {
+      return result;
+    }
+  }
+  throw new Error("SQLite session state changed repeatedly during exact-key selection");
+}
+
+function readSessionEntryRowUnchecked(
+  database: OpenClawAgentDatabaseReader,
+  sessionKey: string,
+): ResolvedSessionEntryRow | undefined {
   const db = getSessionKysely(database.db);
   const lookupKeys = collectSessionEntryLookupKeys(database, sessionKey);
   if (lookupKeys.length === 0) {
@@ -130,33 +141,6 @@ export function readSessionEntryRow(
   }
   const selected = entries.get(resolved.existing.sessionKey);
   return selected ? { ...selected, legacyKeys: resolved.legacyKeys } : undefined;
-}
-
-function assertNoPaddedSqliteSessionKeyRow(
-  database: OpenClawAgentDatabaseReader,
-  sessionKey: string,
-): void {
-  const db = getSessionKysely(database.db);
-  const row = executeSqliteQueryTakeFirstSync(
-    database.db,
-    db
-      .selectFrom("session_nodes")
-      .select("session_key")
-      .where((eb) => {
-        const trimmedKey = eb.fn<string>("trim", [
-          "session_key",
-          eb.fn<string>(
-            "char",
-            SQLITE_SESSION_KEY_TRIM_CODE_POINTS.map((codePoint) => eb.lit(codePoint)),
-          ),
-        ]);
-        return eb.and([eb(trimmedKey, "=", sessionKey), eb("session_key", "!=", trimmedKey)]);
-      })
-      .limit(1),
-  );
-  if (row?.session_key.trim() === sessionKey) {
-    throw nonCanonicalSessionKeyRowError(sessionKey);
-  }
 }
 
 // Async updaters prepare against this complete selection. Capturing alias rows
@@ -220,6 +204,20 @@ export function readExactSessionEntryRow(
   }
   const entry = parseSessionEntryRow(row);
   return entry ? { entry, legacyKeys: [], row } : undefined;
+}
+
+export function readExactSessionEntryRowValidated(
+  database: OpenClawAgentDatabaseReader,
+  sessionKey: string,
+): ResolvedSessionEntryRow | undefined {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const token = assertCanonicalSqliteSessionKeysCurrent(database);
+    const result = readExactSessionEntryRow(database, sessionKey);
+    if (canonicalSqliteSessionKeyTokenIsCurrent(database, token)) {
+      return result;
+    }
+  }
+  throw new Error("SQLite session state changed repeatedly during exact-row selection");
 }
 
 export function readSqliteSessionEntryStore(
@@ -937,7 +935,7 @@ export function writeSessionEntry(
   assertCanonicalSessionKeyWrite(sessionKey, database.agentId);
   const db = getSessionKysely(database.db);
   if (!options.allowStoredAliases) {
-    assertNoPaddedSqliteSessionKeyRow(database, sessionKey);
+    assertCanonicalSqliteSessionKeysCurrent(database);
   }
   const normalizedEntry = normalizeSqliteSessionEntryTimestamp(entry);
   const updatedAt = normalizedEntry.updatedAt;

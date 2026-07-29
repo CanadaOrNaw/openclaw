@@ -1,5 +1,8 @@
 import type { MsgContext } from "../../auto-reply/templating.js";
-import { executeSqliteQueryTakeFirstSync } from "../../infra/kysely-sync.js";
+import {
+  executeSqliteQuerySync,
+  executeSqliteQueryTakeFirstSync,
+} from "../../infra/kysely-sync.js";
 import type { ChannelRouteRef } from "../../plugin-sdk/channel-route.js";
 import { withOpenClawAgentDatabaseReadOnly } from "../../state/openclaw-agent-db-readonly.js";
 import {
@@ -33,7 +36,7 @@ import {
   collectSessionEntryLookupKeys,
   createSqliteSessionIdentitySnapshot,
   deleteLegacySessionEntryRows,
-  readExactSessionEntryRow,
+  readExactSessionEntryRowValidated,
   readSessionEntryRow,
   readSqliteLifecycleTargetSnapshot,
   readSqliteSessionEntrySelectionSnapshot,
@@ -68,6 +71,7 @@ import {
 } from "./session-accessor.sqlite-scope.js";
 import { setSessionProjectedTitle } from "./session-accessor.sqlite-session-row.js";
 import {
+  parseSqliteSessionEntryJson,
   querySqliteSessionEntries as querySqliteSessionEntriesFromDatabase,
   readSqliteSessionEntriesByStatus,
   type SqliteSessionEntryListQueryResult,
@@ -175,9 +179,7 @@ export function loadExactSqliteSessionEntry(
   }
   const resolved = resolveSqliteScope(scope);
   const database = openOpenClawAgentDatabase(toDatabaseOptions(resolved));
-  const entry = readSessionEntrySnapshot(database, resolved, scope.readConsistency).entries.get(
-    sessionKey,
-  );
+  const entry = readExactSessionEntryRowValidated(database, sessionKey)?.entry;
   return entry
     ? { sessionKey, entry: scope.clone === false ? entry : cloneSessionEntry(entry) }
     : undefined;
@@ -204,7 +206,7 @@ export function loadExactSqliteSessionEntryReadOnly(
   }
   const resolved = resolveSqliteScope(scope);
   const result = withOpenClawAgentDatabaseReadOnly(
-    (database) => readExactSessionEntryRow(database, sessionKey)?.entry,
+    (database) => readExactSessionEntryRowValidated(database, sessionKey)?.entry,
     toDatabaseOptions(resolved),
   );
   return result.found && result.value
@@ -318,6 +320,26 @@ export function listSqliteSessionEntriesReadOnly(
     (database) => listSqliteSessionEntriesFromDatabase(database, resolved, scope),
     toDatabaseOptions(resolved),
   );
+  return result.found ? result.value : [];
+}
+
+/** Doctor inventory hydrates legacy blobs from promoted identity/timestamp columns. */
+export function listSqliteSessionEntriesForCanonicalRepair(
+  scope: SessionEntryListScope = {},
+): SessionEntrySummary[] {
+  const resolved = resolveSqliteScope({ ...scope, sessionKey: "" });
+  const result = withOpenClawAgentDatabaseReadOnly((database) => {
+    const db = getSessionKysely(database.db);
+    return executeSqliteQuerySync(
+      database.db,
+      db
+        .selectFrom("session_nodes")
+        .select(["session_key", "current_session_id", "entry_json", "updated_at"]),
+    ).rows.flatMap((row) => {
+      const entry = parseSqliteSessionEntryJson(row, true);
+      return entry ? [{ sessionKey: row.session_key, entry }] : [];
+    });
+  }, toDatabaseOptions(resolved));
   return result.found ? result.value : [];
 }
 

@@ -3,6 +3,7 @@ export {
   copySqliteSessionOwnedStateForCanonicalRepair,
   listSqliteSessionGenerationIdsForCanonicalRepair,
   listSqliteSessionEntries,
+  listSqliteSessionEntriesForCanonicalRepair,
   listSqliteSessionChildEntriesReadOnly,
   listSqliteSessionEntriesReadOnly,
   listSqliteSessionEntryKeysReadOnly,
