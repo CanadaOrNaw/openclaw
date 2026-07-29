@@ -307,43 +307,6 @@ export async function saveCronJobsStoreWithMetadata(
   );
 }
 
-/** Transforms the latest canonical cron rows inside one write transaction. */
-export async function transformCronJobsStore(
-  storePath: string,
-  transform: (loaded: LoadedCronStore) => CronStoreFile | null,
-  options?: {
-    bumpStoreEpoch?: boolean;
-    env?: NodeJS.ProcessEnv;
-    expectedStoreEpoch?: number;
-  },
-): Promise<boolean> {
-  const resolvedStorePath = path.resolve(storePath);
-  const storeKey = cronStoreKey(resolvedStorePath);
-  return runOpenClawStateWriteTransaction(
-    ({ db }) => {
-      const { rows, storeEpoch, runtimeRevision } = loadCronRowsWithEpoch(db, storeKey);
-      const loaded =
-        rows.length > 0
-          ? loadedCronStoreFromRows(rows, storeEpoch, runtimeRevision)
-          : emptyLoadedCronStore(storeEpoch, runtimeRevision);
-      if (options?.expectedStoreEpoch !== undefined && options.expectedStoreEpoch !== storeEpoch) {
-        return false;
-      }
-      const next = transform(loaded);
-      if (!next) {
-        return false;
-      }
-      assertCronStoreCanPersist(next);
-      replaceCronRows(db, storeKey, next, {
-        expectedStoreEpoch: storeEpoch,
-        bumpStoreEpoch: options?.bumpStoreEpoch ?? true,
-      });
-      return true;
-    },
-    { env: options?.env },
-  );
-}
-
 /** Transforms the latest canonical cron rows while atomically acquiring migration metadata. */
 export async function transformCronJobsStoreWithMetadata(
   storePath: string,
