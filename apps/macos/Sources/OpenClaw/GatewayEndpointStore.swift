@@ -471,15 +471,17 @@ actor GatewayEndpointStore {
               generation == self.resolutionGeneration,
               self.activeSource == source
         else { return false }
+        if let routingGeneration = source.routingGeneration {
+            // Live snapshots are anchored to the MainActor routing generation.
+            // Re-reading config here would multiply disk work inside every request.
+            let routingGenerationIsCurrent = await deps.routingGenerationIsCurrent(routingGeneration)
+            return routingGenerationIsCurrent &&
+                !Task.isCancelled &&
+                generation == self.resolutionGeneration &&
+                self.activeSource == source
+        }
         let current = await deps.sourceSnapshot()
-        guard !Task.isCancelled,
-              generation == self.resolutionGeneration,
-              self.activeSource == source,
-              current == source
-        else { return false }
-        guard let routingGeneration = source.routingGeneration else { return true }
-        let routingGenerationIsCurrent = await deps.routingGenerationIsCurrent(routingGeneration)
-        return routingGenerationIsCurrent &&
+        return current == source &&
             !Task.isCancelled &&
             generation == self.resolutionGeneration &&
             self.activeSource == source

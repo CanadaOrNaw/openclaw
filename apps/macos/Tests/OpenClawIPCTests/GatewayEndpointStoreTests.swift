@@ -6,6 +6,7 @@ import Testing
 
 private actor GatewayEndpointSourceGate {
     private var current: GatewayEndpointStore.SourceSnapshot
+    private var readCount = 0
     private var suspendNext = false
     private var returnCapturedSource = false
     private var suspendedReadStarted = false
@@ -17,6 +18,7 @@ private actor GatewayEndpointSourceGate {
     }
 
     func snapshot() async -> GatewayEndpointStore.SourceSnapshot {
+        self.readCount += 1
         guard self.suspendNext else { return self.current }
         self.suspendNext = false
         let capturedSource = self.returnCapturedSource ? self.current : nil
@@ -30,6 +32,10 @@ private actor GatewayEndpointSourceGate {
             self.releaseWaiter = continuation
         }
         return capturedSource ?? self.current
+    }
+
+    func reads() -> Int {
+        self.readCount
     }
 
     func suspendNextRead(returningCapturedSource: Bool = false) {
@@ -611,6 +617,29 @@ extension GatewayEndpointStoreTests {
             #expect(firstEndpoint.config.url == secondEndpoint.config.url)
             #expect(firstEndpoint.config.token == "same-token")
             #expect(firstEndpoint.revision == secondEndpoint.revision)
+        }
+    }
+
+    @Test func `routing generation avoids redundant source reads within each request`() async throws {
+        try await TestIsolation.withUserDefaultsValues([connectionModeKey: "unconfigured"]) {
+            let source = self.source(mode: .local, token: "same-token", routingGeneration: 7)
+            let sourceGate = GatewayEndpointSourceGate(source)
+            let store = GatewayEndpointStore(deps: .init(
+                token: { nil },
+                password: { nil },
+                localPort: { 18789 },
+                remoteRouteIfRunning: { nil },
+                remoteRouteIsCurrent: { _ in true },
+                canStartRemoteTunnel: { true },
+                ensureRemoteTunnel: { throw CancellationError() },
+                routingGenerationIsCurrent: { $0 == 7 },
+                sourceSnapshot: { await sourceGate.snapshot() }))
+
+            _ = try await store.requireEndpoint()
+            #expect(await sourceGate.reads() == 1)
+
+            _ = try await store.requireEndpoint()
+            #expect(await sourceGate.reads() == 2)
         }
     }
 
