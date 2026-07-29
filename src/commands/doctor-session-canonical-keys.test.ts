@@ -194,6 +194,48 @@ describe("doctor canonical session-key repair", () => {
     });
   });
 
+  it("keeps sentinel rows scoped to their owning agent stores", async () => {
+    await withStateDirEnv("openclaw-doctor-canonical-sentinels-", async ({ stateDir }) => {
+      const env = { ...process.env, OPENCLAW_STATE_DIR: stateDir };
+      const storeTemplate = path.join(stateDir, "agents", "{agentId}", "sessions.json");
+      const mainStore = resolveStorePath(storeTemplate, { agentId: "main", env });
+      const opsStore = resolveStorePath(storeTemplate, { agentId: "ops", env });
+      const cfg = {
+        agents: { list: [{ id: "main", default: true }, { id: "ops" }] },
+        session: { store: storeTemplate },
+      } as OpenClawConfig;
+      replaceSessionEntrySync(
+        { agentId: "main", env, sessionKey: "global", storePath: mainStore },
+        { sessionId: "main-global", updatedAt: 10 },
+      );
+      replaceSessionEntrySync(
+        { agentId: "ops", env, sessionKey: "global", storePath: opsStore },
+        { sessionId: "ops-global", updatedAt: 20 },
+      );
+
+      expect(await repairCanonicalSessionKeys({ apply: true, cfg, env })).toMatchObject({
+        foundGroups: 0,
+        repairedGroups: 0,
+      });
+      expect(
+        loadExactSessionEntryReadOnly({
+          agentId: "main",
+          env,
+          sessionKey: "global",
+          storePath: mainStore,
+        })?.entry.sessionId,
+      ).toBe("main-global");
+      expect(
+        loadExactSessionEntryReadOnly({
+          agentId: "ops",
+          env,
+          sessionKey: "global",
+          storePath: opsStore,
+        })?.entry.sessionId,
+      ).toBe("ops-global");
+    });
+  });
+
   it("normalizes persisted lineage keys before runtime SQL filtering", async () => {
     await withStateDirEnv("openclaw-doctor-canonical-lineage-", async ({ stateDir }) => {
       const env = { ...process.env, OPENCLAW_STATE_DIR: stateDir };

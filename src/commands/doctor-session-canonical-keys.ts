@@ -20,6 +20,7 @@ import {
   resolveSessionStoreAgentId,
   resolveStoredSessionKeyForAgentStore,
 } from "../gateway/session-store-key.js";
+import { normalizeAgentId } from "../routing/session-key.js";
 import { openOpenClawAgentDatabase } from "../state/openclaw-agent-db.js";
 import { resolveTargetSqlitePath } from "./doctor-session-sqlite-readers.js";
 
@@ -142,8 +143,14 @@ function resolveCanonicalDestination(params: {
   canonicalKey: string;
   cfg: OpenClawConfig;
   env: NodeJS.ProcessEnv;
+  sourceAgentId?: string;
 }) {
-  const agentId = resolveSessionStoreAgentId(params.cfg, params.canonicalKey);
+  const agentId =
+    params.canonicalKey === "global" || params.canonicalKey === "unknown"
+      ? normalizeAgentId(
+          params.sourceAgentId ?? resolveSessionStoreAgentId(params.cfg, params.canonicalKey),
+        )
+      : resolveSessionStoreAgentId(params.cfg, params.canonicalKey);
   const storePath = resolveStorePath(params.cfg.session?.store, { agentId, env: params.env });
   return {
     agentId,
@@ -164,6 +171,7 @@ function selectCanonicalSessionCandidate(
     canonicalKey: first.canonicalKey,
     cfg: params.cfg,
     env: params.env,
+    sourceAgentId: first.agentId,
   });
   const selected = mergeCanonicalSessionEntryCandidates(
     candidates.map((candidate) => ({
@@ -183,9 +191,14 @@ function groupRepairCandidates(
 ) {
   const byCanonicalKey = new Map<string, CanonicalSessionCandidate[]>();
   for (const candidate of candidates) {
-    const group = byCanonicalKey.get(candidate.canonicalKey) ?? [];
+    const sentinelOwner =
+      candidate.canonicalKey === "global" || candidate.canonicalKey === "unknown"
+        ? candidate.agentId
+        : "";
+    const groupKey = `${candidate.canonicalKey}\0${sentinelOwner}`;
+    const group = byCanonicalKey.get(groupKey) ?? [];
     group.push(candidate);
-    byCanonicalKey.set(candidate.canonicalKey, group);
+    byCanonicalKey.set(groupKey, group);
   }
   return [...byCanonicalKey.values()].filter((group) => {
     const first = group[0];
@@ -196,6 +209,7 @@ function groupRepairCandidates(
       canonicalKey: first.canonicalKey,
       cfg: params.cfg,
       env: params.env,
+      sourceAgentId: first.agentId,
     });
     return (
       group.length > 1 ||
