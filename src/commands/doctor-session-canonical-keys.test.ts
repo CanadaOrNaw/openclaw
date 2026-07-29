@@ -348,7 +348,7 @@ describe("doctor canonical session-key repair", () => {
 
       const report = await repairCanonicalSessionKeys({ apply: true, cfg, env });
       expect(report).toMatchObject({ foundGroups: 1, removedRows: 2, repairedGroups: 1 });
-      expect(report.archivedTranscriptDirectories).toHaveLength(1);
+      expect(report.archivedTranscriptDirectories).toHaveLength(2);
       const repairedEntry = loadExactSessionEntryReadOnly({
         agentId: "main",
         env,
@@ -447,17 +447,18 @@ describe("doctor canonical session-key repair", () => {
           storePath: opsStore,
         }),
       ).toBeUndefined();
-      const archiveDirectory = report.archivedTranscriptDirectories[0];
-      if (!archiveDirectory) {
-        throw new Error("expected cross-store transcript archive directory");
-      }
-      const archiveName = fs
-        .readdirSync(archiveDirectory)
-        .find((name) => name.startsWith("winner.jsonl"));
-      expect(archiveName).toBeTruthy();
-      expect(
-        readSessionArchiveContentSync(path.join(archiveDirectory, archiveName ?? "")),
-      ).toContain("cross-store history");
+      const archiveContents = report.archivedTranscriptDirectories.flatMap((archiveDirectory) =>
+        fs
+          .readdirSync(archiveDirectory)
+          .filter((name) => name.startsWith("winner.jsonl"))
+          .map((name) => readSessionArchiveContentSync(path.join(archiveDirectory, name))),
+      );
+      expect(archiveContents).toEqual(
+        expect.arrayContaining([
+          expect.stringContaining("cross-store history"),
+          expect.stringContaining("stale destination history"),
+        ]),
+      );
 
       insertLegacySession({
         agentId: "ops",

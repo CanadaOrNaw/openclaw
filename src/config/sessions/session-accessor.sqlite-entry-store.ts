@@ -715,6 +715,7 @@ export function copySqliteSessionOwnedStateForRepair(params: {
     deleteSessionTranscriptIndexInTransaction(params.destination.db, sessionId);
   }
   if (params.preferSource) {
+    // Node artifacts follow the selected winner; merging loser memberships can restore access.
     deleteSessionNodeArtifacts(params.destination, params.canonicalKey);
     copySessionNodeArtifactsForRepair(
       params.source,

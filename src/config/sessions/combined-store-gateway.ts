@@ -26,7 +26,10 @@ import type {
   SessionEntryListScope,
   SessionEntrySummary,
 } from "./session-accessor.types.js";
-import { duplicateCanonicalSessionKeyError } from "./session-canonical-key.js";
+import {
+  duplicateCanonicalSessionKeyError,
+  nonCanonicalSessionKeyRowError,
+} from "./session-canonical-key.js";
 import { foldedSessionKeyAliasCandidates, normalizeStoreSessionKey } from "./store-entry.js";
 import {
   dedupeSessionStoreTargetsBySqliteTarget,
@@ -206,6 +209,9 @@ function mergeGatewayStore(params: {
     ) {
       exact = false;
       continue;
+    }
+    if (key !== canonicalKey) {
+      throw nonCanonicalSessionKeyRowError(canonicalKey);
     }
     if (params.combined[canonicalKey]) {
       exact = false;

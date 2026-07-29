@@ -1,12 +1,16 @@
 import fs from "node:fs";
+import path from "node:path";
 import { resolveStorePath } from "../config/sessions/paths.js";
 import {
   applySessionEntryLifecycleMutation,
   copySessionOwnedStateForCanonicalRepair,
   listSessionEntriesReadOnly,
+  loadTranscriptEvents,
 } from "../config/sessions/session-accessor.js";
+import { writeSqliteTranscriptArchive } from "../config/sessions/session-accessor.sqlite-archive.js";
 import { mergeCanonicalSessionEntryCandidates } from "../config/sessions/session-canonical-key.js";
 import { resolveAllAgentSessionStoreTargetsSync } from "../config/sessions/targets.js";
+import { serializeJsonlLines } from "../config/sessions/transcript-jsonl.js";
 import type { SessionEntry } from "../config/sessions/types.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import {
@@ -150,6 +154,49 @@ async function repairCanonicalSessionGroup(
   }
 
   const destinationStore = byDatabase.get(destination.sqlitePath) ?? [];
+  const preArchivedDirectories: string[] = [];
+  const destinationCollision = winner.entry.sessionId
+    ? destinationStore.find((candidate) => candidate.entry.sessionId === winner.entry.sessionId)
+    : undefined;
+  if (
+    winner.sqlitePath !== destination.sqlitePath &&
+    winner.entry.sessionId &&
+    destinationCollision
+  ) {
+    const destinationCandidate = destinationCollision;
+    const [destinationEvents, sourceEvents] = await Promise.all([
+      loadTranscriptEvents({
+        agentId: destinationCandidate.agentId,
+        sessionId: winner.entry.sessionId,
+        sessionKey: destinationCandidate.sessionKey,
+        storePath: destinationCandidate.storePath,
+      }),
+      loadTranscriptEvents({
+        agentId: winner.agentId,
+        sessionId: winner.entry.sessionId,
+        sessionKey: winner.sessionKey,
+        storePath: winner.storePath,
+      }),
+    ]);
+    const destinationContent = serializeJsonlLines(
+      destinationEvents.map((event) => JSON.stringify(event)),
+    );
+    const sourceContent = serializeJsonlLines(sourceEvents.map((event) => JSON.stringify(event)));
+    if (destinationContent && destinationContent !== sourceContent) {
+      const sqliteDirectory = path.dirname(destination.sqlitePath);
+      const archiveDirectory =
+        path.basename(sqliteDirectory) === "agent"
+          ? path.join(path.dirname(sqliteDirectory), "sessions")
+          : sqliteDirectory;
+      writeSqliteTranscriptArchive({
+        archiveDirectory,
+        content: destinationContent,
+        reason: "deleted",
+        sessionId: winner.entry.sessionId,
+      });
+      preArchivedDirectories.push(archiveDirectory);
+    }
+  }
   const relatedSessionIds = new Set(
     [selected.entry.sessionId, selected.entry.previousSessionId].filter(
       (value): value is string => typeof value === "string" && value.length > 0,
@@ -190,7 +237,10 @@ async function repairCanonicalSessionGroup(
     storePath: destination.storePath,
     upserts: [{ entry: selected.entry, sessionKey: winner.canonicalKey }],
   });
-  const archivedDirectories = new Set(winnerResult.archivedTranscriptDirectories);
+  const archivedDirectories = new Set([
+    ...preArchivedDirectories,
+    ...winnerResult.archivedTranscriptDirectories,
+  ]);
 
   for (const [sqlitePath, storeCandidates] of byDatabase) {
     if (sqlitePath === destination.sqlitePath) {
