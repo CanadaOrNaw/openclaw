@@ -40,7 +40,7 @@ import type { SessionEntry } from "./types.js";
 
 // Doctor-only cross-store transfer. Runtime readers never reconcile aliases.
 
-export function resolveSqliteCanonicalRepairLookupKeys(
+function resolveSqliteCanonicalRepairLookupKeys(
   canonicalKey: string,
   storedKeys: readonly string[],
 ): string[] {
@@ -126,7 +126,7 @@ export function listSqliteSessionEntriesForCanonicalRepair(
   return result.found ? result.value : [];
 }
 
-export function copySqliteSessionOwnedStateForRepair(params: {
+function copySqliteSessionOwnedStateForRepair(params: {
   canonicalKey: string;
   destination: OpenClawAgentDatabase;
   preferSource: boolean;
