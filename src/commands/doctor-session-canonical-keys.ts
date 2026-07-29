@@ -155,21 +155,16 @@ async function repairCanonicalSessionGroup(
 
   const destinationStore = byDatabase.get(destination.sqlitePath) ?? [];
   const preArchivedDirectories: string[] = [];
-  const destinationCollision = winner.entry.sessionId
-    ? destinationStore.find((candidate) => candidate.entry.sessionId === winner.entry.sessionId)
-    : undefined;
-  if (
-    winner.sqlitePath !== destination.sqlitePath &&
-    winner.entry.sessionId &&
-    destinationCollision
-  ) {
-    const destinationCandidate = destinationCollision;
+  if (winner.sqlitePath !== destination.sqlitePath && winner.entry.sessionId) {
+    const destinationCollision = destinationStore.find(
+      (candidate) => candidate.entry.sessionId === winner.entry.sessionId,
+    );
     const [destinationEvents, sourceEvents] = await Promise.all([
       loadTranscriptEvents({
-        agentId: destinationCandidate.agentId,
+        agentId: destinationCollision?.agentId ?? destination.agentId,
         sessionId: winner.entry.sessionId,
-        sessionKey: destinationCandidate.sessionKey,
-        storePath: destinationCandidate.storePath,
+        sessionKey: destinationCollision?.sessionKey ?? winner.canonicalKey,
+        storePath: destinationCollision?.storePath ?? destination.storePath,
       }),
       loadTranscriptEvents({
         agentId: winner.agentId,

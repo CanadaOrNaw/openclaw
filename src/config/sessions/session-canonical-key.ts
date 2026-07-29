@@ -23,11 +23,14 @@ class SessionCanonicalKeyMigrationRequiredError extends Error {
 
 function isCanonicalSessionKey(sessionKey: string): boolean {
   const trimmed = sessionKey.trim();
+  if (!trimmed || sessionKey !== trimmed) {
+    return false;
+  }
   return trimmed === "global" || trimmed === "unknown" || parseAgentSessionKey(trimmed) !== null;
 }
 
 export function assertCanonicalSessionKeyWrite(sessionKey: string): void {
-  if (sessionKey && !isCanonicalSessionKey(sessionKey)) {
+  if (!isCanonicalSessionKey(sessionKey)) {
     throw new SessionCanonicalKeyMigrationRequiredError(sessionKey, "non-canonical-write");
   }
 }
