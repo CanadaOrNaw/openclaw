@@ -113,6 +113,24 @@ describe("resolveSessionKeyFromResolveParams", () => {
     });
   });
 
+  it("resolves an explicitly included global key within an agent scope", async () => {
+    targetStore = {
+      global: { sessionId: "global-session", updatedAt: 1 },
+    };
+    hoisted.resolveGatewaySessionStoreTargetWithStoreMock.mockReturnValue({
+      canonicalKey: "global",
+      storeKeys: ["global"],
+      storePath,
+      store: targetStore,
+    });
+    await expect(
+      resolveSessionKeyFromResolveParams({
+        cfg: {},
+        p: { agentId: "ops", includeGlobal: true, key: "global" },
+      }),
+    ).resolves.toEqual({ ok: true, key: "global" });
+  });
+
   it("does not page-limit exact key spawnedBy visibility checks", async () => {
     const now = Date.now();
     const store: Record<string, SessionEntry> = {

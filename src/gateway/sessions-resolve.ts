@@ -76,6 +76,7 @@ function isResolvedSessionKeyVisible(params: {
   }
   const parsed = parseAgentSessionKey(params.key);
   if (
+    !specialKey &&
     params.p.agentId &&
     (!parsed || normalizeAgentId(parsed.agentId) !== normalizeAgentId(params.p.agentId))
   ) {
