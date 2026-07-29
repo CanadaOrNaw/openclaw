@@ -12,7 +12,12 @@ vi.mock("../channels/plugins/persisted-auth-state.js", () => ({
 import { resolveAgentRoute } from "../routing/resolve-route.js";
 import { configIncludeOwnsAgentRoster } from "./agent-roster-provenance.js";
 import { readConfigFileSnapshot, resetConfigRuntimeState } from "./config.js";
-import { tryGetLegacyDefaultAgentId } from "./legacy.default-agent-owner.js";
+import {
+  inheritLegacyDefaultAgentId,
+  listLegacyOwnershipWarnings,
+  retainLegacyDefaultAgentId,
+  tryGetLegacyDefaultAgentId,
+} from "./legacy.default-agent-owner.js";
 import { migratePersistedImplicitMainRoster } from "./legacy.js";
 import type { OpenClawConfig } from "./types.openclaw.js";
 import {
@@ -448,6 +453,28 @@ describe("persisted implicit-main roster migration", () => {
       expect(validateConfigObjectRaw(raw).ok).toBe(false);
     },
   );
+
+  it("clears retained ownership metadata when a reused config becomes explicit", () => {
+    const raw = {
+      agents: { ownership: "explicit" as const, entries: { ops: {}, research: {} } },
+    };
+    retainLegacyDefaultAgentId(raw, "ops", {
+      warnings: [{ path: "agents.entries", message: "legacy owner retained" }],
+    });
+
+    const migrated = migratePersistedImplicitMainRoster(raw);
+
+    expect(migrated.config).toBe(raw);
+    expect(tryGetLegacyDefaultAgentId(raw)).toBeUndefined();
+    expect(listLegacyOwnershipWarnings(raw)).toEqual([]);
+
+    const target = retainLegacyDefaultAgentId({ agents: { entries: { ops: {} } } }, "ops", {
+      warnings: [{ path: "agents.entries", message: "stale target metadata" }],
+    });
+    inheritLegacyDefaultAgentId(raw, target);
+    expect(tryGetLegacyDefaultAgentId(target)).toBeUndefined();
+    expect(listLegacyOwnershipWarnings(target)).toEqual([]);
+  });
 
   it.each([
     {

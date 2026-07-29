@@ -19,9 +19,13 @@ export function retainLegacyDefaultAgentId(
 ): OpenClawConfig {
   if (agentId) {
     legacyDefaultAgentIdByConfig.set(config, normalizeAgentId(agentId));
+  } else {
+    legacyDefaultAgentIdByConfig.delete(config);
   }
-  if (options.warnings && options.warnings.length > 0) {
+  if (agentId && options.warnings && options.warnings.length > 0) {
     legacyOwnershipWarningsByConfig.set(config, [...options.warnings]);
+  } else {
+    legacyOwnershipWarningsByConfig.delete(config);
   }
   return config;
 }

@@ -1,4 +1,7 @@
+import { tryResolveDefaultAgentId } from "../../agents/agent-scope.js";
 import { isEmbeddedAgentRunInProgress } from "../../agents/embedded-agent-runner/runs.js";
+import { tryGetLegacyDefaultAgentId } from "../../config/legacy.default-agent-owner.js";
+import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import {
   hasProjectedAgentRunForSession,
   type ProjectedAgentRunIndex,
@@ -13,6 +16,16 @@ type TrackedActiveSessionRun = {
   sessionId?: string;
   agentId?: string;
 };
+
+/** Resolves the compatibility owner used to disambiguate an unscoped global run. */
+export function resolveActiveSessionRunDefaultAgentId(
+  cfg: OpenClawConfig,
+  requestedAgentId?: string,
+): string | undefined {
+  return requestedAgentId
+    ? normalizeAgentId(requestedAgentId)
+    : (tryGetLegacyDefaultAgentId(cfg) ?? tryResolveDefaultAgentId(cfg));
+}
 
 export function collectTrackedActiveSessionRuns(
   context: Partial<Pick<GatewayRequestContext, "chatAbortControllers">>,

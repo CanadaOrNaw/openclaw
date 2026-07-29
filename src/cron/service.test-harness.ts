@@ -257,6 +257,9 @@ export function createMockCronStateForJobs(params: {
     storeEpoch: 0,
     runtimeRevision: 0,
     durableNextRunAtMsByJobId: new Map<string, number | undefined>(),
+    durableRuntimeStateByJobId: new Map(
+      params.jobs.map((job) => [job.id, structuredClone(job.state ?? {})]),
+    ),
     legacyImportedJobIds: new Set<string>(),
     running: false,
     stopped: false,

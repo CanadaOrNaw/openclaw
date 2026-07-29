@@ -27,6 +27,7 @@ describe("Gateway cron config adoption", () => {
       enabled: true,
       nextConfig: { agents: { ownership: "explicit", entries: { ops: {}, research: {} } } },
       failureLabel: "test reload failed",
+      isCurrent: () => true,
     });
 
     expect(fixture.owner()).toBe("candidate");
@@ -43,6 +44,7 @@ describe("Gateway cron config adoption", () => {
       enabled: true,
       nextConfig: { agents: { entries: { ops: {} } } },
       failureLabel: "test reload failed",
+      isCurrent: () => true,
     });
 
     adoption?.complete();
@@ -81,12 +83,14 @@ describe("Gateway cron config adoption", () => {
       enabled: true,
       nextConfig: { agents: { entries: { ops: {} } } },
       failureLabel: "candidate A failed",
+      isCurrent: () => true,
     });
     const candidateB = beginGatewayCronConfigAdoption({
       cron,
       enabled: true,
       nextConfig: { agents: { entries: { research: {} } } },
       failureLabel: "candidate B failed",
+      isCurrent: () => true,
     });
     await vi.waitFor(() => {
       expect(reloadForConfigAdoption).toHaveBeenCalledTimes(1);
@@ -100,5 +104,86 @@ describe("Gateway cron config adoption", () => {
 
     expect(reloadForConfigAdoption).toHaveBeenCalledTimes(2);
     expect(owner).toBe("committed-b");
+  });
+
+  it("skips a candidate superseded while waiting for the scheduler tail", async () => {
+    let releaseFirstReload!: () => void;
+    const firstReload = new Promise<void>((resolve) => {
+      releaseFirstReload = resolve;
+    });
+    let candidateBCurrent = true;
+    const reloadForConfigAdoption = vi
+      .fn()
+      .mockImplementationOnce(async () => await firstReload)
+      .mockImplementationOnce(async () => {});
+    const cron = {
+      reloadForConfigAdoption,
+      completeConfigAdoption: vi.fn(),
+      rejectConfigAdoption: vi.fn(async () => {}),
+    } as unknown as GatewayCronServiceContract;
+    const candidateA = beginGatewayCronConfigAdoption({
+      cron,
+      enabled: true,
+      nextConfig: { agents: { entries: { ops: {} } } },
+      failureLabel: "candidate A failed",
+      isCurrent: () => true,
+    });
+    const candidateB = beginGatewayCronConfigAdoption({
+      cron,
+      enabled: true,
+      nextConfig: { agents: { entries: { research: {} } } },
+      failureLabel: "candidate B failed",
+      isCurrent: () => candidateBCurrent,
+    });
+    await vi.waitFor(() => {
+      expect(reloadForConfigAdoption).toHaveBeenCalledTimes(1);
+    });
+
+    candidateBCurrent = false;
+    releaseFirstReload();
+    const adoptionA = await candidateA;
+    await adoptionA?.reject(new Error("superseded by B"));
+
+    await expect(candidateB).resolves.toBeNull();
+    expect(reloadForConfigAdoption).toHaveBeenCalledTimes(1);
+  });
+
+  it("rolls back and releases the tail when completion throws", async () => {
+    let owner = "current";
+    const reloadForConfigAdoption = vi.fn(async () => {
+      owner = "candidate";
+    });
+    const rejectConfigAdoption = vi.fn(async () => {
+      owner = "current";
+    });
+    const cron = {
+      reloadForConfigAdoption,
+      completeConfigAdoption: vi.fn(() => {
+        throw new Error("completion failed");
+      }),
+      rejectConfigAdoption,
+    } as unknown as GatewayCronServiceContract;
+    const adoption = await beginGatewayCronConfigAdoption({
+      cron,
+      enabled: true,
+      nextConfig: { agents: { entries: { ops: {} } } },
+      failureLabel: "candidate failed",
+      isCurrent: () => true,
+    });
+
+    expect(() => adoption?.complete()).toThrow("completion failed");
+    await adoption?.reject(new Error("commit rejected"));
+    expect(owner).toBe("current");
+    expect(rejectConfigAdoption).toHaveBeenCalledOnce();
+
+    const nextAdoption = await beginGatewayCronConfigAdoption({
+      cron,
+      enabled: true,
+      nextConfig: { agents: { entries: { research: {} } } },
+      failureLabel: "next candidate failed",
+      isCurrent: () => true,
+    });
+    expect(reloadForConfigAdoption).toHaveBeenCalledTimes(2);
+    await nextAdoption?.reject(new Error("test cleanup"));
   });
 });

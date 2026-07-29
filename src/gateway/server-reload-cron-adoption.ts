@@ -31,6 +31,7 @@ export async function beginGatewayCronConfigAdoption(params: {
   enabled: boolean;
   nextConfig: OpenClawConfig;
   failureLabel: string;
+  isCurrent: () => boolean;
 }): Promise<GatewayCronConfigAdoption | null> {
   if (!params.enabled) {
     return null;
@@ -38,6 +39,10 @@ export async function beginGatewayCronConfigAdoption(params: {
   // Config candidates may overlap while superseding each other. Serialize the scheduler
   // adoption through commit/reject so an obsolete candidate cannot roll back a newer one.
   const releaseAdoption = await acquireCronConfigAdoption(params.cron);
+  if (!params.isCurrent()) {
+    releaseAdoption();
+    return null;
+  }
   let pending = true;
   const reject = async (error: unknown): Promise<unknown> => {
     if (!pending) {
@@ -66,12 +71,14 @@ export async function beginGatewayCronConfigAdoption(params: {
       if (!pending) {
         return;
       }
-      try {
-        params.cron.completeConfigAdoption(params.nextConfig);
-      } finally {
-        pending = false;
-        releaseAdoption();
+      if (!params.isCurrent()) {
+        throw new Error("gateway config candidate superseded before cron adoption commit");
       }
+      // A throwing completion still owns rollback and the serialization tail; the caller's
+      // catch path must invoke reject() before a newer candidate can adopt the scheduler.
+      params.cron.completeConfigAdoption(params.nextConfig);
+      pending = false;
+      releaseAdoption();
     },
     reject,
   };

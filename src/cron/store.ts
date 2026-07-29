@@ -40,7 +40,7 @@ export type {
   LoadedCronStore,
   QuarantinedCronConfigJob,
 } from "./store/types.js";
-import type { CronStoreFile } from "./types.js";
+import type { CronJob, CronStoreFile } from "./types.js";
 
 export { CronRuntimeRevisionMismatchError, CronStoreEpochMismatchError };
 
@@ -194,6 +194,8 @@ type SaveCronStoreOptions = {
   expectedStoreEpoch?: number;
   /** Detect runtime writes committed since this snapshot was loaded. */
   expectedRuntimeRevision?: number;
+  /** Per-job runtime baseline for distinguishing stale siblings from intentional writes. */
+  expectedRuntimeStateByJobId?: ReadonlyMap<string, CronJob["state"]>;
   /** Advance the epoch when an ownership migration changes topology meaning. */
   bumpStoreEpoch?: boolean;
 };
@@ -266,6 +268,7 @@ export async function saveCronJobsStore(
       const storeEpoch = replaceCronRows(db, storeKey, store, {
         expectedStoreEpoch: opts?.expectedStoreEpoch,
         expectedRuntimeRevision: opts?.expectedRuntimeRevision,
+        expectedRuntimeStateByJobId: opts?.expectedRuntimeStateByJobId,
         bumpStoreEpoch: opts?.bumpStoreEpoch ?? true,
       });
       const runtimeRevision = readCronRuntimeRevision(db, storeKey);

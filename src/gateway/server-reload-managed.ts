@@ -182,6 +182,7 @@ export function startManagedGatewayConfigReloader(
         enabled: reloadPlanChangesAgentResolution(plan),
         nextConfig,
         failureLabel: "gateway restart preparation failed",
+        isCurrent,
       });
       assertCurrent();
     } catch (error) {
@@ -300,6 +301,7 @@ export function startManagedGatewayConfigReloader(
           expectedGeneration: nextSharedGatewaySessionGeneration,
         });
       }
+      assertCurrent();
       restartTransaction.settle("committed");
       transactionOwnership.commitRuntimeEnv();
       restartLifecycle.settle("committed");

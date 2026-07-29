@@ -12,6 +12,7 @@ import {
 import { makeCronJob } from "../delivery.test-helpers.js";
 import type { CronJob } from "../types.js";
 import {
+  CronRuntimeRevisionMismatchError,
   loadedCronStoreFromRows,
   loadCronRows,
   materializeCronRowAgentOwners,
@@ -126,6 +127,7 @@ describe("cron store epoch", () => {
       replaceCronRows(database, storeKey, staleStore, { bumpStoreEpoch: true });
       const epoch = readCronStoreEpoch(database, storeKey);
       const runtimeRevision = readCronRuntimeRevision(database, storeKey);
+      const runtimeBaseline = new Map([[job.id, structuredClone(job.state)]]);
       updateCronRuntimeRows(database, storeKey, {
         version: 1,
         jobs: [
@@ -135,6 +137,19 @@ describe("cron store epoch", () => {
           },
         ],
       });
+
+      expect(() =>
+        replaceCronRows(
+          database,
+          storeKey,
+          { version: 1, jobs: [{ ...staleStore.jobs[0]!, name: "ambiguous rename" }] },
+          {
+            expectedStoreEpoch: epoch,
+            expectedRuntimeRevision: runtimeRevision,
+            bumpStoreEpoch: true,
+          },
+        ),
+      ).toThrow(CronRuntimeRevisionMismatchError);
 
       expect(
         replaceCronRows(
@@ -153,6 +168,7 @@ describe("cron store epoch", () => {
           {
             expectedStoreEpoch: epoch,
             expectedRuntimeRevision: runtimeRevision,
+            expectedRuntimeStateByJobId: runtimeBaseline,
             bumpStoreEpoch: true,
           },
         ),
@@ -167,6 +183,7 @@ describe("cron store epoch", () => {
       });
 
       const renamedRevision = readCronRuntimeRevision(database, storeKey);
+      const renamedRuntimeBaseline = new Map([[renamed!.id, structuredClone(renamed!.state)]]);
       updateCronRuntimeRows(database, storeKey, {
         version: 1,
         jobs: [{ ...renamed!, state: { nextRunAtMs: runtimeNextRunAtMs + 60_000 } }],
@@ -187,6 +204,7 @@ describe("cron store epoch", () => {
         {
           expectedStoreEpoch: epoch + 1,
           expectedRuntimeRevision: renamedRevision,
+          expectedRuntimeStateByJobId: renamedRuntimeBaseline,
           bumpStoreEpoch: true,
         },
       );

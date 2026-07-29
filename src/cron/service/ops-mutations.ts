@@ -526,6 +526,7 @@ export async function removeAgentJobsTransactional<T>(
       }
       state.store = snapshot.store;
       state.durableNextRunAtMsByJobId = snapshot.durableNextRunAtMsByJobId;
+      state.durableRuntimeStateByJobId = snapshot.durableRuntimeStateByJobId;
       try {
         if (!(await persist(state))) {
           throw new Error("cron: rollback store write did not complete", { cause: error });
