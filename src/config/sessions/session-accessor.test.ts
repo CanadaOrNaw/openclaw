@@ -472,6 +472,12 @@ describe("session accessor seam", () => {
       ["agent:main:sessions", "real-sessions-key"],
       ["agent:main:custom:sessions", "nested-session"],
     ]);
+    expect(loadSessionEntry({ sessionKey: "agent:main:legacy", storePath })?.sessionId).toBe(
+      "legacy-session",
+    );
+    expect(
+      loadSessionEntry({ sessionKey: "agent:main:custom:sessions", storePath })?.sessionId,
+    ).toBe("nested-session");
     expect(
       querySqliteSessionEntriesReadOnly({
         agentId: "main",

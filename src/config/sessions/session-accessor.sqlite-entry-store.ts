@@ -45,6 +45,7 @@ import type { SessionEntry } from "./types.js";
 // Canonical owner for session_nodes row selection, alias snapshots, and writes.
 
 type OpenClawAgentDatabaseReader = Pick<OpenClawAgentDatabase, "agentId" | "db">;
+type SessionEntryReadOptions = { hydratePromotedColumns?: boolean };
 type SessionEntryRow = Selectable<OpenClawAgentKyselyDatabase["session_nodes"]>;
 export type ResolvedSessionEntryRow = {
   entry: SessionEntry;
@@ -90,10 +91,11 @@ export function createSqliteSessionIdentitySnapshot(
 export function readSessionEntryRow(
   database: OpenClawAgentDatabaseReader,
   sessionKey: string,
+  options: SessionEntryReadOptions = {},
 ): ResolvedSessionEntryRow | undefined {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const token = assertCanonicalSqliteSessionKeysCurrent(database);
-    const result = readSessionEntryRowUnchecked(database, sessionKey);
+    const result = readSessionEntryRowUnchecked(database, sessionKey, options);
     if (canonicalSqliteSessionKeyTokenIsCurrent(database, token)) {
       return result;
     }
@@ -104,6 +106,7 @@ export function readSessionEntryRow(
 function readSessionEntryRowUnchecked(
   database: OpenClawAgentDatabaseReader,
   sessionKey: string,
+  options: SessionEntryReadOptions,
 ): ResolvedSessionEntryRow | undefined {
   const db = getSessionKysely(database.db);
   const lookupKeys = collectSessionEntryLookupKeys(database, sessionKey);
@@ -120,7 +123,7 @@ function readSessionEntryRowUnchecked(
   ).rows;
   const entries = new Map<string, ResolvedSessionEntryRow>();
   for (const row of rows) {
-    const entry = parseSessionEntryRow(row);
+    const entry = parseSessionEntryRow(row, options.hydratePromotedColumns === true);
     if (!entry) {
       continue;
     }
@@ -190,6 +193,7 @@ export function collectSessionEntryLookupKeys(
 export function readExactSessionEntryRow(
   database: OpenClawAgentDatabaseReader,
   sessionKey: string,
+  options: SessionEntryReadOptions = {},
 ): ResolvedSessionEntryRow | undefined {
   const db = getSessionKysely(database.db);
   const row = executeSqliteQueryTakeFirstSync(
@@ -199,7 +203,7 @@ export function readExactSessionEntryRow(
   if (!row) {
     return undefined;
   }
-  const entry = parseSessionEntryRow(row);
+  const entry = parseSessionEntryRow(row, options.hydratePromotedColumns === true);
   return entry ? { entry, legacyKeys: [], row } : undefined;
 }
 
@@ -217,10 +221,11 @@ export function readExactSessionEntryJson(
 export function readExactSessionEntryRowValidated(
   database: OpenClawAgentDatabaseReader,
   sessionKey: string,
+  options: SessionEntryReadOptions = {},
 ): ResolvedSessionEntryRow | undefined {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const token = assertCanonicalSqliteSessionKeysCurrent(database);
-    const result = readExactSessionEntryRow(database, sessionKey);
+    const result = readExactSessionEntryRow(database, sessionKey, options);
     if (canonicalSqliteSessionKeyTokenIsCurrent(database, token)) {
       return result;
     }

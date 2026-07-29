@@ -115,6 +115,32 @@ describe("doctor canonical session-key repair", () => {
         foundGroups: 0,
         repairedGroups: 0,
       });
+      const database = openOpenClawAgentDatabase({
+        agentId: "main",
+        env,
+        path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "main", env }).path,
+      });
+      database.db
+        .prepare("UPDATE session_nodes SET entry_json = ? WHERE session_key = ?")
+        .run(JSON.stringify({ subject: "legacy", updatedAt: 10 }), "agent:main:main");
+      expect(await repairCanonicalSessionKeys({ apply: true, cfg, env })).toMatchObject({
+        foundGroups: 1,
+        removedRows: 0,
+        repairedGroups: 1,
+      });
+      expect(
+        JSON.parse(
+          (
+            database.db
+              .prepare("SELECT entry_json FROM session_nodes WHERE session_key = ?")
+              .get("agent:main:main") as { entry_json: string }
+          ).entry_json,
+        ),
+      ).toMatchObject({ sessionId: "fresh", subject: "legacy", updatedAt: 10 });
+      expect(await repairCanonicalSessionKeys({ apply: true, cfg, env })).toMatchObject({
+        foundGroups: 0,
+        repairedGroups: 0,
+      });
     });
   });
 

@@ -158,6 +158,12 @@ export async function resolveSessionKeyFromResolveParams(params: {
       ) {
         return noSessionFoundResult({ p, message: `No session found: ${key}` });
       }
+      const legacyKey = target.storeKeys.find(
+        (candidate) => candidate !== target.canonicalKey && store[candidate],
+      );
+      if (legacyKey) {
+        throw nonCanonicalSessionKeyRowError(target.canonicalKey);
+      }
       return (
         validateSessionAgentExists(cfg, target.canonicalKey, store[target.canonicalKey], {
           acpMetadataSessionKey: target.canonicalKey,

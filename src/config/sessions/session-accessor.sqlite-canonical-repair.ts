@@ -108,7 +108,7 @@ export function listSqliteSessionEntriesForCanonicalRepair(
         .selectFrom("session_nodes")
         .select(["session_key", "current_session_id", "entry_json", "updated_at"]),
     ).rows.flatMap((row) => {
-      const persistedEntry = parseSqliteSessionEntryJson(row);
+      const persistedEntry = parseSqliteSessionEntryJson(row, false);
       const entry = parseSqliteSessionEntryJson(row, true);
       const rawCompareRequired =
         !persistedEntry || JSON.stringify(persistedEntry) !== JSON.stringify(entry);

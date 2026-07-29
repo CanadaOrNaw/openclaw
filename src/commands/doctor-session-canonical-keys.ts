@@ -172,6 +172,7 @@ function groupRepairCandidates(
       group.length > 1 ||
       group.some(
         (candidate) =>
+          candidate.rawEntryJson !== undefined ||
           candidate.sessionKey !== candidate.canonicalKey ||
           candidate.sqlitePath !== destination.sqlitePath,
       )

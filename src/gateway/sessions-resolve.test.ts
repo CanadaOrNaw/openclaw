@@ -74,6 +74,7 @@ describe("resolveSessionKeyFromResolveParams", () => {
   it("hides canonical keys that fail the spawnedBy visibility filter", async () => {
     targetStore = {
       [canonicalKey]: { sessionId: "sess-1", updatedAt: 1 },
+      [legacyKey]: { sessionId: "sess-legacy", updatedAt: 0 },
     };
     hoisted.listSessionsFromStoreMock.mockReturnValue({ sessions: [] });
 
@@ -186,6 +187,17 @@ describe("resolveSessionKeyFromResolveParams", () => {
         cfg: {},
         p: { key: canonicalKey, spawnedBy: "controller-1" },
       }),
+    ).rejects.toThrow("openclaw doctor --fix");
+  });
+
+  it("rejects a legacy alias even when the canonical row exists", async () => {
+    targetStore = {
+      [canonicalKey]: { sessionId: "sess-canonical", updatedAt: 2 },
+      [legacyKey]: { sessionId: "sess-legacy", updatedAt: 1 },
+    };
+
+    await expect(
+      resolveSessionKeyFromResolveParams({ cfg: {}, p: { key: canonicalKey } }),
     ).rejects.toThrow("openclaw doctor --fix");
   });
 
