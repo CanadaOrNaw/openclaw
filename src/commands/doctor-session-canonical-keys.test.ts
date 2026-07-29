@@ -579,6 +579,16 @@ describe("doctor canonical session-key repair", () => {
           "INSERT INTO session_members (session_key, identity_id, added_by, added_at) VALUES ('agent:main:main' || char(9), 'stale-member', 'owner-2', 5)",
         )
         .run();
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO trajectory_runtime_events (session_id, seq, run_id, event_json, created_at) VALUES ('destination-only', 0, 'late-run', ?, 5)",
+        )
+        .run(JSON.stringify({ source: "late-stale" }));
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO acp_parent_stream_events (session_id, run_id, seq, event_json, created_at) VALUES ('destination-only', 'late-run', 0, ?, 5)",
+        )
+        .run(JSON.stringify({ source: "late-stale" }));
       expect(await repairCanonicalSessionKeys({ apply: true, cfg, env })).toMatchObject({
         foundGroups: 1,
         removedRows: 1,
@@ -602,6 +612,20 @@ describe("doctor canonical session-key repair", () => {
           .prepare("SELECT identity_id FROM session_members ORDER BY identity_id")
           .all(),
       ).toEqual([{ identity_id: "member-1" }]);
+      expect(
+        mainDatabase.db
+          .prepare(
+            "SELECT event_json FROM trajectory_runtime_events WHERE session_id = 'destination-only'",
+          )
+          .get(),
+      ).toEqual({ event_json: JSON.stringify({ source: "late-stale" }) });
+      expect(
+        mainDatabase.db
+          .prepare(
+            "SELECT event_json FROM acp_parent_stream_events WHERE session_id = 'destination-only'",
+          )
+          .get(),
+      ).toEqual({ event_json: JSON.stringify({ source: "late-stale" }) });
     });
   });
 });

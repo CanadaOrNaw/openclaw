@@ -212,22 +212,23 @@ export function copySqliteSessionOwnedStateForRepair(params: {
   }
   for (const sessionId of sessionIds) {
     const sourceIsAuthoritative = authoritativeSourceSessionIds.has(sessionId);
-    if (
+    const copyTranscripts = !(
       existingDestinationSessionIds.has(sessionId) &&
       (!params.preferSource || !sourceIsAuthoritative) &&
       hasSqliteSessionGenerationContent(params.destination, sessionId)
-    ) {
-      continue;
-    }
+    );
     copySqliteSessionGenerationRows({
+      copyTranscripts,
       destination: params.destination,
       preferSource: params.preferSource,
       sessionId,
       source: params.source,
       sourceIsAuthoritative,
     });
-    // Search and active-event tables are derived from transcript_events; force their canonical rebuild.
-    deleteSessionTranscriptIndexInTransaction(params.destination.db, sessionId);
+    if (copyTranscripts) {
+      // Search and active-event tables are derived from transcript_events; force their canonical rebuild.
+      deleteSessionTranscriptIndexInTransaction(params.destination.db, sessionId);
+    }
   }
   if (params.preferSource) {
     // Node artifacts follow the selected winner; merging loser memberships can restore access.
@@ -390,6 +391,7 @@ function mergeAcpParentStreamEvents(
 }
 
 function copySqliteSessionGenerationRows(params: {
+  copyTranscripts: boolean;
   destination: OpenClawAgentDatabase;
   preferSource: boolean;
   sessionId: string;
@@ -432,7 +434,12 @@ function copySqliteSessionGenerationRows(params: {
   ).rows;
   // Cross-store rows have no deletion tombstone. Empty winner tables cannot authorize
   // destructive loss, so doctor replaces only tables backed by winner rows.
-  if (params.preferSource && params.sourceIsAuthoritative && transcriptEvents.length > 0) {
+  if (
+    params.copyTranscripts &&
+    params.preferSource &&
+    params.sourceIsAuthoritative &&
+    transcriptEvents.length > 0
+  ) {
     executeSqliteQuerySync(
       params.destination.db,
       destinationDb
@@ -445,6 +452,7 @@ function copySqliteSessionGenerationRows(params: {
     );
   }
   if (
+    params.copyTranscripts &&
     params.preferSource &&
     params.sourceIsAuthoritative &&
     (transcriptEvents.length > 0 || rewriteWatermarks.length > 0)
@@ -456,32 +464,34 @@ function copySqliteSessionGenerationRows(params: {
         .where("session_id", "=", params.sessionId),
     );
   }
-  for (const row of transcriptEvents) {
-    executeSqliteQuerySync(
-      params.destination.db,
-      destinationDb
-        .insertInto("transcript_events")
-        .values(row)
-        .onConflict((conflict) => conflict.doNothing()),
-    );
-  }
-  for (const row of transcriptIdentities) {
-    executeSqliteQuerySync(
-      params.destination.db,
-      destinationDb
-        .insertInto("transcript_event_identities")
-        .values(row)
-        .onConflict((conflict) => conflict.doNothing()),
-    );
-  }
-  for (const row of rewriteWatermarks) {
-    executeSqliteQuerySync(
-      params.destination.db,
-      destinationDb
-        .insertInto("transcript_rewrite_watermarks")
-        .values(row)
-        .onConflict((conflict) => conflict.doNothing()),
-    );
+  if (params.copyTranscripts) {
+    for (const row of transcriptEvents) {
+      executeSqliteQuerySync(
+        params.destination.db,
+        destinationDb
+          .insertInto("transcript_events")
+          .values(row)
+          .onConflict((conflict) => conflict.doNothing()),
+      );
+    }
+    for (const row of transcriptIdentities) {
+      executeSqliteQuerySync(
+        params.destination.db,
+        destinationDb
+          .insertInto("transcript_event_identities")
+          .values(row)
+          .onConflict((conflict) => conflict.doNothing()),
+      );
+    }
+    for (const row of rewriteWatermarks) {
+      executeSqliteQuerySync(
+        params.destination.db,
+        destinationDb
+          .insertInto("transcript_rewrite_watermarks")
+          .values(row)
+          .onConflict((conflict) => conflict.doNothing()),
+      );
+    }
   }
   mergeTrajectoryRuntimeEvents(params.destination, trajectoryEvents, params.sessionId);
   mergeAcpParentStreamEvents(params.destination, parentStreamEvents, params.sessionId);
