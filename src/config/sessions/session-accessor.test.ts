@@ -305,8 +305,8 @@ describe("session accessor seam", () => {
 
   it("matches owner agent segments exactly", () => {
     const database = openOpenClawAgentDatabase({
-      agentId: "main",
-      path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "main" }).path,
+      agentId: "ops_team",
+      path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "ops_team" }).path,
     });
     const insert = database.db.prepare(
       "INSERT INTO session_nodes (session_key, current_session_id, entry_json, updated_at, created_actor_id, created_actor_type) VALUES (?, ?, ?, ?, ?, ?)",
@@ -323,17 +323,8 @@ describe("session accessor seam", () => {
       "agent:ops_team:owner",
       "agent",
     );
-    insert.run(
-      "agent:opsXteam:other",
-      "other-session",
-      JSON.stringify({ sessionId: "other-session", updatedAt: 30 }),
-      30,
-      null,
-      null,
-    );
-
     const result = querySqliteSessionEntriesReadOnly({
-      agentId: "main",
+      agentId: "ops_team",
       query: {
         archived: false,
         includeGlobal: false,
@@ -344,6 +335,26 @@ describe("session accessor seam", () => {
     });
     expect(result.entries.map(({ sessionKey }) => sessionKey)).toEqual(["agent:ops_team:own"]);
     expect(result.creatorActors).toEqual([{ type: "agent", id: "agent:ops_team:owner" }]);
+    insert.run(
+      "main",
+      "late-legacy-session",
+      JSON.stringify({ sessionId: "late-legacy-session", updatedAt: 30 }),
+      30,
+      null,
+      null,
+    );
+    expect(() =>
+      querySqliteSessionEntriesReadOnly({
+        agentId: "ops_team",
+        query: {
+          archived: false,
+          includeGlobal: false,
+          includeUnknown: false,
+          ownerAgentId: "ops_team",
+        },
+        storePath,
+      }),
+    ).toThrow("openclaw doctor --fix");
   });
 
   it("does not let invalid JSON consume a bounded list page", () => {
@@ -1707,7 +1718,7 @@ describe("session accessor seam", () => {
   });
 
   it("rejects unscoped alias writes even with an explicit agent owner", async () => {
-    for (const sessionKey of ["main", "", "agent:ops:main "]) {
+    for (const sessionKey of ["main", "", "agent:ops:main ", "agent:OPS:upper"]) {
       await expect(
         upsertSessionEntry(
           { agentId: "ops", sessionKey, storePath },

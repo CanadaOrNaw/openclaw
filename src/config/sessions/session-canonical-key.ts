@@ -1,4 +1,5 @@
 import { normalizeAgentId, parseAgentSessionKey } from "../../routing/session-key.js";
+import { normalizeStoreSessionKey } from "./store-entry.js";
 import type { SessionEntry } from "./types.js";
 
 const SESSION_CANONICAL_KEY_REPAIR_COMMAND = "openclaw doctor --fix";
@@ -26,6 +27,9 @@ function isCanonicalSessionKey(sessionKey: string): boolean {
   if (!trimmed || sessionKey !== trimmed) {
     return false;
   }
+  if (normalizeStoreSessionKey(sessionKey) !== sessionKey) {
+    return false;
+  }
   return trimmed === "global" || trimmed === "unknown" || parseAgentSessionKey(trimmed) !== null;
 }
 
@@ -33,9 +37,7 @@ export function assertCanonicalSessionKeyWrite(sessionKey: string, databaseAgent
   const parsed = parseAgentSessionKey(sessionKey);
   if (
     !isCanonicalSessionKey(sessionKey) ||
-    (databaseAgentId &&
-      parsed &&
-      normalizeAgentId(parsed.agentId) !== normalizeAgentId(databaseAgentId))
+    (databaseAgentId && parsed && parsed.agentId !== normalizeAgentId(databaseAgentId))
   ) {
     throw new SessionCanonicalKeyMigrationRequiredError(sessionKey, "non-canonical-write");
   }

@@ -1449,7 +1449,7 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
     });
   });
 
-  test("reruns a bounded per-agent query when a misplaced row consumes the page", async () => {
+  test("fails loud when a misplaced row would be hidden by owner pushdown", async () => {
     await withStateDirEnv("openclaw-session-list-misplaced-page-", async ({ stateDir }) => {
       const storeTemplate = path.join(stateDir, "agents", "{agentId}", "sessions.json");
       const opsStore = path.join(stateDir, "agents", "ops", "sessions.json");
@@ -1480,19 +1480,19 @@ describe("loadCombinedSessionStoreForGateway includes disk-only agents (#32804)"
         { sessionId: "valid", updatedAt: 20 },
       );
 
-      const loaded = loadCombinedSessionStoreForGateway(cfg, {
-        agentId: "ops",
-        projection: "list",
-        query: {
-          archived: false,
-          includeGlobal: false,
-          includeUnknown: false,
-          limit: 1,
-          sortBy: "updatedAt",
-        },
-      });
-      expect(Object.keys(loaded.store)).toEqual(["agent:ops:valid"]);
-      expect(loaded.selectionExact).toBe(true);
+      expect(() =>
+        loadCombinedSessionStoreForGateway(cfg, {
+          agentId: "ops",
+          projection: "list",
+          query: {
+            archived: false,
+            includeGlobal: false,
+            includeUnknown: false,
+            limit: 1,
+            sortBy: "updatedAt",
+          },
+        }),
+      ).toThrow("openclaw doctor --fix");
     });
   });
 

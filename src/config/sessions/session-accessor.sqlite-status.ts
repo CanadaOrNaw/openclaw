@@ -1,9 +1,11 @@
+import type { DatabaseSync } from "node:sqlite";
 import type { Expression, ExpressionBuilder, SqlBool } from "kysely";
 import {
   executeSqliteQuerySync,
   executeSqliteQueryTakeFirstSync,
   getNodeSqliteKysely,
 } from "../../infra/kysely-sync.js";
+import { normalizeAgentId, parseAgentSessionKey } from "../../routing/session-key.js";
 import type { DB as OpenClawAgentKyselyDatabase } from "../../state/openclaw-agent-db.generated.js";
 import type { OpenClawAgentDatabase } from "../../state/openclaw-agent-db.js";
 import type {
@@ -11,12 +13,65 @@ import type {
   SessionEntrySummary,
 } from "./session-accessor.sqlite-contract.js";
 import type { SessionEntryListQuery } from "./session-accessor.types.js";
+import { nonCanonicalSessionKeyRowError } from "./session-canonical-key.js";
 import { projectCanonicalSessionEntryShape } from "./store-entry-shape.js";
+import { normalizeStoreSessionKey } from "./store-entry.js";
 import type { SessionEntry } from "./types.js";
 
 type SessionStatusDatabase = Pick<OpenClawAgentKyselyDatabase, "session_nodes">;
 type SessionListExpressionBuilder = ExpressionBuilder<SessionStatusDatabase, "session_nodes">;
-type SessionDatabaseReader = Pick<OpenClawAgentDatabase, "db">;
+type SessionDatabaseReader = Pick<OpenClawAgentDatabase, "agentId" | "db">;
+type SessionKeyValidationToken = { dataVersion: number; totalChanges: number };
+const validatedSessionKeyDatabases = new WeakMap<DatabaseSync, SessionKeyValidationToken>();
+
+function readSessionKeyValidationToken(database: DatabaseSync): SessionKeyValidationToken {
+  const dataVersion = database.prepare("PRAGMA data_version").get() as {
+    data_version?: unknown;
+  };
+  const totalChanges = database.prepare("SELECT total_changes() AS value").get() as {
+    value?: unknown;
+  };
+  if (typeof dataVersion.data_version !== "number" || typeof totalChanges.value !== "number") {
+    throw new Error("SQLite did not return session-key validation counters");
+  }
+  return { dataVersion: dataVersion.data_version, totalChanges: totalChanges.value };
+}
+
+function validationTokensEqual(
+  left: SessionKeyValidationToken,
+  right: SessionKeyValidationToken,
+): boolean {
+  return left.dataVersion === right.dataVersion && left.totalChanges === right.totalChanges;
+}
+
+function assertCanonicalSessionKeysCurrent(
+  database: SessionDatabaseReader,
+): SessionKeyValidationToken {
+  const token = readSessionKeyValidationToken(database.db);
+  const cached = validatedSessionKeyDatabases.get(database.db);
+  if (cached && validationTokensEqual(cached, token)) {
+    return token;
+  }
+  const db = getNodeSqliteKysely<SessionStatusDatabase>(database.db);
+  for (const row of executeSqliteQuerySync(
+    database.db,
+    db.selectFrom("session_nodes").select("session_key"),
+  ).rows) {
+    const trimmed = row.session_key.trim();
+    const parsed = parseAgentSessionKey(trimmed);
+    if (
+      row.session_key !== trimmed ||
+      normalizeStoreSessionKey(trimmed) !== trimmed ||
+      (!parsed && trimmed !== "global" && trimmed !== "unknown") ||
+      (parsed && parsed.agentId !== normalizeAgentId(database.agentId))
+    ) {
+      throw nonCanonicalSessionKeyRowError(trimmed || row.session_key);
+    }
+  }
+  // Runtime writers enforce the same invariant; the validity token covers other writers.
+  validatedSessionKeyDatabases.set(database.db, token);
+  return token;
+}
 
 export type SqliteSessionEntryListQueryResult = {
   creatorActors: NonNullable<SessionEntry["createdActor"]>[];
@@ -208,7 +263,18 @@ export function querySqliteSessionEntries(
     projection?: "full" | "list";
     setProjectedTitle: (entry: SessionEntry, title: string | null) => void;
   },
+  attempt = 0,
 ): SqliteSessionEntryListQueryResult {
+  const validationToken = assertCanonicalSessionKeysCurrent(database);
+  const finish = (result: SqliteSessionEntryListQueryResult) => {
+    if (validationTokensEqual(validationToken, readSessionKeyValidationToken(database.db))) {
+      return result;
+    }
+    if (attempt >= 2) {
+      throw new Error("SQLite session state changed repeatedly during list selection");
+    }
+    return querySqliteSessionEntries(database, query, options, attempt + 1);
+  };
   const included = query.includeLineageSessionKeys;
   if (included && included.length > 400) {
     const entries = new Map<string, SessionEntrySummary>();
@@ -230,11 +296,11 @@ export function querySqliteSessionEntries(
         creatorActors.set(`${actor.type}\0${actor.id ?? ""}`, actor);
       }
     }
-    return {
+    return finish({
       creatorActors: [...creatorActors.values()],
       entries: [...entries.values()],
       totalCount: entries.size,
-    };
+    });
   }
   const db = getNodeSqliteKysely<SessionStatusDatabase>(database.db);
   const base = db
@@ -348,11 +414,11 @@ export function querySqliteSessionEntries(
       });
     }
   }
-  return {
+  return finish({
     creatorActors: [...creatorActors.values()],
     entries,
     totalCount: count ?? 0,
-  };
+  });
 }
 
 export function readSqliteSessionEntriesByStatus(
