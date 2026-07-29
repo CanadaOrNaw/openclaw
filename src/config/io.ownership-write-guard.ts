@@ -19,6 +19,9 @@ export function assertAutomaticBindingsWriteAllowed(params: {
   const requiredBindings = params.nextBindings.filter(
     (binding) => !sourceBindingKeys.has(JSON.stringify(binding)),
   );
+  if (requiredBindings.length === 0) {
+    return;
+  }
   const required = requiredBindings.map((binding) => JSON.stringify(binding)).join(", ");
   throw Object.assign(
     new Error(

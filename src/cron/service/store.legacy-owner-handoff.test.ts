@@ -92,6 +92,35 @@ describe("cron legacy owner handoff persistence", () => {
     }
   });
 
+  it("reschedules an existing row whose schedule changed during the handoff", async () => {
+    const { storePath } = await makeStorePath();
+    const original = {
+      ...createOwnerlessJob("rescheduled-during-handoff"),
+      state: { nextRunAtMs: NOW + 60_000 },
+    };
+    await writeJobs(storePath, [original]);
+    const state = createState(storePath);
+    await ensureLoaded(state, { skipRecompute: true });
+    await writeJobs(storePath, [
+      {
+        ...original,
+        schedule: { kind: "cron", expr: "30 7 * * *", tz: "UTC" },
+        state: {},
+      },
+    ]);
+
+    const handoff = await beginLegacyDefaultAgentOwnerHandoff(state, "ops");
+    try {
+      expect(state.store?.jobs[0]?.state.nextRunAtMs).toEqual(expect.any(Number));
+      expect((await loadCronStore(storePath)).jobs[0]?.state.nextRunAtMs).toEqual(
+        expect.any(Number),
+      );
+    } finally {
+      handoff.release();
+      stop(state);
+    }
+  });
+
   it("preserves unparseable rows byte-for-byte during owner migration", async () => {
     const { storePath } = await makeStorePath();
     const valid = createOwnerlessJob("valid-ownerless");

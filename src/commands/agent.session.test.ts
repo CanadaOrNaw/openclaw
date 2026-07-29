@@ -206,6 +206,36 @@ describe("agent session resolution", () => {
     });
   });
 
+  it("uses the per-agent store owner before the retained legacy fallback", async () => {
+    await withTempHome(async (home) => {
+      const storePattern = path.join(home, "agents", "{agentId}", "sessions", "sessions.json");
+      const researchStore = path.join(home, "agents", "research", "sessions", "sessions.json");
+      const cfg = retainLegacyDefaultAgentId(
+        mockConfig(home, storePattern, [{ id: "ops" }, { id: "research" }]),
+        "ops",
+      );
+      await replaceSessionEntry(
+        { agentId: "research", sessionKey: "main", storePath: researchStore },
+        { sessionId: "research-bare-session", updatedAt: 1 },
+      );
+
+      expect(
+        resolveSessionKeyForRequest({
+          cfg,
+          sessionId: "research-bare-session",
+          agentId: "research",
+        }).agentId,
+      ).toBe("research");
+      expect(() =>
+        resolveSessionKeyForRequest({
+          cfg,
+          sessionId: "research-bare-session",
+          agentId: "ops",
+        }),
+      ).toThrowError(expect.objectContaining({ code: "AGENT_SESSION_OWNER_MISMATCH" }));
+    });
+  });
+
   it("rejects another agent for a retained owner's bare shared-store session", async () => {
     await withTempHome(async (home) => {
       const store = path.join(home, "sessions.json");

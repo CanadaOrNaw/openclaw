@@ -82,8 +82,9 @@ describe("server session events without a compatibility owner", () => {
 
     handler({ sessionKey: "global", reason: "updated" } as never);
 
-    expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalledWith(
-      expect.objectContaining({ defaultAgentId: undefined }),
+    expect(resolveVisibleActiveSessionRunStateMock).not.toHaveBeenCalled();
+    expect(broadcastToConnIds.mock.calls[0]?.[1]).not.toEqual(
+      expect.objectContaining({ hasActiveRun: true }),
     );
   });
 
@@ -216,9 +217,10 @@ describe("server session events without a compatibility owner", () => {
       messageSeq: 1,
     } as never);
 
-    await vi.waitFor(() => expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalled());
-    expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalledWith(
-      expect.objectContaining({ defaultAgentId: undefined }),
+    await vi.waitFor(() => expect(broadcastToConnIds).toHaveBeenCalled());
+    expect(resolveVisibleActiveSessionRunStateMock).not.toHaveBeenCalled();
+    expect(broadcastToConnIds.mock.calls[0]?.[1]).not.toEqual(
+      expect.objectContaining({ hasActiveRun: true }),
     );
   });
 

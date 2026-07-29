@@ -2,6 +2,7 @@
  * Resolves command session ids, keys, stores, and persisted thinking state.
  */
 import crypto from "node:crypto";
+import path from "node:path";
 import type { MsgContext } from "../../auto-reply/templating.js";
 import {
   normalizeThinkLevel,
@@ -179,9 +180,18 @@ function collectSessionIdMatchesForRequest(opts: {
   clone?: boolean;
 }): SessionIdMatchSet {
   const candidates: SessionIdMatchCandidate[] = [];
-  const configuredAgentIds = listAgentIds(opts.cfg);
+  const configuredAgentIds = listAgentIds(opts.cfg).map(normalizeAgentId);
   const compatibilityAgentId =
     tryGetLegacyDefaultAgentId(opts.cfg) ?? tryResolveSoleAgentId(opts.cfg);
+  const configuredStoreOwners = new Map<string, Set<string>>();
+  for (const agentId of configuredAgentIds) {
+    const configuredStorePath = path.resolve(
+      resolveStorePath(opts.cfg.session?.store, { agentId }),
+    );
+    const owners = configuredStoreOwners.get(configuredStorePath) ?? new Set<string>();
+    owners.add(agentId);
+    configuredStoreOwners.set(configuredStorePath, owners);
+  }
 
   const addMatches = (
     candidateStore: Record<string, SessionEntry>,
@@ -196,9 +206,12 @@ function collectSessionIdMatchesForRequest(opts: {
       const normalizedCandidateAgentId = candidateAgentId
         ? normalizeAgentId(candidateAgentId)
         : undefined;
+      const pathOwners = configuredStoreOwners.get(path.resolve(candidateStorePath));
+      const pathOwnedAgentId =
+        pathOwners?.size === 1 ? pathOwners.values().next().value : undefined;
       const legacyUnscopedOwner =
         classifySessionKeyShape(candidateKey) === "legacy_or_alias"
-          ? compatibilityAgentId
+          ? (pathOwnedAgentId ?? compatibilityAgentId)
           : undefined;
       const matchedAgentId =
         parseAgentSessionKey(candidateKey)?.agentId ??

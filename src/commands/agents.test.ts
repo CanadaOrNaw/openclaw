@@ -127,6 +127,7 @@ describe("agents helpers", () => {
     expect(next.agents?.ownership).toBe("explicit");
     expect(next.agents?.entries?.ops?.workspace).toBe("/srv/shared");
     expect(next.agents?.entries).toHaveProperty("research");
+    expect(next.agents?.defaults?.authInheritance?.agentId).toBe("ops");
   });
 
   it("applyAgentConfig clears a model override", () => {
@@ -485,5 +486,6 @@ describe("agents helpers", () => {
     expect(result.config.agents?.entries).toEqual({
       home: { workspace: "/srv/agents/home" },
     });
+    expect(result.config.agents?.defaults?.authInheritance?.agentId).toBe("main");
   });
 });

@@ -331,16 +331,18 @@ async function handleTranscriptUpdateBroadcast(
     agentId: routingAgentId,
     transcriptUsageMaxBytes: 64 * 1024,
   });
-  const activeRunState = sessionRow
-    ? resolveVisibleActiveSessionRunState({
-        context: params,
-        requestedKey: sessionKey,
-        canonicalKey: sessionRow.key,
-        sessionId: sessionRow.sessionId,
-        ...(sessionRow.key === "global" && routingAgentId ? { agentId: routingAgentId } : {}),
-        defaultAgentId: compatibilityDefaultAgentId,
-      })
-    : null;
+  const activeRunState =
+    sessionRow &&
+    (sessionRow.key !== "global" || routingAgentId !== undefined || compatibilityDefaultAgentId)
+      ? resolveVisibleActiveSessionRunState({
+          context: params,
+          requestedKey: sessionKey,
+          canonicalKey: sessionRow.key,
+          sessionId: sessionRow.sessionId,
+          ...(sessionRow.key === "global" && routingAgentId ? { agentId: routingAgentId } : {}),
+          defaultAgentId: compatibilityDefaultAgentId,
+        })
+      : null;
   const sessionSnapshot = buildGatewaySessionSnapshot({
     sessionRow,
     agentId: routingAgentId,
@@ -428,15 +430,17 @@ export function createLifecycleEventBroadcastHandler(params: {
       return;
     }
     const sessionRow = loadGatewaySessionRow(event.sessionKey);
-    const activeRunState = sessionRow
-      ? resolveVisibleActiveSessionRunState({
-          context: params,
-          requestedKey: event.sessionKey,
-          canonicalKey: sessionRow.key,
-          sessionId: sessionRow.sessionId,
-          defaultAgentId: tryResolveCompatibilityDefaultAgentId(),
-        })
-      : null;
+    const compatibilityDefaultAgentId = tryResolveCompatibilityDefaultAgentId();
+    const activeRunState =
+      sessionRow && (sessionRow.key !== "global" || compatibilityDefaultAgentId)
+        ? resolveVisibleActiveSessionRunState({
+            context: params,
+            requestedKey: event.sessionKey,
+            canonicalKey: sessionRow.key,
+            sessionId: sessionRow.sessionId,
+            defaultAgentId: compatibilityDefaultAgentId,
+          })
+        : null;
     params.broadcastToConnIds(
       "sessions.changed",
       {

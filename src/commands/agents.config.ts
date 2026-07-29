@@ -14,6 +14,7 @@ import {
 import { resolveAgentAvatarUrlFromSource } from "../agents/identity-avatar-file.js";
 import type { AgentIdentityFile } from "../agents/identity-file.js";
 import { identityHasValues, loadAgentIdentityFromWorkspace } from "../agents/identity-file.js";
+import { pinLegacyInheritedAuthOwnerForRosterTransition } from "../agents/legacy-inherited-auth-dir.js";
 import { pinSoleAgentWorkspaceForFleetExpansion } from "../config/agent-workspace-ownership.js";
 import { listRouteBindings } from "../config/bindings.js";
 import type { IdentityConfig } from "../config/types.base.js";
@@ -174,7 +175,7 @@ export function applyAgentConfig(
     nextList.push(nextEntry);
   }
   const { list: _legacyList, ownership: _ownership, ...agentsConfig } = cfg.agents ?? {};
-  return {
+  const nextConfig: OpenClawConfig = {
     ...cfg,
     ...(nextPlugins ? { plugins: nextPlugins } : {}),
     agents: {
@@ -183,6 +184,9 @@ export function applyAgentConfig(
       entries: toAgentEntriesRecord(nextList),
     },
   };
+  return list.length === 1 && nextList.length > 1
+    ? pinLegacyInheritedAuthOwnerForRosterTransition(cfg, nextConfig)
+    : nextConfig;
 }
 
 /** Remove an agent and any config references that route or allow traffic to it. */
@@ -274,8 +278,13 @@ export function pruneAgentConfig(
         })
       : { config: preliminaryConfig };
 
+  const transitionPinnedConfig =
+    agents.length > 1 && nextAgentsList.length === 1
+      ? pinLegacyInheritedAuthOwnerForRosterTransition(cfg, pinned.config)
+      : pinned.config;
+
   return {
-    config: pinned.config,
+    config: transitionPinnedConfig,
     removedBindings: bindings.length - filteredBindings.length,
     removedAllow: allow.length - filteredAllow.length,
   };

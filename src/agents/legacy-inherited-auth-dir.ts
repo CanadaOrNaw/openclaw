@@ -22,3 +22,28 @@ export function resolveLegacyInheritedAuthDir(
 ): string {
   return resolveAgentDir(config, resolveLegacyInheritedAuthAgentId(config), env);
 }
+
+/** Pins the current auth owner before a sole/fleet topology transition can change its fallback. */
+export function pinLegacyInheritedAuthOwnerForRosterTransition(
+  sourceConfig: OpenClawConfig,
+  targetConfig: OpenClawConfig,
+): OpenClawConfig {
+  const sourceOwner = resolveLegacyInheritedAuthAgentId(sourceConfig);
+  if (sourceOwner === resolveLegacyInheritedAuthAgentId(targetConfig)) {
+    return targetConfig;
+  }
+  // H2-2 owns credential relocation; topology edits must not move the shared store first.
+  return {
+    ...targetConfig,
+    agents: {
+      ...targetConfig.agents,
+      defaults: {
+        ...targetConfig.agents?.defaults,
+        authInheritance: {
+          ...targetConfig.agents?.defaults?.authInheritance,
+          agentId: sourceOwner,
+        },
+      },
+    },
+  };
+}

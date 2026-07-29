@@ -2,17 +2,10 @@ import { computeJobNextRunAtMs, hasScheduledNextRunAtMs, isJobEnabled } from "./
 import type { CronServiceState } from "./state.js";
 
 /** Prepares enabled rows discovered by a store reload before the timer is armed. */
-export function prepareReloadedCronJobsForScheduling(
-  state: CronServiceState,
-  options: { previousJobIds?: ReadonlySet<string> } = {},
-): boolean {
+export function prepareReloadedCronJobsForScheduling(state: CronServiceState): boolean {
   let scheduledJob = false;
   for (const job of state.store?.jobs ?? []) {
-    if (
-      options.previousJobIds?.has(job.id) ||
-      !isJobEnabled(job) ||
-      hasScheduledNextRunAtMs(job.state.nextRunAtMs)
-    ) {
+    if (!isJobEnabled(job) || hasScheduledNextRunAtMs(job.state.nextRunAtMs)) {
       continue;
     }
     job.state.nextRunAtMs = computeJobNextRunAtMs(job, state.deps.nowMs());

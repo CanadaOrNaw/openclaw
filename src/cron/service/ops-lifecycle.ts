@@ -77,9 +77,8 @@ export async function beginLegacyDefaultAgentOwnerHandoff(
   const release = await acquireCronOperationLock(state);
   try {
     await ensureLoaded(state, { skipRecompute: true });
-    const previousJobIds = new Set(state.store?.jobs.map((job) => job.id) ?? []);
     const migration = await materializeLoadedLegacyDefaultAgentOwners(state, legacyDefaultAgentId);
-    await refreshLegacyDefaultAgentOwnerHandoff(state, { previousJobIds });
+    await refreshLegacyDefaultAgentOwnerHandoff(state);
     return { migration, release };
   } catch (error) {
     release();
@@ -92,13 +91,10 @@ export async function refreshLegacyDefaultAgentOwnerHandoff(
   state: CronServiceState,
   options?: {
     persistSchedulingState?: boolean;
-    previousJobIds?: ReadonlySet<string>;
   },
 ) {
-  const previousJobIds =
-    options?.previousJobIds ?? new Set(state.store?.jobs.map((job) => job.id) ?? []);
   await ensureLoaded(state, { forceReload: true, skipRecompute: true });
-  const scheduledNewJob = prepareReloadedCronJobsForScheduling(state, { previousJobIds });
+  const scheduledNewJob = prepareReloadedCronJobsForScheduling(state);
   if (scheduledNewJob && options?.persistSchedulingState !== false) {
     await persist(state, { stateOnly: true });
   }
