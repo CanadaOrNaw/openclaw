@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useAutoCleanupTempDirTracker } from "../../../test/helpers/temp-dir.js";
 import { subagentRuns } from "../../agents/subagent-registry-memory.js";
 import * as sessionAccessor from "../../config/sessions/session-accessor.js";
 import { prepareAgentRequestPreflight } from "./agent-request-preflight.js";
@@ -21,6 +23,7 @@ function runPreflight(
     completed?: boolean;
     ended?: boolean;
     requestAgentId?: string;
+    sessionStore?: string;
     sessionKey?: string;
   },
 ) {
@@ -56,8 +59,8 @@ function runPreflight(
     },
     respond,
     context: {
-      getRuntimeConfig: () =>
-        options?.selectedOnlyEnabled
+      getRuntimeConfig: () => {
+        const runtimeConfig = options?.selectedOnlyEnabled
           ? {
               agents: {
                 list: [{ id: "main" }, { id: "work", tools: { swarm: true } }],
@@ -71,7 +74,11 @@ function runPreflight(
               }
             : options?.enabled
               ? { tools: { swarm: true } }
-              : {},
+              : {};
+        return options?.sessionStore
+          ? { ...runtimeConfig, session: { store: options.sessionStore } }
+          : runtimeConfig;
+      },
       dedupe: options?.cached
         ? new Map([
             [
@@ -93,6 +100,8 @@ function runPreflight(
 }
 
 describe("agent request Swarm preflight", () => {
+  const tempDirs = useAutoCleanupTempDirTracker(afterEach);
+
   beforeEach(() => {
     subagentRuns.clear();
     vi.spyOn(sessionAccessor, "loadSessionEntry").mockReturnValue(undefined);
@@ -231,6 +240,32 @@ describe("agent request Swarm preflight", () => {
         storePath: expect.stringContaining("/agents/work/"),
       }),
     );
+  });
+
+  it("uses the selected logical owner inside a fixed shared store", async () => {
+    vi.mocked(sessionAccessor.loadSessionEntry).mockRestore();
+    const storePath = path.join(tempDirs.make("openclaw-agent-preflight-"), "sessions.sqlite");
+    const sessionKey = "subagent:collector";
+    await sessionAccessor.upsertSessionEntry(
+      { agentId: "main", sessionKey, storePath },
+      { sessionId: "main-collector", swarmCollector: true, updatedAt: 1 },
+    );
+    await sessionAccessor.upsertSessionEntry(
+      { agentId: "work", sessionKey, storePath },
+      { sessionId: "work-ordinary", swarmCollector: false, updatedAt: 2 },
+    );
+
+    const { respond, result } = runPreflight(undefined, false, {
+      backend: true,
+      includeCollectorFields: false,
+      requestAgentId: "work",
+      selectedOnlyEnabled: true,
+      sessionKey,
+      sessionStore: storePath,
+    });
+
+    expect(result).toBeDefined();
+    expect(respond).not.toHaveBeenCalled();
   });
 
   it("loads a bare retained collector key from the sole-agent store", () => {

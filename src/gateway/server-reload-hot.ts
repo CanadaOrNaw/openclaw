@@ -223,45 +223,41 @@ export function createGatewayReloadHandlers(params: GatewayReloadHandlerParams) 
           setGatewaySigusr1RestartPolicy({ allowExternal: isRestartEnabled(nextConfig) });
           runtimeCommitted = true;
           if (plan.restartCron) {
-            try {
-              params.cronReconciliation.invalidate();
-              params.onCronRestart?.();
-              if (state.cronState.cron.stopAndDrain) {
-                await state.cronState.cron.stopAndDrain();
-              } else {
-                state.cronState.cron.stop();
-                state.cronState.stopExitWatchers?.();
-                await state.cronState.stopStreamWatchers?.();
-              }
-              startGatewayCronWithLogging({
-                cronState: nextState.cronState,
-                cronReconciliation: params.cronReconciliation,
-                reason: "reload",
-                config: nextConfig,
-                afterStart: async () => {
-                  await Promise.all([
-                    nextState.cronState.reconcileExitWatchers?.(),
-                    nextState.cronState.reconcileStreamWatchers?.(),
-                  ]);
-                },
-                logCron: params.logCron,
-                onStartError: (err) => {
-                  if (
-                    !isCurrentGatewayReloadGeneration(myGeneration) ||
-                    params.getState().cronState !== nextState.cronState
-                  ) {
-                    return;
-                  }
-                  try {
-                    scheduleRecoveryRestart("cron reload", err);
-                  } catch (recoveryError) {
-                    params.logCron.error(formatErrorMessage(recoveryError));
-                  }
-                },
-              });
-            } catch (error) {
-              scheduleRecoveryRestart("runtime commit", error);
+            params.cronReconciliation.invalidate();
+            params.onCronRestart?.();
+            if (state.cronState.cron.stopAndDrain) {
+              await state.cronState.cron.stopAndDrain();
+            } else {
+              state.cronState.cron.stop();
+              state.cronState.stopExitWatchers?.();
+              await state.cronState.stopStreamWatchers?.();
             }
+            startGatewayCronWithLogging({
+              cronState: nextState.cronState,
+              cronReconciliation: params.cronReconciliation,
+              reason: "reload",
+              config: nextConfig,
+              afterStart: async () => {
+                await Promise.all([
+                  nextState.cronState.reconcileExitWatchers?.(),
+                  nextState.cronState.reconcileStreamWatchers?.(),
+                ]);
+              },
+              logCron: params.logCron,
+              onStartError: (err) => {
+                if (
+                  !isCurrentGatewayReloadGeneration(myGeneration) ||
+                  params.getState().cronState !== nextState.cronState
+                ) {
+                  return;
+                }
+                try {
+                  scheduleRecoveryRestart("cron reload", err);
+                } catch (recoveryError) {
+                  params.logCron.error(formatErrorMessage(recoveryError));
+                }
+              },
+            });
           }
         };
         if (publication) {
@@ -532,7 +528,9 @@ export function createGatewayReloadHandlers(params: GatewayReloadHandlerParams) 
           throw err;
         }
         scheduleRecoveryRestart("runtime commit", err);
-        return;
+        // Publication cannot roll back. Surface the pending recovery so callers
+        // terminate this apply path without undoing the committed generation.
+        throw new GatewayHotReloadRecoveryError("runtime commit", { recoveryPending: true });
       }
 
       try {

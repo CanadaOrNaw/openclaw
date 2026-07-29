@@ -1323,14 +1323,21 @@ describe("gateway hot reload model state", () => {
     });
   });
 
-  it("restarts instead of rolling back when cron teardown fails after runtime commit", async () => {
+  it("surfaces recovery pending and stops the apply tail when cron teardown fails", async () => {
     restartTesting.resetSigusr1State();
     resetGatewayWorkAdmission();
     const signalSpy = vi.fn();
     process.once("SIGUSR1", signalSpy);
     const logReload = { info: vi.fn(), warn: vi.fn() };
     const publish = vi.fn(async (commit: () => Promise<void>) => await commit());
-    const { applyHotReload, cron, setState } = createReloadHandlersForTest(logReload);
+    const startChannel = vi.fn(async () => {});
+    const stopPostReadySidecars = vi.fn();
+    const { applyHotReload, cron, setState } = createReloadHandlersForTest(
+      logReload,
+      { start: startChannel, stop: vi.fn(async () => {}) },
+      undefined,
+      stopPostReadySidecars,
+    );
     cron.stop.mockImplementation(() => {
       throw new Error("cron stop failed");
     });
@@ -1338,14 +1345,23 @@ describe("gateway hot reload model state", () => {
     try {
       await expect(
         applyHotReload(
-          createCronRestartPlan(),
+          createHotTailPlan({
+            changedPaths: ["cron", "channels.discord", "hooks.gmail"],
+            hotReasons: ["cron", "channels.discord", "hooks.gmail"],
+            restartCron: true,
+            restartChannels: new Set<ChannelKind>(["discord"]),
+            restartGmailWatcher: true,
+          }),
           { cron: { enabled: true } },
           {
             publish,
             isCurrent: () => true,
           },
         ),
-      ).resolves.toBeUndefined();
+      ).rejects.toMatchObject({
+        name: "GatewayHotReloadRecoveryError",
+        message: "config hot reload committed with recovery pending for runtime commit",
+      });
 
       expect(publish).toHaveBeenCalledOnce();
       expect(setState).toHaveBeenCalledOnce();
@@ -1354,6 +1370,10 @@ describe("gateway hot reload model state", () => {
       );
       expect(signalSpy).toHaveBeenCalledOnce();
       expect(isGatewayWorkAdmissionClosed()).toBe(true);
+      expect(hoisted.refreshPreparedModelRuntimeSnapshots).not.toHaveBeenCalled();
+      expect(stopPostReadySidecars).not.toHaveBeenCalled();
+      expect(startChannel).not.toHaveBeenCalled();
+      expect(logReload.info).not.toHaveBeenCalledWith(expect.stringContaining("applied"));
       markGatewaySigusr1RestartHandled();
     } finally {
       process.removeListener("SIGUSR1", signalSpy);

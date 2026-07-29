@@ -89,6 +89,7 @@ export function prepareAgentRequestPreflight(
   const persistedCollectorSession =
     !collectorSession && requestSessionKey && isSubagentSessionKey(requestSessionKey)
       ? loadSessionEntry({
+          ...(selectedAgentId ? { agentId: selectedAgentId } : {}),
           storePath: resolveStorePath(cfg.session?.store, {
             agentId: selectedAgentId,
           }),
