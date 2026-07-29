@@ -384,6 +384,9 @@ export function loadCombinedSessionStoreForGateway(
   if (query && requestedAgentId) {
     query = { ...query, ownerAgentId: requestedAgentId };
   }
+  if (query) {
+    query = { ...query, mainKey: cfg.session?.mainKey };
+  }
   const combined: Record<string, SessionEntry> = {};
   const rowContextCombined: Record<string, SessionEntry> = {};
   let selectionExact = targets.length === 1 && !openIncognito && query?.selectionResidual !== true;

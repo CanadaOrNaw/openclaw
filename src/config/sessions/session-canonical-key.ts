@@ -4,7 +4,11 @@ import {
   executeSqliteQueryTakeFirstSync,
   getNodeSqliteKysely,
 } from "../../infra/kysely-sync.js";
-import { normalizeAgentId, parseAgentSessionKey } from "../../routing/session-key.js";
+import {
+  normalizeAgentId,
+  normalizeMainKey,
+  parseAgentSessionKey,
+} from "../../routing/session-key.js";
 import type { DB as OpenClawAgentKyselyDatabase } from "../../state/openclaw-agent-db.generated.js";
 import type { OpenClawAgentDatabase } from "../../state/openclaw-agent-db.js";
 import { normalizeStoreSessionKey } from "./store-entry.js";
@@ -16,7 +20,10 @@ type CanonicalSessionDatabase = Pick<
   "session_key_revisions" | "session_nodes"
 >;
 export type CanonicalSessionKeyToken = { revision: number };
-const validatedDatabases = new WeakMap<DatabaseSync, CanonicalSessionKeyToken>();
+const validatedDatabases = new WeakMap<
+  DatabaseSync,
+  { mainKey: string; token: CanonicalSessionKeyToken }
+>();
 
 class SessionCanonicalKeyMigrationRequiredError extends Error {
   readonly code = "SESSION_CANONICAL_KEY_MIGRATION_REQUIRED";
@@ -90,10 +97,12 @@ function canonicalSessionKeyTokensEqual(
 
 export function assertCanonicalSqliteSessionKeysCurrent(
   database: Pick<OpenClawAgentDatabase, "agentId" | "db">,
+  mainKey?: string,
 ): CanonicalSessionKeyToken {
   const token = readCanonicalSessionKeyToken(database.db);
+  const canonicalMainKey = normalizeMainKey(mainKey);
   const cached = validatedDatabases.get(database.db);
-  if (cached && canonicalSessionKeyTokensEqual(cached, token)) {
+  if (cached?.mainKey === canonicalMainKey && canonicalSessionKeyTokensEqual(cached.token, token)) {
     return token;
   }
   const db = getNodeSqliteKysely<CanonicalSessionDatabase>(database.db);
@@ -107,13 +116,14 @@ export function assertCanonicalSqliteSessionKeysCurrent(
       row.session_key !== trimmed ||
       normalizeStoreSessionKey(trimmed) !== trimmed ||
       (!parsed && trimmed !== "global" && trimmed !== "unknown") ||
-      (parsed && parsed.agentId !== normalizeAgentId(database.agentId))
+      (parsed && parsed.agentId !== normalizeAgentId(database.agentId)) ||
+      (parsed && parsed.rest === "main" && canonicalMainKey !== "main")
     ) {
       throw nonCanonicalSessionKeyRowError(trimmed || row.session_key);
     }
   }
   if (!database.db.isTransaction) {
-    validatedDatabases.set(database.db, token);
+    validatedDatabases.set(database.db, { mainKey: canonicalMainKey, token });
   }
   return token;
 }

@@ -217,7 +217,7 @@ export function querySqliteSessionEntries(
   },
   attempt = 0,
 ): SqliteSessionEntryListQueryResult {
-  const validationToken = assertCanonicalSqliteSessionKeysCurrent(database);
+  const validationToken = assertCanonicalSqliteSessionKeysCurrent(database, query.mainKey);
   const finish = (result: SqliteSessionEntryListQueryResult) => {
     if (canonicalSqliteSessionKeyTokenIsCurrent(database, validationToken)) {
       return result;

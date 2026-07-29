@@ -192,6 +192,7 @@ export function buildSessionListSqlQuery(
     archived: opts.archived ?? false,
     includeGlobal: opts.includeGlobal === true,
     includeUnknown: !opts.agentId && opts.includeUnknown === true,
+    mainKey: params.mainKey,
     sortBy: opts.sortBy ?? "updatedAt",
     ...(lineageRequiresResidual ? { selectionResidual: true } : lineage),
   };

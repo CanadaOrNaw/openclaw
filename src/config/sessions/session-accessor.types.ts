@@ -79,6 +79,7 @@ export type SessionEntryListQuery = {
   label?: string;
   lineageKeys?: readonly string[];
   limit?: number;
+  mainKey?: string;
   ownerAgentId?: string;
   requireLastInteraction?: boolean;
   selectionResidual?: boolean;
