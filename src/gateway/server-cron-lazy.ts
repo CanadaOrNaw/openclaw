@@ -257,6 +257,14 @@ export function createLazyGatewayCronState(params: LazyGatewayCronParams): Gatew
         pendingConfigAdoptionCompletion = incomingConfig;
       }
     },
+    async rejectConfigAdoption() {
+      // A prepared adoption always awaited load(), which first applies any earlier accepted
+      // completion. Only the current adoption can still own this unloaded completion slot.
+      pendingConfigAdoptionCompletion = undefined;
+      if (loaded) {
+        await loaded.state.cron.rejectConfigAdoption();
+      }
+    },
     async status() {
       return await (await load()).state.cron.status();
     },

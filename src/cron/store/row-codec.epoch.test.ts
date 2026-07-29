@@ -15,6 +15,7 @@ import {
   loadedCronStoreFromRows,
   loadCronRows,
   materializeCronRowAgentOwners,
+  readCronRuntimeRevision,
   readCronStoreEpoch,
   replaceCronRows,
   updateCronRuntimeRows,
@@ -120,32 +121,78 @@ describe("cron store epoch", () => {
     const storeKey = "runtime-revision";
     const job = makeCronJob({ id: "runtime-revision-job" });
     const staleStore = { version: 1 as const, jobs: [structuredClone(job)] };
-    const runtimeRevision = job.updatedAtMs + 1;
+    const runtimeNextRunAtMs = job.updatedAtMs + 60_000;
     try {
       replaceCronRows(database, storeKey, staleStore, { bumpStoreEpoch: true });
       const epoch = readCronStoreEpoch(database, storeKey);
+      const runtimeRevision = readCronRuntimeRevision(database, storeKey);
       updateCronRuntimeRows(database, storeKey, {
         version: 1,
         jobs: [
           {
             ...job,
-            state: { nextRunAtMs: runtimeRevision + 60_000, lastStatus: "ok" },
+            state: { nextRunAtMs: runtimeNextRunAtMs, lastStatus: "ok" },
           },
         ],
       });
 
       expect(
-        replaceCronRows(database, storeKey, staleStore, {
-          expectedStoreEpoch: epoch,
-          bumpStoreEpoch: true,
-        }),
-      ).toBe(epoch);
-      const loaded = loadedCronStoreFromRows(loadCronRows(database, storeKey), epoch).store.jobs[0];
-      expect(loaded?.updatedAtMs).toBe(runtimeRevision);
-      expect(loaded?.state).toMatchObject({
-        nextRunAtMs: runtimeRevision + 60_000,
+        replaceCronRows(
+          database,
+          storeKey,
+          {
+            version: 1,
+            jobs: [
+              {
+                ...staleStore.jobs[0]!,
+                name: "renamed job",
+                updatedAtMs: job.updatedAtMs + 30_000,
+              },
+            ],
+          },
+          {
+            expectedStoreEpoch: epoch,
+            expectedRuntimeRevision: runtimeRevision,
+            bumpStoreEpoch: true,
+          },
+        ),
+      ).toBe(epoch + 1);
+      const renamed = loadedCronStoreFromRows(loadCronRows(database, storeKey), epoch + 1).store
+        .jobs[0];
+      expect(renamed?.name).toBe("renamed job");
+      expect(renamed?.updatedAtMs).toBe(job.updatedAtMs + 30_000);
+      expect(renamed?.state).toMatchObject({
+        nextRunAtMs: runtimeNextRunAtMs,
         lastStatus: "ok",
       });
+
+      const renamedRevision = readCronRuntimeRevision(database, storeKey);
+      updateCronRuntimeRows(database, storeKey, {
+        version: 1,
+        jobs: [{ ...renamed!, state: { nextRunAtMs: runtimeNextRunAtMs + 60_000 } }],
+      });
+      replaceCronRows(
+        database,
+        storeKey,
+        {
+          version: 1,
+          jobs: [
+            {
+              ...renamed!,
+              schedule: { kind: "every", everyMs: 120_000 },
+              state: {},
+            },
+          ],
+        },
+        {
+          expectedStoreEpoch: epoch + 1,
+          expectedRuntimeRevision: renamedRevision,
+          bumpStoreEpoch: true,
+        },
+      );
+      expect(
+        loadedCronStoreFromRows(loadCronRows(database, storeKey)).store.jobs[0]?.state,
+      ).toEqual({});
     } finally {
       handle.walMaintenance.close();
       database.close();

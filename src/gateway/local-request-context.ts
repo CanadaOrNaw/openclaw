@@ -41,6 +41,7 @@ const unavailableCron: GatewayCronServiceContract = {
   resumeScheduling: () => {},
   reloadForConfigAdoption: async (_incomingConfig) => cronUnavailable(),
   completeConfigAdoption: () => {},
+  rejectConfigAdoption: async () => {},
   status: async () => cronUnavailable(),
   list: async () => cronUnavailable(),
   listPage: async () => cronUnavailable(),

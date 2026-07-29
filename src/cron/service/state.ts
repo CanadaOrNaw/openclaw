@@ -255,6 +255,10 @@ export type CronServiceState = {
   store: CronStoreFile | null;
   /** Epoch read with the current in-memory topology. */
   storeEpoch: number;
+  /** Runtime-only revision read with the current in-memory state. */
+  runtimeRevision: number;
+  /** Previous retained owner while a Gateway config candidate is prepared. */
+  pendingConfigAdoption?: { legacyDefaultAgentId: string | undefined };
   /** Last known durable wake for each persisted job. Map presence distinguishes
    * a durably unscheduled job from one that is not part of durable topology. */
   durableNextRunAtMsByJobId: Map<string, number | undefined>;
@@ -302,6 +306,7 @@ export function createCronServiceState(deps: CronServiceDeps): CronServiceState 
     deps: { ...deps, defaultAgentId, nowMs: deps.nowMs ?? (() => Date.now()) },
     store: null,
     storeEpoch: 0,
+    runtimeRevision: 0,
     durableNextRunAtMsByJobId: new Map<string, number | undefined>(),
     legacyImportedJobIds: new Set<string>(),
     timer: null,

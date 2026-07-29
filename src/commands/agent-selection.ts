@@ -51,6 +51,8 @@ export async function resolveCliAgentId(params: {
     return normalized;
   }
   const soleAgentId = tryResolveSoleAgentId(params.cfg);
+  // Sole-agent ownership resolves implicitly regardless of agents.ownership. This mirrors
+  // resolveGatewayAgentSelectionState's `sole` projection and selectionRequired=false contract.
   if (soleAgentId && params.requireExplicit !== true) {
     return soleAgentId;
   }

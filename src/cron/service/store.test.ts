@@ -625,7 +625,11 @@ describe("cron service store seam coverage", () => {
 
     await persist(state, { stateOnly: true });
 
-    expect(saveStore).toHaveBeenCalledWith(storePath, state.store, { expectedStoreEpoch: 1 });
+    expect(saveStore).toHaveBeenCalledWith(
+      storePath,
+      state.store,
+      expect.objectContaining({ expectedStoreEpoch: 1, expectedRuntimeRevision: 1 }),
+    );
     expect(onEvent).toHaveBeenCalledTimes(1);
     expect(onEvent).toHaveBeenLastCalledWith(
       expect.objectContaining({

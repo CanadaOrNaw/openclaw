@@ -124,6 +124,10 @@ export class CronService implements CronServiceContract {
     lifecycleOps.completeConfigAdoption(this.state, incomingConfig);
   }
 
+  async rejectConfigAdoption() {
+    await lifecycleOps.rejectConfigAdoption(this.state);
+  }
+
   pauseScheduling() {
     lifecycleOps.pauseScheduling(this.state);
   }

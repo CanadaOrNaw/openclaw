@@ -552,6 +552,7 @@ describe("cron service ops seam coverage", () => {
       .mockResolvedValueOnce({
         store: { version: 1, jobs: [structuredClone(importedJob)] },
         storeEpoch: 0,
+        runtimeRevision: 0,
         configJobs: [structuredClone(importedJob) as unknown as Record<string, unknown>],
         configJobIndexes: [0],
         legacyImportedJobIndexes: [0],
@@ -651,6 +652,7 @@ describe("cron service ops seam coverage", () => {
       .mockResolvedValueOnce({
         store: { version: 1, jobs: [importedJob] },
         storeEpoch: 0,
+        runtimeRevision: 0,
         configJobs: [importedJob as unknown as Record<string, unknown>],
         configJobIndexes: [0],
         legacyImportedJobIndexes: [0],

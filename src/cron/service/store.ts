@@ -5,6 +5,7 @@ import { getInvalidPersistedCronJobReason } from "../persisted-shape.js";
 import { cronSchedulingInputsEqual } from "../schedule-identity.js";
 import { isInvalidCronSessionTargetIdError } from "../session-target.js";
 import {
+  CronRuntimeRevisionMismatchError,
   CronStoreEpochMismatchError,
   loadCronJobsStoreWithConfigJobs,
   saveCronQuarantineFile,
@@ -24,6 +25,7 @@ type PersistOptions = {
 export type CronRollbackSnapshot = {
   store: CronStoreFile | null;
   storeEpoch: number;
+  runtimeRevision: number;
   durableNextRunAtMsByJobId: Map<string, number | undefined>;
 };
 
@@ -236,6 +238,7 @@ export async function ensureLoaded(
     jobs,
   };
   state.storeEpoch = loaded.storeEpoch;
+  state.runtimeRevision = loaded.runtimeRevision;
   state.legacyImportedJobIds = legacyImportedJobIds;
   state.durableNextRunAtMsByJobId = durableNextRunAtMsByJobId;
   state.storeLoadedAtMs = state.deps.nowMs();
@@ -301,19 +304,37 @@ export async function persist(state: CronServiceState, opts?: PersistOptions) {
     flushedPendingQuarantine = true;
   }
   const stateOnly = !flushedPendingQuarantine && opts?.stateOnly === true;
+  let persistedStore = store;
   try {
-    const committedStoreEpoch = await saveCronJobsStore(
+    const committed = await saveCronJobsStore(
       state.deps.storePath,
       store,
       stateOnly
-        ? { stateOnly: true, expectedStoreEpoch: state.storeEpoch, env: state.deps.env }
-        : { expectedStoreEpoch: state.storeEpoch, env: state.deps.env },
+        ? {
+            stateOnly: true,
+            expectedStoreEpoch: state.storeEpoch,
+            expectedRuntimeRevision: state.runtimeRevision,
+            env: state.deps.env,
+          }
+        : {
+            expectedStoreEpoch: state.storeEpoch,
+            expectedRuntimeRevision: state.runtimeRevision,
+            env: state.deps.env,
+          },
     );
-    if (!stateOnly && committedStoreEpoch !== undefined) {
-      state.storeEpoch = committedStoreEpoch;
+    if (committed) {
+      state.storeEpoch = committed.storeEpoch;
+      state.runtimeRevision = committed.runtimeRevision;
+      if (committed.runtimeMerged) {
+        state.store = committed.store;
+        persistedStore = committed.store;
+      }
     }
   } catch (error) {
-    if (error instanceof CronStoreEpochMismatchError) {
+    if (
+      error instanceof CronStoreEpochMismatchError ||
+      error instanceof CronRuntimeRevisionMismatchError
+    ) {
       // Another process changed ownership/topology. Refuse this stale snapshot
       // and publish the durable replacement to the scheduler before returning.
       try {
@@ -327,7 +348,11 @@ export async function persist(state: CronServiceState, opts?: PersistOptions) {
         // Preserve the mismatch classification so persistOrRestore cannot put
         // the stale snapshot back. The next operation must load from SQLite.
         state.store = null;
-        state.storeEpoch = error.actualEpoch;
+        if (error instanceof CronStoreEpochMismatchError) {
+          state.storeEpoch = error.actualEpoch;
+        } else {
+          state.runtimeRevision = error.actualRevision;
+        }
         state.durableNextRunAtMsByJobId = new Map();
         state.deps.log.warn(
           {
@@ -342,7 +367,7 @@ export async function persist(state: CronServiceState, opts?: PersistOptions) {
   }
   publishDurableNextRunChanges({
     state,
-    storeJobs: store.jobs,
+    storeJobs: persistedStore.jobs,
     stateOnly,
     suppressScheduledJobId: opts?.suppressScheduledJobId,
   });
@@ -354,6 +379,7 @@ export function snapshotStoreForRollback(state: CronServiceState): CronRollbackS
   return {
     store: state.store ? structuredClone(state.store) : null,
     storeEpoch: state.storeEpoch,
+    runtimeRevision: state.runtimeRevision,
     durableNextRunAtMsByJobId: new Map(state.durableNextRunAtMsByJobId),
   };
 }
@@ -379,9 +405,13 @@ export async function persistOrRestore(
       throw new Error("cron: durable store write did not complete");
     }
   } catch (err) {
-    if (!(err instanceof CronStoreEpochMismatchError)) {
+    if (
+      !(err instanceof CronStoreEpochMismatchError) &&
+      !(err instanceof CronRuntimeRevisionMismatchError)
+    ) {
       state.store = snapshot.store;
       state.storeEpoch = snapshot.storeEpoch;
+      state.runtimeRevision = snapshot.runtimeRevision;
       state.durableNextRunAtMsByJobId = snapshot.durableNextRunAtMsByJobId;
     }
     throw err;

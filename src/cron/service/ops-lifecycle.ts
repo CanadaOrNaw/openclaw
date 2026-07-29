@@ -131,6 +131,9 @@ export async function reloadForConfigAdoption(
 ) {
   const release = await acquireCronOperationLock(state);
   try {
+    state.pendingConfigAdoption = {
+      legacyDefaultAgentId: state.deps.legacyDefaultAgentId,
+    };
     await ensureLoaded(state, { skipRecompute: true });
     const incomingStorePath = resolveCronJobsStorePathFromConfig(incomingConfig, state.deps.env);
     const currentRetainedOwner = readRetainedLegacyDefaultCronOwnerForStore(
@@ -198,6 +201,23 @@ export async function reloadForConfigAdoption(
 /** Publishes the retained owner from the config only after the caller adopts it. */
 export function completeConfigAdoption(state: CronServiceState, incomingConfig: OpenClawConfig) {
   state.deps.legacyDefaultAgentId = tryGetLegacyDefaultAgentId(incomingConfig);
+  state.pendingConfigAdoption = undefined;
+}
+
+/** Restores the durable scheduler snapshot after a config candidate is rejected. */
+export async function rejectConfigAdoption(state: CronServiceState) {
+  const pending = state.pendingConfigAdoption;
+  if (!pending) {
+    return;
+  }
+  const release = await acquireCronOperationLock(state);
+  try {
+    state.deps.legacyDefaultAgentId = pending.legacyDefaultAgentId;
+    await refreshLegacyDefaultAgentOwnerHandoff(state);
+    state.pendingConfigAdoption = undefined;
+  } finally {
+    release();
+  }
 }
 
 /** Starts the cron service, recovers interrupted runs, catches up missed jobs, and arms the timer. */

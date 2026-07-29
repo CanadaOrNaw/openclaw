@@ -25,6 +25,8 @@ export type GatewayCronServiceContract = CronServiceContract & {
   reloadForConfigAdoption(incomingConfig: OpenClawConfig): Promise<void>;
   /** Publish the incoming config's retained owner after durable config adoption. */
   completeConfigAdoption(incomingConfig: OpenClawConfig): void;
+  /** Restore the prior scheduler snapshot after a config candidate is rejected. */
+  rejectConfigAdoption(): Promise<void>;
   /** Scheduler-owned work not represented by active cron run markers. */
   getSuspensionBlockerCount?(): number;
   /** Stop cron and await scheduler-owned child process teardown. */

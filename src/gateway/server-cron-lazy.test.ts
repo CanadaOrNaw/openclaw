@@ -351,6 +351,7 @@ function createCronService(): GatewayCronServiceContract {
     resumeScheduling: vi.fn(),
     reloadForConfigAdoption: vi.fn(async () => {}),
     completeConfigAdoption: vi.fn(),
+    rejectConfigAdoption: vi.fn(async () => {}),
     status: vi.fn(async () => ({ enabled: true }) as never),
     list: vi.fn(async () => [] as never),
     listPage: vi.fn(async () => ({ items: [], total: 0 }) as never),

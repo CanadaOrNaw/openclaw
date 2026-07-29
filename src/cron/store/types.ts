@@ -30,6 +30,8 @@ export type LoadedCronStore = {
   store: CronStoreFile;
   /** Cross-process revision for full-store topology writes. */
   storeEpoch: number;
+  /** Cross-process revision for runtime-only state writes. */
+  runtimeRevision: number;
   configJobs: Array<Record<string, unknown>>;
   configJobIndexes: number[];
   /** Runtime-job indexes whose records came from the legacy JSON import source. */

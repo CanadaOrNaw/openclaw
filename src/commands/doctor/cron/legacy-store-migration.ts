@@ -629,6 +629,7 @@ export async function loadLegacyCronStoreForMigration(
     return {
       store,
       storeEpoch: 0,
+      runtimeRevision: 0,
       configJobs,
       configJobIndexes,
       legacyImportedJobIndexes: store.jobs.map((_job, index) => index),
@@ -647,6 +648,7 @@ export async function loadLegacyCronStoreForMigration(
       return {
         store: { version: 1, jobs: [] },
         storeEpoch: 0,
+        runtimeRevision: 0,
         configJobs: [],
         configJobIndexes: [],
         legacyImportedJobIndexes: [],
