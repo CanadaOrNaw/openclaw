@@ -10,10 +10,7 @@ import {
   openOpenClawAgentDatabase,
   type OpenClawAgentDatabase,
 } from "../../state/openclaw-agent-db.js";
-import type {
-  SessionEntryListScope,
-  SessionEntrySummary,
-} from "./session-accessor.sqlite-contract.js";
+import type { SessionEntrySummary } from "./session-accessor.sqlite-contract.js";
 import { readSqliteSessionGenerationIdsForKeys } from "./session-accessor.sqlite-lifecycle-state.js";
 import {
   copySessionNodeArtifactsForRepair,
@@ -31,6 +28,7 @@ import {
   refreshSqliteSessionTitleProjection,
 } from "./session-accessor.sqlite-session-row.js";
 import { parseSqliteSessionEntryJson } from "./session-accessor.sqlite-status.js";
+import type { SessionEntryListScope } from "./session-accessor.types.js";
 import {
   deleteSessionTranscriptIndexInTransaction,
   reconcileSessionTranscriptIndexInTransaction,
