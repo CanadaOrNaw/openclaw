@@ -1,6 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
 import { executeSqliteQuerySync } from "../../infra/kysely-sync.js";
-import { tryCronScheduleIdentity } from "../schedule-identity.js";
 import type { CronJob, CronStoreFile } from "../types.js";
 import { resolveCronRuntimeDelta } from "./runtime-merge.js";
 import { getCronStoreKysely } from "./schema.js";
@@ -32,6 +31,9 @@ export function writeCronRuntimeRowDeltas(params: {
         ).rows.map((row) => [row.job_id, stateFromRow(row)]),
       )
     : undefined;
+  // The caller owns the shared-state write transaction, so a later conflict
+  // rolls back earlier row updates. Topology epochs fence schedule changes;
+  // runtime-only writes must not rewrite topology-derived sidecars.
   for (const job of params.store.jobs) {
     if (revisionChanged) {
       const current = currentStates?.get(job.id);
@@ -56,7 +58,6 @@ export function writeCronRuntimeRowDeltas(params: {
           ...bindStateColumns(job.state ?? {}),
           state_json: JSON.stringify(job.state ?? {}),
           runtime_updated_at_ms: job.updatedAtMs,
-          schedule_identity: tryCronScheduleIdentity(job as unknown as Record<string, unknown>),
         })
         .where("store_key", "=", params.storeKey)
         .where("job_id", "=", job.id),

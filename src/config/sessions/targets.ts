@@ -688,7 +688,8 @@ export function resolveSessionStoreTargets(
     const defaultAgentId = hasAgent
       ? normalizeAgentId(opts.agent ?? "")
       : resolveDefaultAgentId(cfg);
-    if (hasAgent && !listAgentIds(cfg).includes(defaultAgentId)) {
+    const knownAgentIds = new Set(listAgentIds(cfg).map(normalizeAgentId));
+    if (hasAgent && !knownAgentIds.has(defaultAgentId)) {
       throw new Error(
         `Unknown agent id "${opts.agent}". Use "openclaw agents list" to see configured agents.`,
       );
@@ -718,9 +719,9 @@ export function resolveSessionStoreTargets(
   }
 
   if (hasAgent) {
-    const knownAgents = listAgentIds(cfg);
+    const knownAgents = new Set(listAgentIds(cfg).map(normalizeAgentId));
     const requested = normalizeAgentId(opts.agent ?? "");
-    if (!knownAgents.includes(requested)) {
+    if (!knownAgents.has(requested)) {
       throw new Error(
         `Unknown agent id "${opts.agent}". Use "openclaw agents list" to see configured agents.`,
       );

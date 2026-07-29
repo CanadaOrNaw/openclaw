@@ -596,12 +596,13 @@ describe("resolveSessionStoreTargets", () => {
   it("allows an explicit store path with an explicit fleet agent", () => {
     const storePath = path.resolve("/tmp/explicit-fleet-sessions.json");
     const cfg: OpenClawConfig = {
-      agents: { ownership: "explicit", entries: { ops: {}, research: {} } },
+      agents: { ownership: "explicit", entries: { Ops: {}, research: {} } },
     };
 
     expect(resolveSessionStoreTargets(cfg, { agent: "ops", store: storePath })).toEqual([
       { agentId: "ops", storePath },
     ]);
+    expect(resolveSessionStoreTargets(cfg, { agent: "ops" })[0]?.agentId).toBe("ops");
 
     expect(() =>
       resolveSessionStoreTargets(cfg, {
