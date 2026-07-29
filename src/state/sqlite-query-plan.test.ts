@@ -183,6 +183,18 @@ describe("sqlite hot query plans", () => {
     });
     expectPlanUsesIndex({
       db: database.db,
+      indexName: "idx_agent_session_nodes_trimmed_session_key",
+      params: ["agent:worker-1:main"],
+      sql: `
+        SELECT session_key
+          FROM session_nodes
+         WHERE trim(session_key, char(9,10,11,12,13,32,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288,65279)) = ?
+           AND session_key <> trim(session_key, char(9,10,11,12,13,32,160,5760,8192,8193,8194,8195,8196,8197,8198,8199,8200,8201,8202,8232,8233,8239,8287,12288,65279))
+         LIMIT 1
+      `,
+    });
+    expectPlanUsesIndex({
+      db: database.db,
       indexName: "idx_agent_session_nodes_updated_at",
       sql: `
         SELECT session_key

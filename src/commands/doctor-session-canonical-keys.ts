@@ -131,11 +131,9 @@ function countRemovedRows(
     cfg: params.cfg,
     env: params.env,
   });
-  const canonicalRowSurvives = candidates.some(
-    (candidate) =>
-      candidate.sqlitePath === destination.sqlitePath &&
-      candidate.sessionKey === candidate.canonicalKey,
-  );
+  const canonicalRowSurvives =
+    selected.winner.sqlitePath === destination.sqlitePath &&
+    selected.winner.sessionKey === selected.winner.canonicalKey;
   return candidates.length - (canonicalRowSurvives ? 1 : 0);
 }
 

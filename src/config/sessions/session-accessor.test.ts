@@ -1707,6 +1707,27 @@ describe("session accessor seam", () => {
         message: expect.stringContaining("openclaw doctor --fix"),
       });
     }
+    const database = openOpenClawAgentDatabase({
+      agentId: "ops",
+      path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "ops" }).path,
+    });
+    const insert = database.db.prepare(
+      "INSERT INTO session_nodes (session_key, current_session_id, entry_json, updated_at) VALUES (?, ?, ?, ?)",
+    );
+    for (const [storedKey, canonicalKey] of [
+      ["agent:ops:padded ", "agent:ops:padded"],
+      [" agent:ops:leading", "agent:ops:leading"],
+      ["agent:ops:nbsp\u00a0", "agent:ops:nbsp"],
+    ] as const) {
+      const sessionId = `${canonicalKey}-session`;
+      insert.run(storedKey, sessionId, JSON.stringify({ sessionId, updatedAt: 5 }), 5);
+      await expect(
+        upsertSessionEntry(
+          { agentId: "ops", sessionKey: canonicalKey, storePath },
+          { sessionId: "new-session", updatedAt: 10 },
+        ),
+      ).rejects.toMatchObject({ code: "SESSION_CANONICAL_KEY_MIGRATION_REQUIRED" });
+    }
   });
 
   it("rejects reply session initialization when the entry is deleted during prepare", async () => {
