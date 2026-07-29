@@ -29,6 +29,7 @@ import {
   bindSqliteSessionNode,
   bindSqliteSessionRoot,
   deriveSessionTitle,
+  deriveSessionTitleFromEventJson,
   deriveSqliteSessionTitle,
   normalizeSqliteSessionEntryTimestamp,
 } from "./session-accessor.sqlite-session-row.js";
@@ -756,11 +757,52 @@ export function copySqliteSessionOwnedStateForRepair(params: {
           .select("display_name")
           .where("session_key", "=", params.preferredSessionKey),
       )?.display_name;
+      const activeTitleRows = executeSqliteQuerySync(
+        params.source.db,
+        sourceDb
+          .selectFrom("session_transcript_active_events as active")
+          .innerJoin("transcript_events as event", (join) =>
+            join
+              .onRef("event.session_id", "=", "active.session_id")
+              .onRef("event.seq", "=", "active.event_seq"),
+          )
+          .select("event.event_json")
+          .where("active.session_id", "=", params.preferredEntry.sessionId)
+          .where("active.message_position", "is not", null)
+          .orderBy("active.message_position", "asc"),
+      ).rows;
+      const hasActiveProjection = Boolean(
+        executeSqliteQueryTakeFirstSync(
+          params.source.db,
+          sourceDb
+            .selectFrom("session_transcript_active_events")
+            .select("active_position")
+            .where("session_id", "=", params.preferredEntry.sessionId)
+            .limit(1),
+        ),
+      );
+      const titleEventRows = hasActiveProjection
+        ? activeTitleRows
+        : executeSqliteQuerySync(
+            params.source.db,
+            sourceDb
+              .selectFrom("transcript_events")
+              .select("event_json")
+              .where("session_id", "=", params.preferredEntry.sessionId)
+              .orderBy("seq", "asc"),
+          ).rows;
+      const rawTitle = deriveSessionTitleFromEventJson(
+        params.preferredEntry,
+        titleEventRows.map((row) => row.event_json),
+      );
       executeSqliteQuerySync(
         params.destination.db,
         destinationDb
           .updateTable("session_nodes")
-          .set({ display_name: sourceTitle ?? deriveSessionTitle(params.preferredEntry) ?? null })
+          .set({
+            display_name:
+              sourceTitle ?? rawTitle ?? deriveSessionTitle(params.preferredEntry) ?? null,
+          })
           .where("session_key", "=", params.canonicalKey),
       );
     }

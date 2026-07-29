@@ -100,11 +100,23 @@ export function deriveSqliteSessionTitle(
       .where("active.message_position", "is not", null)
       .orderBy("active.message_position", "asc"),
   );
+  return (
+    deriveSessionTitleFromEventJson(
+      entry,
+      [...rows].map((row) => row.event_json),
+    ) ?? null
+  );
+}
+
+export function deriveSessionTitleFromEventJson(
+  entry: SessionEntry,
+  eventJsonRows: Iterable<string>,
+): string | undefined {
   let firstUserMessage: string | undefined;
-  for (const row of rows) {
+  for (const eventJson of eventJsonRows) {
     let parsed: { message?: unknown } | null;
     try {
-      const value = JSON.parse(row.event_json) as unknown;
+      const value = JSON.parse(eventJson) as unknown;
       parsed = value && typeof value === "object" ? (value as { message?: unknown }) : null;
     } catch {
       continue;
@@ -123,7 +135,7 @@ export function deriveSqliteSessionTitle(
       break;
     }
   }
-  return deriveSessionTitle(entry, firstUserMessage) ?? null;
+  return deriveSessionTitle(entry, firstUserMessage);
 }
 
 export function refreshSqliteSessionTitleProjection(

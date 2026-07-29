@@ -298,7 +298,11 @@ export const sessionReadHandlers: GatewayRequestHandlers = {
         );
         const exactSqlSelection =
           loaded.selectionExact && !hasResidualFilters && !includesIncognito && !visibilityFiltered;
-        const canUseCreatorActors = exactSqlSelection && !hasFacetResidualFilters;
+        const canUseCreatorActors =
+          !hasFacetResidualFilters &&
+          !hasResidualFilters &&
+          !includesIncognito &&
+          !visibilityFiltered;
         const visibleStorePath = includesIncognito
           ? loaded.storePath
           : (loaded.durableStorePath ?? loaded.storePath);
