@@ -286,8 +286,8 @@ describe("createLazyGatewayCronState", () => {
 
     expect(cron["reloadForConfigAdoption"]).toHaveBeenCalledWith(incomingConfig);
     expect(cron["completeConfigAdoption"]).toHaveBeenCalledWith(incomingConfig);
-    expect(cron["reloadForConfigAdoption"].mock.invocationCallOrder[0]).toBeLessThan(
-      cron["completeConfigAdoption"].mock.invocationCallOrder[0]!,
+    expect(vi.mocked(cron.reloadForConfigAdoption).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(cron.completeConfigAdoption).mock.invocationCallOrder[0]!,
     );
   });
 
