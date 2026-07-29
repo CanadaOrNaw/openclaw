@@ -181,9 +181,29 @@ function copySqliteSessionOwnedStateForRepair(params: {
             .selectAll()
             .where("session_id", "in", sessionIds),
         ).rows;
-  const conversationIds = uniqueStrings([
+  const linkedConversationIds = uniqueStrings([
     ...windows.flatMap((row) => (row.primary_conversation_id ? [row.primary_conversation_id] : [])),
     ...sessionLinks.map((row) => row.conversation_id),
+  ]);
+  const sourceKeyReferences = new Set(sourceKeys.flatMap((key) => [key, key.trim()]));
+  const deliverySourceKeys = [...sourceKeyReferences].filter(Boolean);
+  const deliveries = executeSqliteQuerySync(
+    params.source.db,
+    sourceDb
+      .selectFrom("conversation_deliveries")
+      .selectAll()
+      .where((eb) =>
+        linkedConversationIds.length > 0
+          ? eb.or([
+              eb("conversation_id", "in", linkedConversationIds),
+              eb("source_session_key", "in", deliverySourceKeys),
+            ])
+          : eb("source_session_key", "in", deliverySourceKeys),
+      ),
+  ).rows;
+  const conversationIds = uniqueStrings([
+    ...linkedConversationIds,
+    ...deliveries.map((delivery) => delivery.conversation_id),
   ]);
   if (conversationIds.length > 0) {
     const conversations = executeSqliteQuerySync(
@@ -208,8 +228,28 @@ function copySqliteSessionOwnedStateForRepair(params: {
           ),
       );
     }
+    for (const delivery of deliveries) {
+      const canonicalDelivery = {
+        ...delivery,
+        source_session_key:
+          delivery.source_session_key && sourceKeyReferences.has(delivery.source_session_key)
+            ? params.canonicalKey
+            : delivery.source_session_key,
+      };
+      const { operation_id: _operationId, ...replacement } = canonicalDelivery;
+      executeSqliteQuerySync(
+        params.destination.db,
+        destinationDb
+          .insertInto("conversation_deliveries")
+          .values(canonicalDelivery)
+          .onConflict((conflict) =>
+            params.preferSource
+              ? conflict.column("operation_id").doUpdateSet(replacement)
+              : conflict.column("operation_id").doNothing(),
+          ),
+      );
+    }
   }
-  const sourceKeyReferences = new Set(sourceKeys.flatMap((key) => [key, key.trim()]));
   for (const window of windows) {
     const canonicalWindow = {
       ...window,

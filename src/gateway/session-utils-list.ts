@@ -394,8 +394,13 @@ function listSessionCreatorIdentities(
   for (const creator of creatorActors ?? []) {
     const actor = projectSessionActor(creator, userProfileLabelById);
     const id = normalizeOptionalString(actor?.id);
-    if (id) {
-      creators.set(id, { id, ...(actor?.label ? { label: actor.label } : {}) });
+    if (!id) {
+      continue;
+    }
+    const label = normalizeOptionalString(actor?.label);
+    const existing = creators.get(id);
+    if (!existing || (label && (!existing.label || label.localeCompare(existing.label) < 0))) {
+      creators.set(id, { id, ...(label ? { label } : {}) });
     }
   }
   for (const [, entry] of entries) {

@@ -554,6 +554,31 @@ describe("doctor canonical session-key repair", () => {
         .run(sourceAlias);
       opsDatabase.db
         .prepare(
+          "INSERT INTO conversations (conversation_id, channel, account_id, kind, peer_id, delivery_target, metadata_json, created_at, updated_at) VALUES ('conversation-1', 'webchat', 'default', 'direct', 'peer', 'peer', '{}', 20, 20)",
+        )
+        .run();
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO session_conversations (session_id, conversation_id, role, first_seen_at, last_seen_at) VALUES ('winner', 'conversation-1', 'primary', 20, 20)",
+        )
+        .run();
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO conversation_deliveries (operation_id, operation_kind, conversation_id, source_session_key, message_hash, status, created_at, updated_at) VALUES ('operation-1', 'turn', 'conversation-1', ?, 'hash', 'sent', 20, 20)",
+        )
+        .run(sourceAlias);
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO conversations (conversation_id, channel, account_id, kind, peer_id, delivery_target, metadata_json, created_at, updated_at) VALUES ('conversation-2', 'webchat', 'default', 'direct', 'other-peer', 'other-peer', '{}', 20, 20)",
+        )
+        .run();
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO conversation_deliveries (operation_id, operation_kind, conversation_id, source_session_key, message_hash, status, created_at, updated_at) VALUES ('operation-2', 'turn', 'conversation-2', ?, 'other-hash', 'sent', 20, 20)",
+        )
+        .run(sourceAlias);
+      opsDatabase.db
+        .prepare(
           "INSERT INTO heartbeat_outcomes (session_key, run_session_key, outcome, summary, occurred_at, updated_at) VALUES (?, ?, 'done', 'complete', 20, 20)",
         )
         .run(sourceAlias, sourceAlias);
@@ -669,6 +694,26 @@ describe("doctor canonical session-key repair", () => {
       });
       expect(mainDatabase.db.prepare("SELECT session_key FROM session_members").get()).toEqual({
         session_key: "agent:main:shared",
+      });
+      expect(
+        mainDatabase.db
+          .prepare(
+            "SELECT conversation_id, source_session_key FROM conversation_deliveries WHERE operation_id = 'operation-1'",
+          )
+          .get(),
+      ).toEqual({
+        conversation_id: "conversation-1",
+        source_session_key: "agent:main:shared",
+      });
+      expect(
+        mainDatabase.db
+          .prepare(
+            "SELECT conversation_id, source_session_key FROM conversation_deliveries WHERE operation_id = 'operation-2'",
+          )
+          .get(),
+      ).toEqual({
+        conversation_id: "conversation-2",
+        source_session_key: "agent:main:shared",
       });
       expect(
         mainDatabase.db

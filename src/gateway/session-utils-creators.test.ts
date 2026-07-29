@@ -16,9 +16,32 @@ const getUserProfileListItem = vi.hoisted(() =>
 
 vi.mock("../state/user-profiles.js", () => ({ getUserProfileListItem }));
 
+import { listSessionsFromStoreAsync } from "./session-utils-list.js";
 import { listSessionsFromStoreForTest as listSessionsFromStore } from "./session-utils-list.test-support.js";
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  getUserProfileListItem.mockClear();
+});
+
+it("selects creator labels deterministically across actor types", async () => {
+  const result = await listSessionsFromStoreAsync({
+    cfg: {} as OpenClawConfig,
+    opts: { archived: "all" },
+    sqlSelection: {
+      creatorActors: [
+        { type: "human", id: "shared-id" },
+        { type: "agent", id: "shared-id" },
+      ],
+      ordered: true,
+      totalCount: 0,
+    },
+    store: {},
+    storePath: "/tmp/openclaw-session-creator-labels",
+  });
+
+  expect(result.creators).toEqual([{ id: "shared-id", label: "Bob" }]);
+});
 
 it("returns the complete deterministic creator facet independently of pagination", async () => {
   const store: Record<string, SessionEntry> = {
