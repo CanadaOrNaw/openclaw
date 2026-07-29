@@ -101,8 +101,9 @@ export async function beginLegacyDefaultAgentOwnerHandoff(
   const release = await acquireCronOperationLock(state);
   try {
     await ensureLoaded(state, { skipRecompute: true });
+    const previousJobIds = new Set(state.store?.jobs.map((job) => job.id) ?? []);
     const migration = await materializeLoadedLegacyDefaultAgentOwners(state, legacyDefaultAgentId);
-    await ensureLoaded(state, { forceReload: true, skipRecompute: true });
+    await refreshLegacyDefaultAgentOwnerHandoff(state, { previousJobIds });
     return { migration, release };
   } catch (error) {
     release();
@@ -113,9 +114,13 @@ export async function beginLegacyDefaultAgentOwnerHandoff(
 /** Reloads one sealed service and schedules only jobs newly imported during the handoff. */
 export async function refreshLegacyDefaultAgentOwnerHandoff(
   state: CronServiceState,
-  options?: { persistSchedulingState?: boolean },
+  options?: {
+    persistSchedulingState?: boolean;
+    previousJobIds?: ReadonlySet<string>;
+  },
 ) {
-  const previousJobIds = new Set(state.store?.jobs.map((job) => job.id) ?? []);
+  const previousJobIds =
+    options?.previousJobIds ?? new Set(state.store?.jobs.map((job) => job.id) ?? []);
   await ensureLoaded(state, { forceReload: true, skipRecompute: true });
   const scheduledNewJob = prepareReloadedCronJobsForScheduling(state, { previousJobIds });
   if (scheduledNewJob && options?.persistSchedulingState !== false) {

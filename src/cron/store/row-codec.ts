@@ -19,6 +19,7 @@ import { bindDeliveryColumns, deliveryFromRow } from "./delivery-codec.js";
 import { bindFailureAlertColumns, failureAlertFromRow } from "./failure-alert-codec.js";
 import { bindPayloadColumns, payloadFromRow } from "./payload-codec.js";
 import { preserveConcurrentCronRuntime } from "./runtime-merge.js";
+import { writeCronRuntimeRowDeltas } from "./runtime-row-writes.js";
 import {
   booleanToInteger,
   integerToBoolean,
@@ -723,23 +724,28 @@ export function updateCronRuntimeRows(
   db: DatabaseSync,
   storeKey: string,
   store: CronStoreFile,
+  options?: {
+    expectedRuntimeRevision?: number;
+    currentRuntimeRevision?: number;
+    expectedRuntimeStateByJobId?: ReadonlyMap<string, CronJob["state"]>;
+  },
 ): number {
-  for (const job of store.jobs) {
-    executeSqliteQuerySync(
-      db,
-      getCronStoreKysely(db)
-        .updateTable("cron_jobs")
-        .set({
-          ...bindStateColumns(job.state ?? {}),
-          state_json: JSON.stringify(job.state ?? {}),
-          runtime_updated_at_ms: job.updatedAtMs,
-          schedule_identity: tryCronScheduleIdentity(job as unknown as Record<string, unknown>),
-        })
-        .where("store_key", "=", storeKey)
-        .where("job_id", "=", job.id),
-    );
-  }
-  return incrementCronRuntimeRevision(db, storeKey);
+  const expectedRuntimeRevision = options?.expectedRuntimeRevision;
+  const currentRuntimeRevision = options?.currentRuntimeRevision;
+  return writeCronRuntimeRowDeltas({
+    db,
+    storeKey,
+    store,
+    expectedRuntimeRevision,
+    currentRuntimeRevision,
+    expectedRuntimeStateByJobId: options?.expectedRuntimeStateByJobId,
+    conflictError: () =>
+      new CronRuntimeRevisionMismatchError(
+        expectedRuntimeRevision ?? 0,
+        currentRuntimeRevision ?? 0,
+      ),
+    incrementRevision: () => incrementCronRuntimeRevision(db, storeKey),
+  });
 }
 
 /** Reconstructs loaded cron store data and config-runtime sidecars from SQLite rows. */

@@ -237,17 +237,18 @@ export async function saveCronJobsStore(
           throw new CronStoreEpochMismatchError(opts.expectedStoreEpoch, storeEpoch);
         }
         const runtimeRevision = readCronRuntimeRevision(db, storeKey);
-        if (
+        const runtimeMerged =
           opts.expectedRuntimeRevision !== undefined &&
-          opts.expectedRuntimeRevision !== runtimeRevision
-        ) {
-          throw new CronRuntimeRevisionMismatchError(opts.expectedRuntimeRevision, runtimeRevision);
-        }
-        const nextRuntimeRevision = updateCronRuntimeRows(db, storeKey, store);
+          opts.expectedRuntimeRevision !== runtimeRevision;
+        const nextRuntimeRevision = updateCronRuntimeRows(db, storeKey, store, {
+          expectedRuntimeRevision: opts.expectedRuntimeRevision,
+          currentRuntimeRevision: runtimeRevision,
+          expectedRuntimeStateByJobId: opts.expectedRuntimeStateByJobId,
+        });
         return {
           storeEpoch,
           runtimeRevision: nextRuntimeRevision,
-          runtimeMerged: false,
+          runtimeMerged,
           store: loadedCronStoreFromRows(
             loadCronRows(db, storeKey),
             storeEpoch,

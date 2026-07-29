@@ -1,5 +1,6 @@
 // Shared sessions.changed broadcaster for gateway RPC and chat-command mutations.
 import { tryResolveSoleAgentId } from "../../agents/agent-scope.js";
+import { tryGetLegacyDefaultAgentId } from "../../config/legacy.default-agent-owner.js";
 import { resolveAgentIdFromSessionKey } from "../../routing/session-key.js";
 import { buildGatewaySessionEventFields } from "../session-event-payload.js";
 import { invalidateSessionSharingSnapshot } from "../session-sharing.js";
@@ -38,11 +39,11 @@ export function emitSessionsChanged(
       )
     : null;
   const cfg = context.getRuntimeConfig();
+  const compatibilityAgentId = tryGetLegacyDefaultAgentId(cfg) ?? tryResolveSoleAgentId(cfg);
   let defaultAgentId: string | undefined;
   if (sessionRow) {
     try {
-      defaultAgentId =
-        payload.agentId ?? resolveAgentIdFromSessionKey(sessionRow.key, tryResolveSoleAgentId(cfg));
+      defaultAgentId = resolveAgentIdFromSessionKey(sessionRow.key, compatibilityAgentId);
     } catch {
       defaultAgentId = undefined;
     }

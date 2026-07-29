@@ -110,6 +110,7 @@ export function createGatewayReloadHandlers(params: GatewayReloadHandlerParams) 
     const state = params.getState();
     const nextState = { ...state };
     let runtimeCommitted = false;
+    let preparedModelRuntimeReplacementGateId: PreparedModelRuntimeReplacementGateId | undefined;
     let cronAdoption: Awaited<ReturnType<typeof beginGatewayCronConfigAdoption>> = null;
 
     try {
@@ -160,7 +161,6 @@ export function createGatewayReloadHandlers(params: GatewayReloadHandlerParams) 
       const isLifecycleReloadAborted = () => isGatewayReloadGenerationAborted(myGeneration);
       const isPluginReloadAborted = () =>
         pluginReloadAborted || !isTransactionCurrent() || isLifecycleReloadAborted();
-      let preparedModelRuntimeReplacementGateId: PreparedModelRuntimeReplacementGateId | undefined;
       let recoveryRestartScheduled = false;
       const laneConcurrency = resolveGatewayLaneConcurrency(nextConfig);
       const candidateEnv = publication?.runtimeEnv ?? process.env;
@@ -200,63 +200,68 @@ export function createGatewayReloadHandlers(params: GatewayReloadHandlerParams) 
                 params.logReload.warn(`heartbeat monitor reconvergence failed: ${String(error)}`);
               });
           }
-          // Config, plugin hooks, and prepared stores publish as one generation. Synchronously
-          // retire the prior stores at the commit edge so no request can mix generations.
+          if (reloadPlanChangesAgentResolution(plan) && !isTransactionCurrent()) {
+            throw new GatewayHotReloadCancelledError();
+          }
+          if (reloadPlanChangesAgentResolution(plan)) {
+            cronAdoption?.complete();
+          }
+          // Commit edge ordering:
+          // - freshness, heartbeat preparation, and fallible cron adoption completed above;
+          // - gate arming, setState, lane/policy publication, and runtimeCommitted are one
+          //   synchronous irreversible edge; pre-commit throws reject the gate in the outer catch;
+          // - later fallible cron/plugin/channel work routes through explicit restart recovery.
           preparedModelRuntimeReplacementGateId = markPreparedModelRuntimeSnapshotsStale(
             "prepared model runtime owner is stale before config publication",
             { waitForReplacement: true },
           );
-          if (reloadPlanChangesAgentResolution(plan) && !isTransactionCurrent()) {
-            throw new GatewayHotReloadCancelledError();
-          }
           params.setState(nextState);
-          if (reloadPlanChangesAgentResolution(plan)) {
-            cronAdoption?.complete();
-          }
-          // All rejecting work is complete. Publish pre-resolved lane limits at
-          // the final synchronous commit edge, alongside the accepted state.
           if (hooksReloadResolved) {
             commitHooksConfigReload();
           }
           applyGatewayLaneConcurrency(laneConcurrency);
-          runtimeCommitted = true;
           setGatewaySigusr1RestartPolicy({ allowExternal: isRestartEnabled(nextConfig) });
+          runtimeCommitted = true;
           if (plan.restartCron) {
-            params.cronReconciliation.invalidate();
-            params.onCronRestart?.();
-            if (state.cronState.cron.stopAndDrain) {
-              await state.cronState.cron.stopAndDrain();
-            } else {
-              state.cronState.cron.stop();
-              state.cronState.stopExitWatchers?.();
-              await state.cronState.stopStreamWatchers?.();
+            try {
+              params.cronReconciliation.invalidate();
+              params.onCronRestart?.();
+              if (state.cronState.cron.stopAndDrain) {
+                await state.cronState.cron.stopAndDrain();
+              } else {
+                state.cronState.cron.stop();
+                state.cronState.stopExitWatchers?.();
+                await state.cronState.stopStreamWatchers?.();
+              }
+              startGatewayCronWithLogging({
+                cronState: nextState.cronState,
+                cronReconciliation: params.cronReconciliation,
+                reason: "reload",
+                config: nextConfig,
+                afterStart: async () => {
+                  await Promise.all([
+                    nextState.cronState.reconcileExitWatchers?.(),
+                    nextState.cronState.reconcileStreamWatchers?.(),
+                  ]);
+                },
+                logCron: params.logCron,
+                onStartError: (err) => {
+                  if (
+                    !isCurrentGatewayReloadGeneration(myGeneration) ||
+                    params.getState().cronState !== nextState.cronState
+                  ) {
+                    return;
+                  }
+                  try {
+                    scheduleRecoveryRestart("cron reload", err);
+                  } catch (recoveryError) {
+                    params.logCron.error(formatErrorMessage(recoveryError));
+                  }
+                },
+              });
+            } catch (error) {
+              scheduleRecoveryRestart("runtime commit", error);
             }
-            startGatewayCronWithLogging({
-              cronState: nextState.cronState,
-              cronReconciliation: params.cronReconciliation,
-              reason: "reload",
-              config: nextConfig,
-              afterStart: async () => {
-                await Promise.all([
-                  nextState.cronState.reconcileExitWatchers?.(),
-                  nextState.cronState.reconcileStreamWatchers?.(),
-                ]);
-              },
-              logCron: params.logCron,
-              onStartError: (err) => {
-                if (
-                  !isCurrentGatewayReloadGeneration(myGeneration) ||
-                  params.getState().cronState !== nextState.cronState
-                ) {
-                  return;
-                }
-                try {
-                  scheduleRecoveryRestart("cron reload", err);
-                } catch (recoveryError) {
-                  params.logCron.error(formatErrorMessage(recoveryError));
-                }
-              },
-            });
           }
         };
         if (publication) {
@@ -633,8 +638,11 @@ export function createGatewayReloadHandlers(params: GatewayReloadHandlerParams) 
         );
       }
     } catch (error) {
-      if (cronAdoption && !runtimeCommitted) {
-        throw await cronAdoption.reject(error);
+      if (!runtimeCommitted) {
+        rejectPendingPreparedModelRuntimeReplacement(preparedModelRuntimeReplacementGateId, error);
+        if (cronAdoption) {
+          throw await cronAdoption.reject(error);
+        }
       }
       throw error;
     }

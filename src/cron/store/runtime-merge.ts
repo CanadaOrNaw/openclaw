@@ -2,6 +2,25 @@ import { isDeepStrictEqual } from "node:util";
 import { tryCronScheduleIdentity } from "../schedule-identity.js";
 import type { CronJob } from "../types.js";
 
+type CronRuntimeDeltaResolution = "write" | "preserve" | "conflict";
+
+/** Resolves one state-only delta against the row state the caller originally loaded. */
+export function resolveCronRuntimeDelta(params: {
+  current: CronJob["state"];
+  next: CronJob["state"];
+  expected: CronJob["state"];
+}): CronRuntimeDeltaResolution {
+  const currentChanged = !isDeepStrictEqual(params.current, params.expected);
+  const nextChanged = !isDeepStrictEqual(params.next, params.expected);
+  if (!currentChanged) {
+    return "write";
+  }
+  if (!nextChanged || isDeepStrictEqual(params.current, params.next)) {
+    return "preserve";
+  }
+  return "conflict";
+}
+
 function runtimePreservationIdentity(
   job: CronJob,
 ): { id: string; schedulingIdentity: string } | undefined {

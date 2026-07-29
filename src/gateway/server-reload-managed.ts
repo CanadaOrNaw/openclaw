@@ -295,19 +295,23 @@ export function startManagedGatewayConfigReloader(
       if (restartTransaction.status === "recovery-pending") {
         throw new GatewayHotReloadRecoveryError("config restart");
       }
+      assertCurrent();
+      if (reloadPlanChangesAgentResolution(plan)) {
+        cronAdoption?.complete();
+      }
+      // Commit edge ordering:
+      // - all secret/plugin preparation and fallible cron adoption completed above;
+      // - stale-client disconnect, restart settlement, runtime-env publication, and lifecycle
+      //   settlement below are synchronous irreversible edges with no fallible work after them.
       if (previousSharedGatewaySessionGeneration !== nextSharedGatewaySessionGeneration) {
         disconnectStaleSharedGatewayAuthClients({
           clients: params.clients,
           expectedGeneration: nextSharedGatewaySessionGeneration,
         });
       }
-      assertCurrent();
       restartTransaction.settle("committed");
       transactionOwnership.commitRuntimeEnv();
       restartLifecycle.settle("committed");
-      if (reloadPlanChangesAgentResolution(plan)) {
-        cronAdoption?.complete();
-      }
     } catch (error) {
       restartTransaction?.settle("rejected");
       restartLifecycle.settle("rejected");

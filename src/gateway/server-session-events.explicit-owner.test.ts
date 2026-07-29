@@ -46,6 +46,7 @@ vi.mock("./session-utils.js", async () => {
   return { ...actual, loadGatewaySessionRow: loadGatewaySessionRowMock };
 });
 
+import { emitSessionsChanged } from "./server-methods/session-change-event.js";
 import {
   createLifecycleEventBroadcastHandler,
   createTranscriptUpdateBroadcastHandler,
@@ -79,6 +80,44 @@ describe("server session events without a compatibility owner", () => {
 
     expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalledWith(
       expect.objectContaining({ defaultAgentId: undefined }),
+    );
+  });
+
+  it("keeps a selected global owner separate from the retained compatibility owner", () => {
+    legacyDefaultAgentIdMock.mockReturnValue("main");
+    emitSessionsChanged(
+      {
+        broadcastToConnIds,
+        chatAbortControllers: new Map(),
+        getRuntimeConfig: () => ({
+          agents: { ownership: "explicit", entries: { main: {}, work: {} } },
+        }),
+        getSessionEventSubscriberConnIds: () => new Set(["conn-1"]),
+      } as never,
+      { sessionKey: "global", agentId: "work", reason: "updated" },
+    );
+
+    expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: "work", defaultAgentId: "main" }),
+    );
+  });
+
+  it("uses the retained owner for an unselected migrated global event", () => {
+    legacyDefaultAgentIdMock.mockReturnValue("main");
+    emitSessionsChanged(
+      {
+        broadcastToConnIds,
+        chatAbortControllers: new Map(),
+        getRuntimeConfig: () => ({
+          agents: { ownership: "explicit", entries: { main: {}, work: {} } },
+        }),
+        getSessionEventSubscriberConnIds: () => new Set(["conn-1"]),
+      } as never,
+      { sessionKey: "global", reason: "updated" },
+    );
+
+    expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalledWith(
+      expect.objectContaining({ agentId: undefined, defaultAgentId: "main" }),
     );
   });
 

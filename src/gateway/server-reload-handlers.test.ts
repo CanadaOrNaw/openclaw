@@ -1064,9 +1064,9 @@ describe("gateway hot reload model state", () => {
     expect(cron.reloadForConfigAdoption).toHaveBeenCalledWith(nextConfig);
     expect(cron.completeConfigAdoption).toHaveBeenCalledOnce();
     expect(cron.reloadForConfigAdoption.mock.invocationCallOrder[0]).toBeLessThan(
-      setState.mock.invocationCallOrder[0]!,
+      cron.completeConfigAdoption.mock.invocationCallOrder[0]!,
     );
-    expect(cron.completeConfigAdoption.mock.invocationCallOrder[0]).toBeGreaterThan(
+    expect(cron.completeConfigAdoption.mock.invocationCallOrder[0]).toBeLessThan(
       setState.mock.invocationCallOrder[0]!,
     );
   });

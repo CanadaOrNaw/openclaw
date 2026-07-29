@@ -10,8 +10,14 @@ import {
 import { setupCronServiceSuite } from "../service.test-harness.js";
 import { loadCronStore, saveCronStore } from "../store.js";
 import type { CronJob } from "../types.js";
-import { reloadForConfigAdoption, start, stop } from "./ops-lifecycle.js";
+import {
+  beginLegacyDefaultAgentOwnerHandoff,
+  reloadForConfigAdoption,
+  start,
+  stop,
+} from "./ops-lifecycle.js";
 import { createCronServiceState } from "./state.js";
+import { ensureLoaded } from "./store.js";
 
 const { logger, makeStorePath } = setupCronServiceSuite({
   prefix: "cron-service-legacy-owner-handoff",
@@ -57,6 +63,32 @@ function incomingRoster(storePath: string): OpenClawConfig {
 }
 
 describe("cron legacy owner handoff persistence", () => {
+  it("schedules a row discovered by the migration leader without another restart", async () => {
+    const { storePath } = await makeStorePath();
+    const original = createOwnerlessJob("original");
+    const discovered = createOwnerlessJob("discovered-during-handoff");
+    await writeJobs(storePath, [original]);
+    const state = createState(storePath);
+    await ensureLoaded(state, { skipRecompute: true });
+    await writeJobs(storePath, [original, discovered]);
+
+    const handoff = await beginLegacyDefaultAgentOwnerHandoff(state, "ops");
+    try {
+      const scheduled = state.store?.jobs.find((job) => job.id === discovered.id);
+      expect(scheduled?.agentId).toBe("ops");
+      expect(scheduled?.state.nextRunAtMs).toEqual(expect.any(Number));
+      expect((await loadCronStore(storePath)).jobs.find((job) => job.id === discovered.id)).toEqual(
+        expect.objectContaining({
+          agentId: "ops",
+          state: expect.objectContaining({ nextRunAtMs: expect.any(Number) }),
+        }),
+      );
+    } finally {
+      handoff.release();
+      stop(state);
+    }
+  });
+
   it("migrates rows written by an old gateway after a separate config-write commit", async () => {
     const { storePath } = await makeStorePath();
     const originalOwnerless = createOwnerlessJob("original-ownerless");
