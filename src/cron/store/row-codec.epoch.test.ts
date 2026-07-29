@@ -11,8 +11,10 @@ import {
 } from "../../state/openclaw-state-db.js";
 import { makeCronJob } from "../delivery.test-helpers.js";
 import type { CronJob } from "../types.js";
+import { deleteStaleCronJobFamilyRows } from "./job-family.js";
 import {
   CronRuntimeRevisionMismatchError,
+  CronStoreEpochMismatchError,
   loadedCronStoreFromRows,
   loadCronRows,
   materializeCronRowAgentOwners,
@@ -75,6 +77,64 @@ describe("cron store epoch", () => {
           },
         ),
       ).toBe(2);
+    } finally {
+      handle.walMaintenance.close();
+      database.close();
+      await fs.rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a stale full save after stale-family cleanup deletes its rows", async () => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "openclaw-cron-family-epoch-"));
+    const handle = openOpenClawStateDatabase({ path: path.join(root, "state.sqlite") });
+    const database = handle.db;
+    const activeStoreKey = "active-family-store";
+    const staleStoreKey = "stale-family-store";
+    const secondStaleStoreKey = "second-stale-family-store";
+    const family = {
+      declarationKey: "memory-core:promotion",
+      name: "Memory Promotion",
+      ownerPluginTag: "[managed-by=memory-core.promotion]",
+    };
+    const staleJob = {
+      ...makeCronJob({ id: "stale-family-job" }),
+      declarationKey: family.declarationKey,
+      name: family.name,
+      description: family.ownerPluginTag,
+    };
+    try {
+      replaceCronRows(
+        database,
+        staleStoreKey,
+        {
+          version: 1,
+          jobs: [staleJob, { ...staleJob, id: "second-stale-family-job" }],
+        },
+        { bumpStoreEpoch: true },
+      );
+      replaceCronRows(
+        database,
+        secondStaleStoreKey,
+        { version: 1, jobs: [{ ...staleJob, id: "other-partition-family-job" }] },
+        { bumpStoreEpoch: true },
+      );
+      const loaded = loadedCronStoreFromRows(
+        loadCronRows(database, staleStoreKey),
+        readCronStoreEpoch(database, staleStoreKey),
+      );
+
+      expect(deleteStaleCronJobFamilyRows(database, activeStoreKey, family)).toBe(3);
+      expect(loadCronRows(database, staleStoreKey)).toEqual([]);
+      expect(loadCronRows(database, secondStaleStoreKey)).toEqual([]);
+      expect(readCronStoreEpoch(database, staleStoreKey)).toBe(loaded.storeEpoch + 1);
+      expect(readCronStoreEpoch(database, secondStaleStoreKey)).toBe(2);
+      expect(() =>
+        replaceCronRows(database, staleStoreKey, loaded.store, {
+          expectedStoreEpoch: loaded.storeEpoch,
+          bumpStoreEpoch: true,
+        }),
+      ).toThrow(CronStoreEpochMismatchError);
+      expect(loadCronRows(database, staleStoreKey)).toEqual([]);
     } finally {
       handle.walMaintenance.close();
       database.close();

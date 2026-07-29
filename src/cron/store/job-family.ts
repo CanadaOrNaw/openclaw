@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import { executeSqliteQuerySync } from "../../infra/kysely-sync.js";
+import { incrementCronStoreEpoch } from "./row-codec.js";
 import { getCronStoreKysely } from "./schema.js";
 
 export type CronJobFamilyIdentity = {
@@ -25,6 +26,7 @@ export function deleteStaleCronJobFamilyRows(
       row.declaration_key === family.declarationKey ||
       (row.name === family.name && row.description?.includes(family.ownerPluginTag) === true),
   );
+  const affectedStoreKeys = new Set(staleRows.map((row) => row.store_key));
   for (const row of staleRows) {
     executeSqliteQuerySync(
       db,
@@ -40,6 +42,11 @@ export function deleteStaleCronJobFamilyRows(
         .where("store_key", "=", row.store_key)
         .where("job_id", "=", row.job_id),
     );
+  }
+  // The caller owns the shared-state transaction. Advance every affected
+  // partition there too, so a live stale writer cannot resurrect pruned jobs.
+  for (const storeKey of affectedStoreKeys) {
+    incrementCronStoreEpoch(db, storeKey);
   }
   return staleRows.length;
 }

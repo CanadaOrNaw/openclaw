@@ -442,7 +442,8 @@ function writeCronStoreEpoch(db: DatabaseSync, storeKey: string, storeEpoch: num
   );
 }
 
-function incrementCronStoreEpoch(db: DatabaseSync, storeKey: string): number {
+/** Advances the topology epoch for one cron store partition. */
+export function incrementCronStoreEpoch(db: DatabaseSync, storeKey: string): number {
   ensureCronStoreEpochSchema(db);
   executeSqliteQuerySync(
     db,
