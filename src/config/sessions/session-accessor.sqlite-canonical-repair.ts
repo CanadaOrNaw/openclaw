@@ -371,10 +371,18 @@ function copySqliteSessionOwnedStateForRepair(params: {
   copySessionNodeArtifactsForRepair(
     params.source,
     params.destination,
-    params.preferredSessionKey ? [params.preferredSessionKey] : sourceKeys,
+    sourceKeys,
     params.canonicalKey,
-    { includeMembers: params.preferSource },
+    { includeMembers: false },
   );
+  if (params.preferSource) {
+    copySessionNodeArtifactsForRepair(
+      params.source,
+      params.destination,
+      params.preferredSessionKey ? [params.preferredSessionKey] : sourceKeys,
+      params.canonicalKey,
+    );
+  }
   if (params.preferSource) {
     if (params.preferredEntry && params.preferredSessionKey) {
       const sourceTitle = executeSqliteQueryTakeFirstSync(

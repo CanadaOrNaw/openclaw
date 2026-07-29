@@ -620,6 +620,21 @@ describe("doctor canonical session-key repair", () => {
       });
       opsDatabase.db
         .prepare(
+          "INSERT INTO session_nodes (session_key, current_session_id, entry_json, updated_at) VALUES ('agent:main:shared', 'extra-alias', ?, 5)",
+        )
+        .run(JSON.stringify({ sessionId: "extra-alias", updatedAt: 5 }));
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO board_tabs (session_key, tab_id, title, position, created_by, revision) VALUES ('agent:main:shared', 'extra-tab', 'Extra', 1, 'agent', 1)",
+        )
+        .run();
+      opsDatabase.db
+        .prepare(
+          "INSERT INTO session_suggestions (id, session_key, author_id, text, created_at, state) VALUES ('extra-suggestion', 'agent:main:shared', 'agent-1', 'Extra idea', 5, 'pending')",
+        )
+        .run();
+      opsDatabase.db
+        .prepare(
           "INSERT INTO session_windows (session_id, session_key, previous_session_id, reason, session_scope, created_at, updated_at) VALUES ('winner-previous', ?, NULL, 'reset', 'conversation', 15, 15)",
         )
         .run(sourceAlias);
@@ -717,7 +732,7 @@ describe("doctor canonical session-key repair", () => {
       opsDatabase.db.exec("PRAGMA foreign_keys = ON;");
 
       const report = await repairCanonicalSessionKeys({ apply: true, cfg, env });
-      expect(report).toMatchObject({ foundGroups: 1, removedRows: 2, repairedGroups: 1 });
+      expect(report).toMatchObject({ foundGroups: 1, removedRows: 3, repairedGroups: 1 });
       expect(report.archivedTranscriptDirectories).toHaveLength(2);
       const repairedEntry = loadExactSessionEntryReadOnly({
         agentId: "main",
@@ -835,13 +850,13 @@ describe("doctor canonical session-key repair", () => {
       });
       expect(
         mainDatabase.db.prepare("SELECT tab_id FROM board_tabs ORDER BY tab_id").all(),
-      ).toEqual([{ tab_id: "destination-tab" }, { tab_id: "tab-1" }]);
+      ).toEqual([{ tab_id: "destination-tab" }, { tab_id: "extra-tab" }, { tab_id: "tab-1" }]);
       expect(mainDatabase.db.prepare("SELECT name FROM board_widgets ORDER BY name").all()).toEqual(
         [{ name: "destination-widget" }, { name: "widget-1" }],
       );
-      expect(mainDatabase.db.prepare("SELECT id FROM session_suggestions").get()).toEqual({
-        id: "destination-suggestion",
-      });
+      expect(
+        mainDatabase.db.prepare("SELECT id FROM session_suggestions ORDER BY id").all(),
+      ).toEqual([{ id: "destination-suggestion" }, { id: "extra-suggestion" }]);
       expect(mainDatabase.db.prepare("SELECT identity_id FROM session_members").all()).toEqual([
         { identity_id: "member-1" },
       ]);
