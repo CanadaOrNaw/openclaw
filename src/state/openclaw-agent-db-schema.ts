@@ -55,8 +55,19 @@ import { OPENCLAW_SQLITE_BUSY_TIMEOUT_MS } from "./openclaw-state-db.js";
 type OpenClawAgentMetadataDatabase = Pick<OpenClawAgentKyselyDatabase, "schema_meta">;
 type MigratedSessionEntry = Record<string, unknown>;
 const SESSION_TITLE_PROJECTION_META_KEY = "session-title-projection-v1";
+const SESSION_KEY_REVISION_SCHEMA_START = "CREATE TABLE IF NOT EXISTS session_key_revisions (";
+const SESSION_KEY_REVISION_SCHEMA_END = "CREATE TABLE IF NOT EXISTS session_windows (";
 
 const agentDbLog = createSubsystemLogger("state/agent-db");
+
+function ensureSessionKeyRevisionSchemaInTransaction(db: DatabaseSync): void {
+  const start = OPENCLAW_AGENT_SCHEMA_SQL.indexOf(SESSION_KEY_REVISION_SCHEMA_START);
+  const end = OPENCLAW_AGENT_SCHEMA_SQL.indexOf(SESSION_KEY_REVISION_SCHEMA_END, start);
+  if (start === -1 || end === -1) {
+    throw new Error("OpenClaw agent session-key revision schema markers are missing.");
+  }
+  db.exec(OPENCLAW_AGENT_SCHEMA_SQL.slice(start, end)); // sqlite-allow-raw -- Idempotent additive lazy ensure.
+}
 
 function migratedSessionColumn(
   columns: ReadonlySet<string>,
@@ -607,6 +618,7 @@ function ensureAgentSchema(
         repairCanonicalSqliteIndexes(db, pathname, OPENCLAW_AGENT_SCHEMA_SQL, {
           verifyPhysicalIntegrity: false,
         });
+        ensureSessionKeyRevisionSchemaInTransaction(db);
         backfillSessionTitleProjection(db);
         assertAgentSchemaVersion(db, { agentId, pathname, version: targetVersion });
         return;

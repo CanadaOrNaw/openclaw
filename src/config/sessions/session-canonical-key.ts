@@ -1,5 +1,9 @@
 import type { DatabaseSync } from "node:sqlite";
-import { executeSqliteQuerySync, getNodeSqliteKysely } from "../../infra/kysely-sync.js";
+import {
+  executeSqliteQuerySync,
+  executeSqliteQueryTakeFirstSync,
+  getNodeSqliteKysely,
+} from "../../infra/kysely-sync.js";
 import { normalizeAgentId, parseAgentSessionKey } from "../../routing/session-key.js";
 import type { DB as OpenClawAgentKyselyDatabase } from "../../state/openclaw-agent-db.generated.js";
 import type { OpenClawAgentDatabase } from "../../state/openclaw-agent-db.js";
@@ -7,8 +11,11 @@ import { normalizeStoreSessionKey } from "./store-entry.js";
 import type { SessionEntry } from "./types.js";
 
 const SESSION_CANONICAL_KEY_REPAIR_COMMAND = "openclaw doctor --fix";
-type CanonicalSessionDatabase = Pick<OpenClawAgentKyselyDatabase, "session_nodes">;
-export type CanonicalSessionKeyToken = { dataVersion: number; totalChanges: number };
+type CanonicalSessionDatabase = Pick<
+  OpenClawAgentKyselyDatabase,
+  "session_key_revisions" | "session_nodes"
+>;
+export type CanonicalSessionKeyToken = { revision: number };
 const validatedDatabases = new WeakMap<DatabaseSync, CanonicalSessionKeyToken>();
 
 class SessionCanonicalKeyMigrationRequiredError extends Error {
@@ -63,23 +70,22 @@ export function nonCanonicalSessionKeyRowError(
 }
 
 function readCanonicalSessionKeyToken(database: DatabaseSync): CanonicalSessionKeyToken {
-  const dataVersion = database.prepare("PRAGMA data_version").get() as {
-    data_version?: unknown;
-  };
-  const totalChanges = database.prepare("SELECT total_changes() AS value").get() as {
-    value?: unknown;
-  };
-  if (typeof dataVersion.data_version !== "number" || typeof totalChanges.value !== "number") {
-    throw new Error("SQLite did not return canonical session-key validation counters");
+  const db = getNodeSqliteKysely<CanonicalSessionDatabase>(database);
+  const row = executeSqliteQueryTakeFirstSync(
+    database,
+    db.selectFrom("session_key_revisions").select("revision").where("id", "=", 1),
+  );
+  if (typeof row?.revision !== "number") {
+    throw new Error("SQLite did not return the canonical session-key revision");
   }
-  return { dataVersion: dataVersion.data_version, totalChanges: totalChanges.value };
+  return { revision: row.revision };
 }
 
 function canonicalSessionKeyTokensEqual(
   left: CanonicalSessionKeyToken,
   right: CanonicalSessionKeyToken,
 ): boolean {
-  return left.dataVersion === right.dataVersion && left.totalChanges === right.totalChanges;
+  return left.revision === right.revision;
 }
 
 export function assertCanonicalSqliteSessionKeysCurrent(
@@ -106,7 +112,9 @@ export function assertCanonicalSqliteSessionKeysCurrent(
       throw nonCanonicalSessionKeyRowError(trimmed || row.session_key);
     }
   }
-  validatedDatabases.set(database.db, token);
+  if (!database.db.isTransaction) {
+    validatedDatabases.set(database.db, token);
+  }
   return token;
 }
 
