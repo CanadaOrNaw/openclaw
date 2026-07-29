@@ -269,6 +269,7 @@ export const sessionReadHandlers: GatewayRequestHandlers = {
           () =>
             loadCombinedSessionStoreForGateway(cfg, {
               agentId: p.agentId,
+              configuredAgentsOnly,
               includeRowContext: true,
               projection: "list",
               query,
