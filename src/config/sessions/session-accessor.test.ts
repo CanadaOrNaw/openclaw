@@ -295,7 +295,11 @@ describe("session accessor seam", () => {
       database.db,
       ["validations"],
       (sqlText) =>
-        sqlText.trim() === 'select "session_key" from "session_nodes"' ? "validations" : null,
+        sqlText.includes(
+          'select "session_key", "parent_session_key", "spawned_by" from "session_nodes"',
+        )
+          ? "validations"
+          : null,
     );
     const scope = {
       agentId: "main",
