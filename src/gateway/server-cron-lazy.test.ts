@@ -230,6 +230,89 @@ describe("createLazyGatewayCronState", () => {
     expect(cron["completeConfigAdoption"]).toHaveBeenCalledWith(incomingConfig);
   });
 
+  it("preserves an accepted unloaded completion when the next adoption fails loading", async () => {
+    const cron = createCronService();
+    cron.pauseScheduling = vi.fn().mockImplementationOnce(() => {
+      throw new Error("candidate load failed");
+    });
+    hoisted.setState(createCronState(cron));
+    const lazy = createLazyGatewayCronState(createParams());
+    const acceptedConfig = { agents: { entries: { ops: {} } } };
+    const rejectedConfig = { agents: { entries: { research: {} } } };
+
+    lazy.cron.completeConfigAdoption(acceptedConfig);
+    lazy.cron.pauseScheduling();
+    const reload = lazy.cron.reloadForConfigAdoption(rejectedConfig);
+    lazy.cron.completeConfigAdoption(rejectedConfig);
+    await expect(reload).rejects.toThrow("candidate load failed");
+    await lazy.cron.rejectConfigAdoption();
+    await lazy.cron.status();
+
+    expect(cron["completeConfigAdoption"]).toHaveBeenCalledWith(acceptedConfig);
+    expect(cron["completeConfigAdoption"]).not.toHaveBeenCalledWith(rejectedConfig);
+    expect(cron["reloadForConfigAdoption"]).not.toHaveBeenCalled();
+    expect(cron["rejectConfigAdoption"]).not.toHaveBeenCalled();
+  });
+
+  it("clears the current adoption's own unloaded completion on rejection", async () => {
+    const cron = createCronService();
+    cron.pauseScheduling = vi.fn().mockImplementationOnce(() => {
+      throw new Error("candidate load failed");
+    });
+    hoisted.setState(createCronState(cron));
+    const lazy = createLazyGatewayCronState(createParams());
+    const rejectedConfig = { agents: { entries: { research: {} } } };
+
+    lazy.cron.pauseScheduling();
+    const reload = lazy.cron.reloadForConfigAdoption(rejectedConfig);
+    lazy.cron.completeConfigAdoption(rejectedConfig);
+    await lazy.cron.rejectConfigAdoption();
+    await expect(reload).rejects.toThrow("candidate load failed");
+    await lazy.cron.status();
+
+    expect(cron["completeConfigAdoption"]).not.toHaveBeenCalled();
+    expect(cron["reloadForConfigAdoption"]).not.toHaveBeenCalled();
+  });
+
+  it("defers an in-flight adoption completion until reload preparation finishes", async () => {
+    const cron = createCronService();
+    hoisted.setState(createCronState(cron));
+    const lazy = createLazyGatewayCronState(createParams());
+    const incomingConfig = { agents: { entries: { research: {} } } };
+
+    const reload = lazy.cron.reloadForConfigAdoption(incomingConfig);
+    lazy.cron.completeConfigAdoption(incomingConfig);
+    await reload;
+
+    expect(cron["reloadForConfigAdoption"]).toHaveBeenCalledWith(incomingConfig);
+    expect(cron["completeConfigAdoption"]).toHaveBeenCalledWith(incomingConfig);
+    expect(cron["reloadForConfigAdoption"].mock.invocationCallOrder[0]).toBeLessThan(
+      cron["completeConfigAdoption"].mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it("rejects a queued completion when loaded reload preparation fails", async () => {
+    const finishReload = deferred();
+    const cron = createCronService();
+    cron.reloadForConfigAdoption = vi.fn(async () => {
+      await finishReload.promise;
+      throw new Error("reload preparation failed");
+    });
+    hoisted.setState(createCronState(cron));
+    const lazy = createLazyGatewayCronState(createParams());
+    const incomingConfig = { agents: { entries: { research: {} } } };
+
+    const reload = lazy.cron.reloadForConfigAdoption(incomingConfig);
+    await vi.waitFor(() => expect(cron["reloadForConfigAdoption"]).toHaveBeenCalledOnce());
+    lazy.cron.completeConfigAdoption(incomingConfig);
+    finishReload.resolve();
+    await expect(reload).rejects.toThrow("reload preparation failed");
+    await lazy.cron.rejectConfigAdoption();
+
+    expect(cron["completeConfigAdoption"]).not.toHaveBeenCalled();
+    expect(cron["rejectConfigAdoption"]).toHaveBeenCalledOnce();
+  });
+
   it("waits to start while scheduling is paused", async () => {
     const cron = createCronService();
     hoisted.setState(createCronState(cron));

@@ -5,6 +5,7 @@ import {
   resolveAgentWorkspaceDir,
   tryResolveSoleAgentId,
 } from "../agents/agent-scope.js";
+import { resolveLegacyInheritedAuthAgentId } from "../agents/legacy-inherited-auth-dir.js";
 import {
   prepareLegacyWorkspaceStateReset,
   removeLegacyWorkspaceStateForReset,
@@ -112,6 +113,14 @@ export async function agentsDeleteCommand(
   }
   if (agentId === tryResolveSoleAgentId(cfg)) {
     runtime.error(`Agent "${agentId}" is the only configured agent and cannot be deleted.`);
+    runtime.exit(1);
+    return;
+  }
+  if (agentId === normalizeAgentId(resolveLegacyInheritedAuthAgentId(cfg))) {
+    // H2-2 owns credential relocation; deleting this directory first destroys the shared store.
+    runtime.error(
+      `Agent "${agentId}" owns inherited credentials through agents.defaults.authInheritance.agentId and cannot be deleted. Relocate those credentials, then re-point or remove that binding before retrying.`,
+    );
     runtime.exit(1);
     return;
   }

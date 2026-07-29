@@ -3,12 +3,15 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { prepareLegacyCronOwnerHandoffs } from "../../config/io.cron-owner-handoff.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
+import { openOpenClawStateDatabase } from "../../state/openclaw-state-db.js";
 import {
   readRetainedLegacyDefaultCronOwnerForStore,
   retainLegacyDefaultCronOwnerHandoffForStore,
 } from "../legacy-default-agent-owner-handoff.js";
 import { setupCronServiceSuite } from "../service.test-harness.js";
 import { loadCronStore, saveCronStore } from "../store.js";
+import { cronStoreKey } from "../store/key.js";
+import { loadCronRows } from "../store/row-codec.js";
 import type { CronJob } from "../types.js";
 import {
   beginLegacyDefaultAgentOwnerHandoff,
@@ -87,6 +90,31 @@ describe("cron legacy owner handoff persistence", () => {
       handoff.release();
       stop(state);
     }
+  });
+
+  it("preserves unparseable rows byte-for-byte during owner migration", async () => {
+    const { storePath } = await makeStorePath();
+    const valid = createOwnerlessJob("valid-ownerless");
+    const forwardVersion = createOwnerlessJob("forward-version");
+    await writeJobs(storePath, [valid, forwardVersion]);
+    const database = openOpenClawStateDatabase().db;
+    const storeKey = cronStoreKey(path.resolve(storePath));
+    database
+      .prepare("UPDATE cron_jobs SET schedule_kind = ? WHERE store_key = ? AND job_id = ?")
+      .run("future-schedule-v2", storeKey, forwardVersion.id);
+    const before = loadCronRows(database, storeKey).find((row) => row.job_id === forwardVersion.id);
+
+    const state = createState(storePath);
+    await ensureLoaded(state, { skipRecompute: true });
+    const handoff = await beginLegacyDefaultAgentOwnerHandoff(state, "ops");
+    handoff.release();
+    stop(state);
+
+    const after = loadCronRows(database, storeKey).find((row) => row.job_id === forwardVersion.id);
+    expect(after).toEqual(before);
+    expect((await loadCronStore(storePath)).jobs).toEqual([
+      expect.objectContaining({ id: valid.id, agentId: "ops" }),
+    ]);
   });
 
   it("migrates rows written by an old gateway after a separate config-write commit", async () => {

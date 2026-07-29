@@ -4,8 +4,7 @@ import {
   errorShape,
   validateChatAbortParams,
 } from "../../../packages/gateway-protocol/src/index.js";
-import { tryResolveDefaultAgentId } from "../../agents/agent-scope.js";
-import { tryGetLegacyDefaultAgentId } from "../../config/legacy.default-agent-owner.js";
+import { tryResolveLegacyCompatibilityAgentId } from "../../config/legacy.default-agent-owner.js";
 import { normalizeAgentId } from "../../routing/session-key.js";
 import { parseAgentSessionKey } from "../../sessions/session-key-utils.js";
 import { abortChatRunById } from "../chat-abort.js";
@@ -63,8 +62,7 @@ export async function handleChatAbortRequestWithLifecycle(
   const agentIdOverride = normalizeOptionalText((params as { agentId?: string }).agentId);
   const abortCfg = context.getRuntimeConfig();
   const parsedAbortSessionKey = parseAgentSessionKey(rawSessionKey);
-  const compatibilityDefaultAgentId =
-    tryGetLegacyDefaultAgentId(abortCfg) ?? tryResolveDefaultAgentId(abortCfg);
+  const compatibilityDefaultAgentId = tryResolveLegacyCompatibilityAgentId(abortCfg);
   const abortSessionResolvesGlobal =
     resolveSessionStoreKey({ cfg: abortCfg, sessionKey: rawSessionKey }) === "global";
   const inferredGlobalAgentId =

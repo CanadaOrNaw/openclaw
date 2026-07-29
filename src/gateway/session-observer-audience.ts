@@ -1,5 +1,4 @@
-import { tryResolveSoleAgentId } from "../agents/agent-scope.js";
-import { tryGetLegacyDefaultAgentId } from "../config/legacy.default-agent-owner.js";
+import { tryResolveLegacyCompatibilityAgentId } from "../config/legacy.default-agent-owner.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { normalizeAgentId } from "../routing/session-key.js";
 import type {
@@ -19,7 +18,7 @@ export function createSessionObserverAudience(params: {
     // to this same qualified key before registering the connection.
     const scopedKey = sessionObserverScopeKey(sessionKey, agentId);
     const cfg = params.getConfig();
-    const compatibilityAgentId = tryGetLegacyDefaultAgentId(cfg) ?? tryResolveSoleAgentId(cfg);
+    const compatibilityAgentId = tryResolveLegacyCompatibilityAgentId(cfg);
     if (
       sessionKey === "global" &&
       compatibilityAgentId !== undefined &&

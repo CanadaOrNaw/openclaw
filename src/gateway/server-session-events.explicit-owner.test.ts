@@ -34,6 +34,7 @@ vi.mock("../config/io.js", () => ({
 
 vi.mock("../config/legacy.default-agent-owner.js", () => ({
   tryGetLegacyDefaultAgentId: legacyDefaultAgentIdMock,
+  tryResolveLegacyCompatibilityAgentId: legacyDefaultAgentIdMock,
 }));
 
 vi.mock("../plugins/gateway-events.js", () => ({

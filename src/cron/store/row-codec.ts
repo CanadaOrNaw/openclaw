@@ -583,9 +583,13 @@ export function materializeCronRowAgentOwners(
   db: DatabaseSync,
   storeKey: string,
   legacyDefaultAgentId: string,
+  options?: { jobIds?: ReadonlySet<string> },
 ): number {
   let rewritten = 0;
   for (const row of loadCronRows(db, storeKey)) {
+    if (options?.jobIds && !options.jobIds.has(row.job_id)) {
+      continue;
+    }
     const jobJson = parseJsonObject<Record<string, unknown>>(row.job_json, {});
     const owner = {
       ...(row.agent_id !== null

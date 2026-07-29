@@ -1281,6 +1281,26 @@ describe("agents.delete", () => {
     mocks.movePathToTrash.mockReset().mockResolvedValue("/trashed");
   });
 
+  it("rejects deleting the auth-inheritance owner before starting cleanup", async () => {
+    mocks.loadConfigReturn = {
+      agents: {
+        defaults: { authInheritance: { agentId: "test-agent" } },
+        list: [
+          { id: "test-agent", workspace: "/workspace/test-agent" },
+          { id: "main", default: true },
+        ],
+      },
+    };
+
+    const { respond, promise } = makeCall("agents.delete", { agentId: "test-agent" });
+    await promise;
+
+    expectRespondErrorContaining(respond, "agents.defaults.authInheritance.agentId");
+    expect(mocks.cronRemoveAgentJobsTransactional).not.toHaveBeenCalled();
+    expect(mocks.writeConfigFile).not.toHaveBeenCalled();
+    expect(mocks.movePathToTrash).not.toHaveBeenCalled();
+  });
+
   it("removes only the deleted agent's authority before committing its roster removal", async () => {
     const cronJobs = [
       { id: "deleted-job", agentId: "test-agent" },

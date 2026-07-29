@@ -47,6 +47,7 @@ import {
   sanitizeAgentIdentityLine,
 } from "../../agents/identity-file.js";
 import { resolveAgentIdentity } from "../../agents/identity.js";
+import { resolveLegacyInheritedAuthAgentId } from "../../agents/legacy-inherited-auth-dir.js";
 import {
   prepareLegacyWorkspaceStateReset,
   removeLegacyWorkspaceStateForReset,
@@ -1047,6 +1048,18 @@ export const agentsHandlers: GatewayRequestHandlers = {
       );
       return;
     }
+    if (agentId === normalizeAgentId(resolveLegacyInheritedAuthAgentId(cfg))) {
+      // H2-2 owns credential relocation; deleting this directory first destroys the shared store.
+      respond(
+        false,
+        undefined,
+        errorShape(
+          ErrorCodes.INVALID_REQUEST,
+          `Agent "${agentId}" owns inherited credentials through agents.defaults.authInheritance.agentId and cannot be deleted. Relocate those credentials, then re-point or remove that binding before retrying.`,
+        ),
+      );
+      return;
+    }
 
     const requestedDeleteFiles =
       typeof params.deleteFiles === "boolean" ? params.deleteFiles : true;
@@ -1060,6 +1073,11 @@ export const agentsHandlers: GatewayRequestHandlers = {
         if (agentId === resolveDefaultAgentId(lockedConfig)) {
           throw new AgentConfigPreconditionError(
             `agent "${agentId}" is the default; reassign default first`,
+          );
+        }
+        if (agentId === normalizeAgentId(resolveLegacyInheritedAuthAgentId(lockedConfig))) {
+          throw new AgentConfigPreconditionError(
+            `agent "${agentId}" owns agents.defaults.authInheritance.agentId; relocate credentials and re-point it first`,
           );
         }
         if (configured && lockedJournal?.cleanupCompleted) {

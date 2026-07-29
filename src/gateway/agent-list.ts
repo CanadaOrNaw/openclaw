@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
 import { listAgentEntries, tryResolveDefaultAgentId } from "../agents/agent-scope.js";
-import { tryGetLegacyDefaultAgentId } from "../config/legacy.default-agent-owner.js";
+import { tryResolveLegacyCompatibilityAgentId } from "../config/legacy.default-agent-owner.js";
 import { resolveStateDir } from "../config/paths.js";
 import type { SessionScope } from "../config/sessions.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
@@ -57,7 +57,7 @@ export function resolveGatewayAgentSelectionState(cfg: OpenClawConfig): GatewayA
       selectionRequired: false,
     };
   }
-  const legacyAgentId = tryGetLegacyDefaultAgentId(cfg);
+  const legacyAgentId = tryResolveLegacyCompatibilityAgentId(cfg);
   const legacyCompatibleId = legacyAgentId ?? configuredIds[0];
   if (!legacyCompatibleId) {
     throw new Error("Cannot project gateway agent ownership without a configured agent.");

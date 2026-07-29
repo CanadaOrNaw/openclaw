@@ -16,6 +16,7 @@ import { setupCronServiceSuite, writeCronStoreSnapshot } from "../service.test-h
 import * as cronStoreModule from "../store.js";
 import { loadCronJobsStoreWithConfigJobs, loadCronStore, saveCronJobsStore } from "../store.js";
 import { cronStoreKey } from "../store/key.js";
+import * as ownerMigrationModule from "../store/owner-migration.js";
 import { getCronStoreKysely } from "../store/schema.js";
 import type { CronJob } from "../types.js";
 import { reloadForConfigAdoption, start, stop } from "./ops-lifecycle.js";
@@ -590,6 +591,63 @@ describe("cron service ops seam coverage", () => {
     }
   });
 
+  it("materializes an imported ID concurrently inserted into SQLite", async () => {
+    const { storePath } = await makeStorePath();
+    const now = Date.parse("2026-07-25T12:15:00.000Z");
+    const importedJob: CronJob = {
+      id: "legacy-json-concurrent-sqlite",
+      name: "legacy json concurrent sqlite",
+      enabled: true,
+      createdAtMs: now,
+      updatedAtMs: now,
+      schedule: { kind: "every", everyMs: 60_000, anchorMs: now },
+      sessionTarget: "isolated",
+      wakeMode: "next-heartbeat",
+      payload: { kind: "agentTurn", message: "run" },
+      state: { nextRunAtMs: now + 60_000 },
+    };
+    const committed = await saveCronJobsStore(storePath, {
+      version: 1,
+      jobs: [structuredClone(importedJob)],
+    });
+    if (!committed) {
+      throw new Error("expected cron fixture write result");
+    }
+    const loadSpy = vi
+      .spyOn(cronStoreModule, "loadCronJobsStoreWithConfigJobs")
+      .mockResolvedValueOnce({
+        store: { version: 1, jobs: [structuredClone(importedJob)] },
+        storeEpoch: committed.storeEpoch,
+        runtimeRevision: committed.runtimeRevision,
+        configJobs: [structuredClone(importedJob) as unknown as Record<string, unknown>],
+        configJobIndexes: [0],
+        legacyImportedJobIndexes: [0],
+        configJobRuntimeEntries: [],
+        invalidConfigRows: [],
+      });
+    const state = createCronServiceState({
+      storePath,
+      cronEnabled: true,
+      legacyDefaultAgentId: "ops",
+      nowMs: () => now,
+      log: logger,
+      enqueueSystemEvent: vi.fn(),
+      requestHeartbeat: vi.fn(),
+      runIsolatedAgentJob: vi.fn(async () => ({ status: "ok" as const })),
+    });
+
+    try {
+      await start(state);
+      expect((await loadCronStore(storePath)).jobs[0]).toMatchObject({
+        id: importedJob.id,
+        agentId: "ops",
+      });
+    } finally {
+      stop(state);
+      loadSpy.mockRestore();
+    }
+  });
+
   it("does not resurrect a loaded SQLite record deleted by a pre-upgrade writer", async () => {
     const { storePath } = await makeStorePath();
     const now = Date.parse("2026-07-25T12:30:00.000Z");
@@ -659,9 +717,9 @@ describe("cron service ops seam coverage", () => {
         configJobRuntimeEntries: [],
         invalidConfigRows: [],
       });
-    const transformSpy = vi
-      .spyOn(cronStoreModule, "transformCronJobsStore")
-      .mockResolvedValue(false);
+    const migrationSpy = vi
+      .spyOn(ownerMigrationModule, "materializeCronJobsStoreOwners")
+      .mockResolvedValue({ matched: false, rewritten: 0 });
     const state = createCronServiceState({
       storePath,
       cronEnabled: true,
@@ -677,11 +735,11 @@ describe("cron service ops seam coverage", () => {
       await expect(start(state)).rejects.toThrow(
         "cron store changed during legacy owner migration twice",
       );
-      expect(transformSpy).toHaveBeenCalledTimes(2);
+      expect(migrationSpy).toHaveBeenCalledTimes(2);
     } finally {
       stop(state);
       loadSpy.mockRestore();
-      transformSpy.mockRestore();
+      migrationSpy.mockRestore();
     }
   });
 

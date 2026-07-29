@@ -30,7 +30,15 @@ export function createLazyGatewayCronState(params: LazyGatewayCronParams): Gatew
   const storePath = resolveCronJobsStorePathFromConfig(params.cfg, env);
   const cronEnabled = env.OPENCLAW_SKIP_CRON !== "1" && params.cfg.cron?.enabled !== false;
   let loaded: LoadedGatewayCronState | null = null;
-  let pendingConfigAdoptionCompletion: OpenClawConfig | undefined;
+  const pendingConfigAdoptionCompletions: Array<{ config: OpenClawConfig; owner?: symbol }> = [];
+  let activeConfigAdoption:
+    | {
+        token: symbol;
+        loadedReloadStarted: boolean;
+        preparedLoadedService: boolean;
+        installedPendingCompletion: boolean;
+      }
+    | undefined;
   let stopped = false;
   let lifecycleGeneration = 0;
   let schedulingPaused = false;
@@ -71,17 +79,36 @@ export function createLazyGatewayCronState(params: LazyGatewayCronParams): Gatew
     { cacheRejections: true },
   );
 
+  const applyPendingConfigAdoptionCompletion = (resolved: LoadedGatewayCronState) => {
+    for (;;) {
+      const completion = pendingConfigAdoptionCompletions[0];
+      if (!completion) {
+        return;
+      }
+      if (
+        completion.owner &&
+        activeConfigAdoption?.token === completion.owner &&
+        !activeConfigAdoption.preparedLoadedService
+      ) {
+        return;
+      }
+      resolved.state.cron.completeConfigAdoption(completion.config);
+      pendingConfigAdoptionCompletions.shift();
+      if (completion.owner && activeConfigAdoption?.token === completion.owner) {
+        activeConfigAdoption = undefined;
+      }
+    }
+  };
+
   const load = async (): Promise<LoadedGatewayCronState> => {
     if (loaded) {
+      applyPendingConfigAdoptionCompletion(loaded);
       return loaded;
     }
     // Share the same import promise across concurrent API calls so only one
     // scheduler instance is built for a Gateway process.
     const resolved = await cronStateLoader.load();
-    if (pendingConfigAdoptionCompletion) {
-      resolved.state.cron.completeConfigAdoption(pendingConfigAdoptionCompletion);
-      pendingConfigAdoptionCompletion = undefined;
-    }
+    applyPendingConfigAdoptionCompletion(resolved);
     return resolved;
   };
 
@@ -248,21 +275,59 @@ export function createLazyGatewayCronState(params: LazyGatewayCronParams): Gatew
       return loaded?.phase === "starting" ? Math.max(1, loadedBlockers) : loadedBlockers;
     },
     async reloadForConfigAdoption(incomingConfig) {
-      await (await load()).state.cron.reloadForConfigAdoption(incomingConfig);
+      const adoption = {
+        token: Symbol("cron-config-adoption"),
+        loadedReloadStarted: false,
+        preparedLoadedService: false,
+        installedPendingCompletion: false,
+      };
+      activeConfigAdoption = adoption;
+      const resolved = await load();
+      if (activeConfigAdoption !== adoption) {
+        return;
+      }
+      adoption.loadedReloadStarted = true;
+      await resolved.state.cron.reloadForConfigAdoption(incomingConfig);
+      if (activeConfigAdoption !== adoption) {
+        return;
+      }
+      adoption.preparedLoadedService = true;
+      applyPendingConfigAdoptionCompletion(resolved);
     },
     completeConfigAdoption(incomingConfig) {
-      if (loaded) {
+      if (loaded && (!activeConfigAdoption || activeConfigAdoption.preparedLoadedService)) {
         loaded.state.cron.completeConfigAdoption(incomingConfig);
+        activeConfigAdoption = undefined;
       } else {
-        pendingConfigAdoptionCompletion = incomingConfig;
+        pendingConfigAdoptionCompletions.push({
+          config: incomingConfig,
+          ...(activeConfigAdoption ? { owner: activeConfigAdoption.token } : {}),
+        });
+        if (activeConfigAdoption) {
+          activeConfigAdoption.installedPendingCompletion = true;
+        }
       }
     },
     async rejectConfigAdoption() {
-      // A prepared adoption always awaited load(), which first applies any earlier accepted
-      // completion. Only the current adoption can still own this unloaded completion slot.
-      pendingConfigAdoptionCompletion = undefined;
-      if (loaded) {
-        await loaded.state.cron.rejectConfigAdoption();
+      const adoption = activeConfigAdoption;
+      try {
+        if (
+          adoption?.installedPendingCompletion &&
+          pendingConfigAdoptionCompletions.some((completion) => completion.owner === adoption.token)
+        ) {
+          for (let index = pendingConfigAdoptionCompletions.length - 1; index >= 0; index -= 1) {
+            if (pendingConfigAdoptionCompletions[index]?.owner === adoption.token) {
+              pendingConfigAdoptionCompletions.splice(index, 1);
+            }
+          }
+        }
+        if (loaded && adoption?.loadedReloadStarted) {
+          await loaded.state.cron.rejectConfigAdoption();
+        }
+      } finally {
+        if (activeConfigAdoption === adoption) {
+          activeConfigAdoption = undefined;
+        }
       }
     },
     async status() {

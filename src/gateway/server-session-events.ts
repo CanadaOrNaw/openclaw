@@ -3,9 +3,8 @@
 import path from "node:path";
 import { asPositiveSafeInteger } from "@openclaw/normalization-core/number-coercion";
 import { normalizeOptionalString } from "@openclaw/normalization-core/string-coerce";
-import { tryResolveDefaultAgentId } from "../agents/agent-scope.js";
 import { getRuntimeConfig } from "../config/io.js";
-import { tryGetLegacyDefaultAgentId } from "../config/legacy.default-agent-owner.js";
+import { tryResolveLegacyCompatibilityAgentId } from "../config/legacy.default-agent-owner.js";
 import { parseSqliteSessionFileMarker } from "../config/sessions/legacy-sqlite-marker.js";
 import {
   listSessionEntriesReadOnly as listAccessorSessionEntriesReadOnly,
@@ -43,7 +42,7 @@ type SessionMessageSubscribers = Pick<SessionMessageSubscriberRegistry, "get">;
 
 function tryResolveCompatibilityDefaultAgentId(): string | undefined {
   const cfg = getRuntimeConfig();
-  return tryGetLegacyDefaultAgentId(cfg) ?? tryResolveDefaultAgentId(cfg);
+  return tryResolveLegacyCompatibilityAgentId(cfg);
 }
 
 function hasSessionsChangedReceiver(connIds: ReadonlySet<string>): boolean {

@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import { retainLegacyDefaultAgentId } from "../config/legacy.default-agent-owner.js";
 import { loadSessionEntry } from "../config/sessions/session-accessor.js";
 import {
   directSessionReq,
@@ -29,6 +30,29 @@ test("sessions.delete protects a retained legacy default global session", async 
         storePath: globalStores.mainStorePath,
       })?.sessionId,
     ).toBe("sess-main-global");
+  } finally {
+    await resetConfiguredGlobalAgentSessionStore(globalStores);
+  }
+});
+
+test("sessions.delete falls back from a departed retained owner to the current sole agent", async () => {
+  const globalStores = await createConfiguredGlobalAgentSessionStore({ writePrimeStore: true });
+
+  try {
+    const cfg = globalStores.getRuntimeConfig();
+    cfg.agents = { entries: { research: {} } };
+    retainLegacyDefaultAgentId(cfg, "ops");
+
+    const deleted = await directSessionReq("sessions.delete", {
+      key: "global",
+      agentId: "research",
+      deleteTranscript: false,
+    });
+
+    expect(deleted).toMatchObject({
+      ok: false,
+      error: { code: "INVALID_REQUEST", message: "Cannot delete the main session (global)." },
+    });
   } finally {
     await resetConfiguredGlobalAgentSessionStore(globalStores);
   }

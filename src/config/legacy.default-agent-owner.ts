@@ -1,4 +1,5 @@
 import { normalizeAgentId } from "@openclaw/normalization-core/agent-id";
+import { listAgentIds, tryResolveSoleAgentId } from "../agents/agent-scope-config.js";
 import type { OpenClawConfig } from "./types.openclaw.js";
 
 const legacyDefaultAgentIdByConfig = new WeakMap<object, string>();
@@ -43,6 +44,20 @@ export function inheritLegacyDefaultAgentId(
 /** Reads the retired owner without restoring it to the public config shape. */
 export function tryGetLegacyDefaultAgentId(config: OpenClawConfig): string | undefined {
   return legacyDefaultAgentIdByConfig.get(config);
+}
+
+/** Resolves the live compatibility owner without routing to a departed retained agent. */
+export function tryResolveLegacyCompatibilityAgentId(config: OpenClawConfig): string | undefined {
+  const retainedAgentId = tryGetLegacyDefaultAgentId(config);
+  if (
+    retainedAgentId &&
+    listAgentIds(config).some((agentId) => normalizeAgentId(agentId) === retainedAgentId)
+  ) {
+    return retainedAgentId;
+  }
+  // Raw default:true markers are migration input, never a runtime fallback. The loader
+  // retains their owner above; without that sidecar only a live sole agent is compatible.
+  return tryResolveSoleAgentId(config);
 }
 
 /** Adds per-surface warnings while a legacy first-entry owner is retained. */

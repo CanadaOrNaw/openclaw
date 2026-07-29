@@ -8,8 +8,8 @@ import {
   readRetainedLegacyDefaultCronOwnerForStore,
 } from "../legacy-default-agent-owner-handoff.js";
 import { materializeLegacyDefaultCronJobOwners } from "../legacy-default-agent-owner-migration.js";
-import { materializeLegacyDefaultCronJobOwnersInRecords } from "../legacy-default-agent-owner-records.js";
-import { resolveCronJobsStorePathFromConfig, transformCronJobsStore } from "../store.js";
+import { resolveCronJobsStorePathFromConfig } from "../store.js";
+import { materializeCronJobsStoreOwners } from "../store/owner-migration.js";
 import type { CronJob } from "../types.js";
 import { failureNotificationDeliveryFromJobState } from "./failure-alerts.js";
 import { nextWakeAtMs, recomputeNextRunsForMaintenance } from "./jobs.js";
@@ -41,46 +41,22 @@ async function materializeLoadedLegacyDefaultAgentOwners(
     persistRecords: async (records) => {
       let candidateRecords = records;
       for (let attempt = 0; attempt < 2; attempt += 1) {
-        let transformRan = false;
-        let rewritten = 0;
         const expectedStoreEpoch = state.storeEpoch;
-        await transformCronJobsStore(
-          state.deps.storePath,
-          (current) => {
-            transformRan = true;
-            const currentRecords = current.store.jobs as unknown as Array<Record<string, unknown>>;
-            const currentIds = new Set(
-              currentRecords.flatMap((record) =>
-                typeof record.id === "string" ? [record.id] : [],
-              ),
-            );
-            // Only legacy-JSON imports may be absent from SQLite at load time.
-            // A disappeared SQLite row can be a pre-upgrade writer's concurrent deletion.
-            const missingImportedRecords = candidateRecords.filter(
-              (record) =>
-                typeof record.id === "string" &&
-                state.legacyImportedJobIds.has(record.id) &&
-                !currentIds.has(record.id),
-            );
-            const merged = [...currentRecords, ...missingImportedRecords];
-            rewritten = materializeLegacyDefaultCronJobOwnersInRecords(
-              merged,
-              legacyDefaultAgentId,
-            );
-            if (missingImportedRecords.length === 0 && rewritten === 0) {
-              return null;
-            }
-            return { version: 1, jobs: merged as unknown as CronJob[] };
-          },
-          { bumpStoreEpoch: true, expectedStoreEpoch, env: state.deps.env },
-        );
-        if (transformRan) {
+        const persisted = await materializeCronJobsStoreOwners({
+          storePath: state.deps.storePath,
+          legacyDefaultAgentId,
+          records: candidateRecords as unknown as CronJob[],
+          legacyImportedJobIds: state.legacyImportedJobIds,
+          expectedStoreEpoch,
+          env: state.deps.env,
+        });
+        if (persisted.matched) {
           for (const record of candidateRecords) {
             if (typeof record.id === "string") {
               state.legacyImportedJobIds.delete(record.id);
             }
           }
-          return rewritten;
+          return persisted.rewritten;
         }
         if (attempt === 1) {
           throw new Error("cron store changed during legacy owner migration twice; retry startup");
