@@ -3,6 +3,7 @@ import { normalizeOptionalString } from "@openclaw/normalization-core/string-coe
 import { stripInboundMetadata } from "../../auto-reply/reply/strip-inbound-meta.js";
 import {
   executeSqliteQuerySync,
+  executeSqliteQueryTakeFirstSync,
   getNodeSqliteKysely,
   iterateSqliteQuerySync,
 } from "../../infra/kysely-sync.js";
@@ -31,7 +32,7 @@ const PROJECTED_TITLE = Symbol("projectedTitle");
 type ProjectedTitleEntry = SessionEntry & { [PROJECTED_TITLE]?: string };
 type SessionTitleDatabase = Pick<
   OpenClawAgentKyselyDatabase,
-  "session_nodes" | "session_transcript_active_events" | "transcript_events"
+  "session_nodes" | "session_transcript_active_events" | "session_windows" | "transcript_events"
 >;
 
 export function setSessionProjectedTitle(entry: SessionEntry, title: string | null): void {
@@ -100,10 +101,54 @@ export function deriveSqliteSessionTitle(
       .where("active.message_position", "is not", null)
       .orderBy("active.message_position", "asc"),
   );
+  const hasActiveProjection = Boolean(
+    executeSqliteQueryTakeFirstSync(
+      database,
+      db
+        .selectFrom("session_transcript_active_events")
+        .select("active_position")
+        .where("session_id", "=", entry.sessionId)
+        .limit(1),
+    ),
+  );
+  if (hasActiveProjection) {
+    return (
+      deriveSessionTitleFromEventJson(
+        entry,
+        (function* () {
+          for (const row of rows) {
+            yield row.event_json;
+          }
+        })(),
+      ) ?? null
+    );
+  }
+  const provenance = executeSqliteQueryTakeFirstSync(
+    database,
+    db
+      .selectFrom("session_windows")
+      .select("session_entry_provenance")
+      .where("session_id", "=", entry.sessionId),
+  )?.session_entry_provenance;
+  if (provenance !== 0) {
+    return deriveSessionTitle(entry) ?? null;
+  }
+  const rawRows = iterateSqliteQuerySync(
+    database,
+    db
+      .selectFrom("transcript_events")
+      .select("event_json")
+      .where("session_id", "=", entry.sessionId)
+      .orderBy("seq", "asc"),
+  );
   return (
     deriveSessionTitleFromEventJson(
       entry,
-      [...rows].map((row) => row.event_json),
+      (function* () {
+        for (const row of rawRows) {
+          yield row.event_json;
+        }
+      })(),
     ) ?? null
   );
 }
