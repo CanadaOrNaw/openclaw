@@ -594,11 +594,10 @@ describeBrowserLayout.concurrent("chat responsive browser layout", () => {
         `<!doctype html><html><head><style>${readUiCss()}\n${splitViewCss}</style></head><body>
           <wa-dropdown class="chat-pane__gateway-menu">
             <template shadowrootmode="open"><div part="menu">Gateways</div></template>
-            <wa-dropdown-item class="chat-pane__gateway-menu-item">Local Gateway</wa-dropdown-item>
+            <div class="chat-pane__gateway-menu-item">Local Gateway</div>
           </wa-dropdown>
         </body></html>`,
       );
-      await waitForLayoutSettled(page);
 
       const styles = await page.evaluate(() => {
         const dropdown = document.querySelector<HTMLElement>(".chat-pane__gateway-menu")!;
