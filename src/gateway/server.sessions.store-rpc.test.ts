@@ -604,7 +604,7 @@ test("lists and patches session store via sessions.* RPC", async () => {
   );
 });
 
-test("sessions.list configuredAgentsOnly keeps configured-agent children and hides unrelated stores", async () => {
+test("sessions.list configuredAgentsOnly limits reads to configured stores", async () => {
   const stateDir = process.env.OPENCLAW_STATE_DIR;
   if (!stateDir) {
     throw new Error("OPENCLAW_STATE_DIR is required for gateway session tests");
@@ -680,13 +680,12 @@ test("sessions.list configuredAgentsOnly keeps configured-agent children and hid
     "sessions.list",
     { includeGlobal: false, includeUnknown: false, configuredAgentsOnly: true },
   );
+  diskOnlyDatabase.db.prepare("DELETE FROM session_nodes WHERE session_key = 'main'").run();
   expect(configuredOnly.ok).toBe(true);
   expect(configuredOnly.payload?.sessions.map((session) => session.key)).toEqual([
     "agent:claude:acp:25f77580-de30-4d80-9bc3-7cbc6374bce7",
-    "agent:codex:subagent:app-server-child",
     "agent:main:main",
   ]);
-  diskOnlyDatabase.db.prepare("DELETE FROM session_nodes WHERE session_key = 'main'").run();
 
   const broad = await directSessionHandlerReq<{ sessions: Array<{ key: string }> }>(
     "sessions.list",
