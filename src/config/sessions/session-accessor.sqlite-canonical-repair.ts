@@ -14,7 +14,7 @@ import type { SessionEntrySummary } from "./session-accessor.sqlite-contract.js"
 import { readSqliteSessionGenerationIdsForKeys } from "./session-accessor.sqlite-lifecycle-state.js";
 import {
   copySessionNodeArtifactsForRepair,
-  deleteSessionNodeArtifacts,
+  deleteSessionMembersForRepair,
 } from "./session-accessor.sqlite-node-artifacts.js";
 import { collectSqliteSessionStateIdsForEntry } from "./session-accessor.sqlite-references.js";
 import {
@@ -364,14 +364,18 @@ function copySqliteSessionOwnedStateForRepair(params: {
     }
   }
   if (params.preferSource) {
-    // Node artifacts follow the selected winner; merging loser memberships can restore access.
-    deleteSessionNodeArtifacts(params.destination, params.canonicalKey);
-    copySessionNodeArtifactsForRepair(
-      params.source,
-      params.destination,
-      params.preferredSessionKey ? [params.preferredSessionKey] : sourceKeys,
-      params.canonicalKey,
-    );
+    // Membership is authorization state and follows the selected winner. Boards,
+    // suggestions, and heartbeat state merge by their own revision/id contracts.
+    deleteSessionMembersForRepair(params.destination, params.canonicalKey);
+  }
+  copySessionNodeArtifactsForRepair(
+    params.source,
+    params.destination,
+    params.preferredSessionKey ? [params.preferredSessionKey] : sourceKeys,
+    params.canonicalKey,
+    { includeMembers: params.preferSource },
+  );
+  if (params.preferSource) {
     if (params.preferredEntry && params.preferredSessionKey) {
       const sourceTitle = executeSqliteQueryTakeFirstSync(
         params.source.db,

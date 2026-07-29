@@ -177,6 +177,7 @@ export function copySessionNodeArtifactsForRepair(
   destination: OpenClawAgentDatabase,
   sourceKeys: readonly string[],
   canonicalKey: string,
+  options: { includeMembers?: boolean } = {},
 ): void {
   const keys = [...new Set(sourceKeys)];
   if (keys.length === 0) {
@@ -242,7 +243,11 @@ export function copySessionNodeArtifactsForRepair(
       );
     }
   }
-  if (sourceTables.has("session_members") && destinationTables.has("session_members")) {
+  if (
+    options.includeMembers !== false &&
+    sourceTables.has("session_members") &&
+    destinationTables.has("session_members")
+  ) {
     for (const member of executeSqliteQuerySync(
       source.db,
       sourceDb.selectFrom("session_members").selectAll().where("session_key", "in", keys),
@@ -309,6 +314,21 @@ export function copySessionNodeArtifactsForRepair(
       );
     }
   }
+}
+
+/** Membership is authorization state; canonical repair replaces it from the selected winner. */
+export function deleteSessionMembersForRepair(
+  database: OpenClawAgentDatabase,
+  sessionKey: string,
+): void {
+  if (!readSessionNodeArtifactTables(database).has("session_members")) {
+    return;
+  }
+  const db = getSessionKysely(database.db);
+  executeSqliteQuerySync(
+    database.db,
+    db.deleteFrom("session_members").where("session_key", "=", sessionKey),
+  );
 }
 
 export function deleteSessionNodeArtifacts(

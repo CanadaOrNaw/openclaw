@@ -501,6 +501,31 @@ describe("doctor canonical session-key repair", () => {
       });
       staleDestinationDatabase.db
         .prepare(
+          "INSERT INTO board_tabs (session_key, tab_id, title, position, created_by, revision) VALUES ('agent:main:shared', 'destination-tab', 'Destination', 0, 'user', 2)",
+        )
+        .run();
+      staleDestinationDatabase.db
+        .prepare(
+          "INSERT INTO board_widgets (session_key, name, tab_id, content_kind, html, sha256, view_generation, revision, size_w, size_h, position, created_by, created_at, updated_at) VALUES ('agent:main:shared', 'destination-widget', 'destination-tab', 'html', X'00', 'destination-sha', 'destination-view', 2, 1, 1, 0, 'user', 1, 25)",
+        )
+        .run();
+      staleDestinationDatabase.db
+        .prepare(
+          "INSERT INTO session_suggestions (id, session_key, author_id, text, created_at, state) VALUES ('destination-suggestion', 'agent:main:shared', 'user-1', 'Keep me', 25, 'pending')",
+        )
+        .run();
+      staleDestinationDatabase.db
+        .prepare(
+          "INSERT INTO session_members (session_key, identity_id, added_by, added_at) VALUES ('agent:main:shared', 'destination-member', 'owner-0', 10)",
+        )
+        .run();
+      staleDestinationDatabase.db
+        .prepare(
+          "INSERT INTO heartbeat_outcomes (session_key, run_session_key, outcome, summary, occurred_at, updated_at) VALUES ('agent:main:shared', 'agent:main:shared', 'done', 'destination heartbeat', 25, 25)",
+        )
+        .run();
+      staleDestinationDatabase.db
+        .prepare(
           "INSERT INTO transcript_events (session_id, seq, event_json, created_at) VALUES ('destination-only', 0, ?, 10)",
         )
         .run(
@@ -808,12 +833,18 @@ describe("doctor canonical session-key repair", () => {
       expect(mainDatabase.db.prepare("SELECT session_key FROM board_tabs").get()).toEqual({
         session_key: "agent:main:shared",
       });
-      expect(mainDatabase.db.prepare("SELECT session_key FROM board_widgets").get()).toEqual({
-        session_key: "agent:main:shared",
+      expect(
+        mainDatabase.db.prepare("SELECT tab_id FROM board_tabs ORDER BY tab_id").all(),
+      ).toEqual([{ tab_id: "destination-tab" }, { tab_id: "tab-1" }]);
+      expect(mainDatabase.db.prepare("SELECT name FROM board_widgets ORDER BY name").all()).toEqual(
+        [{ name: "destination-widget" }, { name: "widget-1" }],
+      );
+      expect(mainDatabase.db.prepare("SELECT id FROM session_suggestions").get()).toEqual({
+        id: "destination-suggestion",
       });
-      expect(mainDatabase.db.prepare("SELECT session_key FROM session_members").get()).toEqual({
-        session_key: "agent:main:shared",
-      });
+      expect(mainDatabase.db.prepare("SELECT identity_id FROM session_members").all()).toEqual([
+        { identity_id: "member-1" },
+      ]);
       expect(
         mainDatabase.db
           .prepare(
@@ -841,6 +872,9 @@ describe("doctor canonical session-key repair", () => {
       ).toEqual({
         session_key: "agent:main:shared",
         run_session_key: "agent:main:shared",
+      });
+      expect(mainDatabase.db.prepare("SELECT summary FROM heartbeat_outcomes").get()).toEqual({
+        summary: "destination heartbeat",
       });
       expect(
         loadExactSessionEntryReadOnly({
