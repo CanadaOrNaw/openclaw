@@ -2497,7 +2497,9 @@ export const fr: TranslationMap = {
       description:
         "Exactement un plugin de mémoire occupe l'emplacement mémoire. Sélectionner un moteur l'active et désactive les autres.",
       rowTitle: "Moteur de mémoire",
+      openClawMemory: "Mémoire OpenClaw",
       off: "Désactivée",
+      unavailable: "Indisponible",
       autoHint:
         "Aucun moteur n'est épinglé dans la configuration, l'emplacement revient donc à son propriétaire par défaut.",
       explicitHint: "Ce moteur est épinglé dans la configuration sous plugins.slots.memory.",
@@ -2825,6 +2827,11 @@ export const fr: TranslationMap = {
       title: "Recherche d'outils",
       description:
         "Gardez visible un répertoire d'outils limité et différez le reste derrière une recherche, afin que les grands catalogues MCP et de plugins n'encombrent plus l'invite.",
+    },
+    loopDetection: {
+      title: "Détection des boucles d’outils",
+      description:
+        "Activez des protections basées sur l’historique récent qui avertissent ou bloquent les appels d’outils répétés lorsqu’un agent cesse de progresser.",
     },
     localModelLean: {
       title: "Outils allégés pour les modèles locaux",
@@ -3868,12 +3875,12 @@ export const fr: TranslationMap = {
       loadingPage: "Chargement de la page wiki…",
       dreamsTab: "Rêves",
       insightsTab: "Insights importés",
-      palaceTab: "Palais de la mémoire",
+      wikiTab: "Wiki de la mémoire",
       dreamsExplainer:
         "Il s'agit du journal de rêves brut que le système écrit pendant qu'il rejoue et consolide la mémoire ; utilisez-le pour inspecter ce que le système de mémoire remarque, et où cela semble encore bruité ou pauvre.",
       insightsExplainer:
         "Ce sont des insights importés regroupés à partir d'un historique externe ; utilisez-les pour examiner ce que les imports ont fait ressortir avant que tout cela ne se transforme en mémoire durable.",
-      palaceExplainer:
+      wikiExplainer:
         "Il s'agit de la surface wiki de mémoire compilée que le système peut consulter et exploiter ; utilisez-la pour inspecter les pages de mémoire réelles, les affirmations, les questions ouvertes et les contradictions plutôt que les conversations sources importées brutes.",
       copyArchivePath: "Copier le chemin de l'archive",
       loadingInsights: "Chargement des insights importés…",
@@ -3889,9 +3896,9 @@ export const fr: TranslationMap = {
       riskReasons: "Motifs de risque :",
       labels: "Étiquettes :",
       openSourcePage: "Ouvrir la page source",
-      loadingPalace: "Chargement du palais de la mémoire…",
-      emptyPalace: "Le palais de la mémoire n'est pas encore rempli",
-      emptyPalaceHint:
+      loadingWiki: "Chargement du wiki de la mémoire…",
+      emptyWiki: "Le wiki de la mémoire n’est pas encore renseigné",
+      emptyWikiHint:
         "Pour l'instant, le wiki contient surtout des imports de sources brutes et des rapports opérationnels. Cet onglet devient utile une fois que des synthèses, des entités ou des concepts commencent à être rédigés.",
       claims: "Affirmations",
       openQuestions: "Questions ouvertes",
@@ -3969,7 +3976,7 @@ export const fr: TranslationMap = {
       tidyingKnowledgeGraph: "rangement du graphe de connaissances…",
       replayingConversations: "relecture des conversations d’aujourd’hui…",
       weavingShortTerm: "tissage du court terme dans le long terme…",
-      defragmentingMindPalace: "défragmentation du palais mental…",
+      defragmentingMemoryLane: "défragmentation du chemin des souvenirs…",
       filingLooseThoughts: "classement des pensées éparses…",
       connectingDots: "connexion de points éloignés…",
       compostingContext: "compostage des anciennes fenêtres de contexte…",
@@ -5200,7 +5207,14 @@ export const fr: TranslationMap = {
         scopeSessionHint:
           "Le serveur est enregistré comme désactivé globalement et activé uniquement pour cette session.",
         scopeEverywhereHint: "Le serveur est enregistré et activé pour toutes les sessions.",
-        toolAccess: "Accès aux outils",
+        toolAccess: {
+          label: "Accès aux outils",
+          loading: "Chargement des outils…",
+          loadFailed: "Impossible de charger les outils.",
+          noTools: "Aucun outil disponible pour ce connecteur.",
+          summary: "{enabled} outils sur {total} activés",
+          summaryOne: "{enabled} outil sur {total} activé",
+        },
         enabledCount: "{count} activé(s)",
         loadingSkills: "Chargement des Skills…",
         skillsLoadFailed: "Impossible de charger les Skills.",

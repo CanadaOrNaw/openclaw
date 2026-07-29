@@ -10337,6 +10337,142 @@
         }
       }
     },
+    "Add Attachment": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Attachment"
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加附件"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入附件"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar anexo"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anhang hinzufügen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir archivo adjunto"
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添付ファイルを追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첨부 파일 추가"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter une pièce jointe"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अटैचमेंट जोड़ें"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة مرفق"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi allegato"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ek ekle"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Додати вкладення"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tambahkan Lampiran"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj załącznik"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "เพิ่มไฟล์แนบ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm tệp đính kèm"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bijlage toevoegen"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "افزودن پیوست"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить вложение"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lägg till bilaga"
+          }
+        }
+      }
+    },
     "Add Gateway": {
       "localizations": {
         "en": {
@@ -10741,142 +10877,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lägg till Header"
-          }
-        }
-      }
-    },
-    "Add Image": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add Image"
-          }
-        },
-        "zh-CN": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加图像"
-          }
-        },
-        "zh-TW": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新增圖片"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adicionar imagem"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bild hinzufügen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Agregar imagen"
-          }
-        },
-        "ja-JP": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "画像を追加"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이미지 추가"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajouter une image"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "छवि जोड़ें"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "إضافة صورة"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aggiungi immagine"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Görsel Ekle"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Додати зображення"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tambahkan Gambar"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj obraz"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "เพิ่มรูปภาพ"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Thêm hình ảnh"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Afbeelding toevoegen"
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "افزودن تصویر"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Добавить изображение"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lägg till bild"
           }
         }
       }
@@ -21349,6 +21349,142 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bilagan %@ överskrider gränsen på 5 MB efter storleksändring"
+          }
+        }
+      }
+    },
+    "Attachment %@ exceeds the 20 MB video limit": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attachment %@ exceeds the 20 MB video limit"
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "附件 %@ 超出 20 MB 的视频大小限制"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "附件 %@ 超過 20 MB 的影片大小限制"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O anexo %@ excede o limite de 20 MB para vídeos"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anhang %@ überschreitet das Videolimit von 20 MB"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El archivo adjunto %@ supera el límite de 20 MB para videos"
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添付ファイル %@ は動画の上限サイズ20 MBを超えています"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첨부 파일 %@이(가) 동영상 제한인 20 MB를 초과합니다"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La pièce jointe %@ dépasse la limite de 20 Mo pour les vidéos"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अटैचमेंट %@ वीडियो की 20 MB सीमा से अधिक है"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يتجاوز المرفق %@ الحد الأقصى للفيديو البالغ 20 ميغابايت"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'allegato %@ supera il limite di 20 MB per i video"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ eki, 20 MB video sınırını aşıyor"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вкладення %@ перевищує обмеження розміру відео у 20 МБ"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lampiran %@ melebihi batas video 20 MB"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Załącznik %@ przekracza limit 20 MB dla filmów"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ไฟล์แนบ %@ มีขนาดเกินขีดจำกัดวิดีโอ 20 MB"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tệp đính kèm %@ vượt quá giới hạn video 20 MB"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bijlage %@ overschrijdt de videolimiet van 20 MB"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پیوست %@ از محدودیت ۲۰ مگابایتی ویدیو فراتر می‌رود"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вложение %@ превышает ограничение в 20 МБ для видео"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilagan %@ överskrider gränsen på 20 MB för videor"
           }
         }
       }
@@ -32777,138 +32913,138 @@
         }
       }
     },
-    "Choose Image File": {
+    "Choose Media File": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose Image File"
+            "value": "Choose Media File"
           }
         },
         "zh-CN": {
           "stringUnit": {
             "state": "translated",
-            "value": "选择图片文件"
+            "value": "选择媒体文件"
           }
         },
         "zh-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "選擇圖片檔案"
+            "value": "選擇媒體檔案"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Escolher arquivo de imagem"
+            "value": "Escolher arquivo de mídia"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bilddatei auswählen"
+            "value": "Mediendatei auswählen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Elegir archivo de imagen"
+            "value": "Elegir archivo multimedia"
           }
         },
         "ja-JP": {
           "stringUnit": {
             "state": "translated",
-            "value": "画像ファイルを選択"
+            "value": "メディアファイルを選択"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이미지 파일 선택"
+            "value": "미디어 파일 선택"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choisir un fichier image"
+            "value": "Choisir un fichier multimédia"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "इमेज फ़ाइल चुनें"
+            "value": "मीडिया फ़ाइल चुनें"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "اختر ملف صورة"
+            "value": "اختيار ملف وسائط"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scegli file immagine"
+            "value": "Scegli file multimediale"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Görüntü Dosyası Seç"
+            "value": "Medya dosyası seç"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Вибрати файл зображення"
+            "value": "Вибрати медіафайл"
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pilih File Gambar"
+            "value": "Pilih File Media"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wybierz plik obrazu"
+            "value": "Wybierz plik multimedialny"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "เลือกรูปภาพ"
+            "value": "เลือกไฟล์สื่อ"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Chọn tệp hình ảnh"
+            "value": "Chọn tệp phương tiện"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Afbeeldingsbestand kiezen"
+            "value": "Mediabestand kiezen"
           }
         },
         "fa": {
           "stringUnit": {
             "state": "translated",
-            "value": "انتخاب فایل تصویر"
+            "value": "انتخاب فایل رسانه‌ای"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Выбрать файл изображения"
+            "value": "Выбрать медиафайл"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Välj bildfil"
+            "value": "Välj mediefil"
           }
         }
       }
@@ -121449,6 +121585,142 @@
         }
       }
     },
+    "Only image and video attachments are supported right now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only image and video attachments are supported right now"
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前仅支持图片和视频附件"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前僅支援圖片和影片附件"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No momento, apenas anexos de imagem e vídeo são compatíveis"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Derzeit werden nur Bild- und Videoanhänge unterstützt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por ahora, solo se admiten archivos adjuntos de imagen y video"
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在サポートされている添付ファイルは画像と動画のみです"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재는 이미지 및 동영상 첨부 파일만 지원됩니다"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seules les pièces jointes de type image et vidéo sont actuellement prises en charge"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़िलहाल केवल इमेज और वीडियो अटैचमेंट समर्थित हैं"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا تُدعم حاليًا سوى مرفقات الصور والفيديو"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al momento sono supportati solo allegati di immagini e video"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şu anda yalnızca resim ve video ekleri destekleniyor"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Наразі підтримуються лише вкладення із зображеннями та відео"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saat ini hanya lampiran gambar dan video yang didukung"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obecnie obsługiwane są tylko załączniki w postaci obrazów i filmów"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ขณะนี้รองรับเฉพาะไฟล์แนบรูปภาพและวิดีโอเท่านั้น"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiện chỉ hỗ trợ tệp đính kèm là hình ảnh và video"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Momenteel worden alleen afbeeldingen en video's als bijlage ondersteund"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "در حال حاضر فقط پیوست‌های تصویری و ویدیویی پشتیبانی می‌شوند"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сейчас поддерживаются только изображения и видео"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endast bild- och videobilagor stöds för närvarande"
+          }
+        }
+      }
+    },
     "Only image attachments are supported right now": {
       "localizations": {
         "en": {
@@ -133277,6 +133549,142 @@
           "stringUnit": {
             "state": "translated",
             "value": "Förbereder engångskonfiguration…"
+          }
+        }
+      }
+    },
+    "Preparing playback…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing playback…"
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在准备播放…"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在準備播放…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparando reprodução…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiedergabe wird vorbereitet…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparando la reproducción…"
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生を準備中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "재생 준비 중…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Préparation de la lecture…"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्लेबैक तैयार किया जा रहा है…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ تحضير التشغيل…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparazione della riproduzione…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oynatma hazırlanıyor…"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Підготовка до відтворення…"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menyiapkan pemutaran…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przygotowywanie odtwarzania…"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "กำลังเตรียมเล่น…"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang chuẩn bị phát…"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afspelen voorbereiden…"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "در حال آماده‌سازی پخش…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подготовка к воспроизведению…"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Förbereder uppspelning…"
           }
         }
       }

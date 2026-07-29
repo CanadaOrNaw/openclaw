@@ -2469,7 +2469,9 @@ export const nl: TranslationMap = {
       description:
         "Precies één geheugenplug-in bezit de geheugenslot. Een engine selecteren schakelt deze in en de andere uit.",
       rowTitle: "Geheugenengine",
+      openClawMemory: "OpenClaw-geheugen",
       off: "Uit",
+      unavailable: "Niet beschikbaar",
       autoHint:
         "Er is geen engine vastgezet in de configuratie, dus de slot valt terug op de standaardeigenaar.",
       explicitHint: "Deze engine is vastgezet in de config onder plugins.slots.memory.",
@@ -2780,6 +2782,11 @@ export const nl: TranslationMap = {
       title: "Tool Search",
       description:
         "Houd een begrensde toolmap zichtbaar en stel de rest uit achter zoeken, zodat grote MCP- en plugincatalogi de prompt niet langer overspoelen.",
+    },
+    loopDetection: {
+      title: "Detectie van toollussen",
+      description:
+        "Schakel controles op basis van voortschrijdende geschiedenis in die waarschuwen of herhaalde toolaanroepen blokkeren wanneer een agent geen voortgang meer boekt.",
     },
     localModelLean: {
       title: "Slanke tools voor lokale modellen",
@@ -3816,12 +3823,12 @@ export const nl: TranslationMap = {
       loadingPage: "Wiki-pagina laden…",
       dreamsTab: "Dromen",
       insightsTab: "Geïmporteerde inzichten",
-      palaceTab: "Memory Palace",
+      wikiTab: "Geheugenwiki",
       dreamsExplainer:
         "Dit is het ruwe droomdagboek dat het systeem schrijft tijdens het opnieuw afspelen en consolideren van geheugen; gebruik het om te inspecteren wat het geheugensysteem opmerkt en waar het nog rommelig of dun oogt.",
       insightsExplainer:
         "Dit zijn geïmporteerde inzichten die zijn geclusterd uit externe geschiedenis; gebruik ze om te bekijken wat imports naar boven brachten voordat iets ervan doorgroeit naar duurzaam geheugen.",
-      palaceExplainer:
+      wikiExplainer:
         "Dit is het gecompileerde geheugenwiki-oppervlak dat het systeem kan doorzoeken en waarover het kan redeneren; gebruik het om echte geheugenpagina's, beweringen, openstaande vragen en tegenstrijdigheden te inspecteren in plaats van ruwe geïmporteerde bronchats.",
       copyArchivePath: "Archiefpad kopiëren",
       loadingInsights: "Geïmporteerde inzichten laden…",
@@ -3837,9 +3844,9 @@ export const nl: TranslationMap = {
       riskReasons: "Risicoredenen:",
       labels: "Labels:",
       openSourcePage: "Bronpagina openen",
-      loadingPalace: "Geheugenpaleis laden…",
-      emptyPalace: "Geheugenpaleis is nog niet gevuld",
-      emptyPalaceHint:
+      loadingWiki: "Geheugenwiki laden…",
+      emptyWiki: "De geheugenwiki is nog niet gevuld",
+      emptyWikiHint:
         "Op dit moment bevat de wiki vooral ruwe bronimports en operationele rapporten. Dit tabblad wordt nuttig zodra syntheses, entiteiten of concepten worden geschreven.",
       claims: "Beweringen",
       openQuestions: "Openstaande vragen",
@@ -3918,7 +3925,7 @@ export const nl: TranslationMap = {
       tidyingKnowledgeGraph: "de kennisgrafiek opruimen…",
       replayingConversations: "gesprekken van vandaag opnieuw afspelen…",
       weavingShortTerm: "kortetermijn in langetermijn verweven…",
-      defragmentingMindPalace: "het mind palace defragmenteren…",
+      defragmentingMemoryLane: "geheugenpad defragmenteren…",
       filingLooseThoughts: "losse gedachten opbergen…",
       connectingDots: "verre punten verbinden…",
       compostingContext: "oude contextvensters composteren…",
@@ -5132,7 +5139,14 @@ export const nl: TranslationMap = {
         scopeSessionHint:
           "De server is globaal uitgeschakeld opgeslagen en wordt alleen voor deze sessie ingeschakeld.",
         scopeEverywhereHint: "De server wordt opgeslagen en voor elke sessie ingeschakeld.",
-        toolAccess: "Toegang tot tools",
+        toolAccess: {
+          label: "Toegang tot tools",
+          loading: "Tools laden…",
+          loadFailed: "Kan tools niet laden.",
+          noTools: "Geen tools beschikbaar voor deze connector.",
+          summary: "{enabled} van {total} tools ingeschakeld",
+          summaryOne: "{enabled} van {total} tool ingeschakeld",
+        },
         enabledCount: "{count} aan",
         loadingSkills: "Skills laden…",
         skillsLoadFailed: "Kan Skills niet laden.",

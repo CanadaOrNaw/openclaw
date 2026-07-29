@@ -2474,7 +2474,9 @@ export const pl: TranslationMap = {
       description:
         "Dokładnie jedna wtyczka pamięci zajmuje slot pamięci. Wybór silnika włącza go i wyłącza pozostałe.",
       rowTitle: "Silnik pamięci",
+      openClawMemory: "Pamięć OpenClaw",
       off: "Wyłączone",
+      unavailable: "Niedostępne",
       autoHint:
         "Żaden silnik nie jest przypięty w konfiguracji, więc slot wraca do domyślnego właściciela.",
       explicitHint: "Ten silnik jest przypięty w konfiguracji w plugins.slots.memory.",
@@ -2790,6 +2792,11 @@ export const pl: TranslationMap = {
       title: "Wyszukiwanie narzędzi",
       description:
         "Utrzymuj widoczny ograniczony katalog narzędzi, a resztę odkładaj za wyszukiwarką, aby duże katalogi MCP i wtyczek przestały zaśmiecać prompt.",
+    },
+    loopDetection: {
+      title: "Wykrywanie pętli narzędzi",
+      description:
+        "Włącz zabezpieczenia oparte na historii kroczącej, które ostrzegają lub blokują powtarzające się wywołania narzędzi, gdy agent przestaje robić postępy.",
     },
     localModelLean: {
       title: "Odchudzone narzędzia dla modeli lokalnych",
@@ -3823,12 +3830,12 @@ export const pl: TranslationMap = {
       loadingPage: "Ładowanie strony wiki…",
       dreamsTab: "Sny",
       insightsTab: "Zaimportowane spostrzeżenia",
-      palaceTab: "Pałac pamięci",
+      wikiTab: "Wiki pamięci",
       dreamsExplainer:
         "To surowy dziennik snów, który system zapisuje podczas odtwarzania i konsolidacji pamięci; użyj go, aby sprawdzić, co system pamięci zauważa i gdzie nadal wygląda to szumowo lub ubogo.",
       insightsExplainer:
         "To zaimportowane spostrzeżenia zgrupowane z zewnętrznej historii; użyj ich, aby przejrzeć, co ujawniły importy, zanim cokolwiek trafi do trwałej pamięci.",
-      palaceExplainer:
+      wikiExplainer:
         "To skompilowana powierzchnia wiki pamięci, którą system może przeszukiwać i na której może wnioskować; użyj jej, aby sprawdzić rzeczywiste strony pamięci, twierdzenia, otwarte pytania i sprzeczności, zamiast surowych zaimportowanych czatów źródłowych.",
       copyArchivePath: "Kopiuj ścieżkę archiwum",
       loadingInsights: "Ładowanie zaimportowanych spostrzeżeń…",
@@ -3844,9 +3851,9 @@ export const pl: TranslationMap = {
       riskReasons: "Powody ryzyka:",
       labels: "Etykiety:",
       openSourcePage: "Otwórz stronę źródłową",
-      loadingPalace: "Ładowanie pałacu pamięci…",
-      emptyPalace: "Pałac pamięci nie jest jeszcze wypełniony",
-      emptyPalaceHint:
+      loadingWiki: "Ładowanie wiki pamięci…",
+      emptyWiki: "Wiki pamięci nie została jeszcze uzupełniona",
+      emptyWikiHint:
         "Obecnie wiki zawiera głównie surowe importy źródłowe i raporty operacyjne. Ta karta staje się przydatna, gdy zaczną powstawać syntezy, encje lub koncepcje.",
       claims: "Twierdzenia",
       openQuestions: "Otwarte pytania",
@@ -3924,7 +3931,7 @@ export const pl: TranslationMap = {
       tidyingKnowledgeGraph: "porządkowanie grafu wiedzy…",
       replayingConversations: "odtwarzanie dzisiejszych rozmów…",
       weavingShortTerm: "przekształcanie pamięci krótkoterminowej w długoterminową…",
-      defragmentingMindPalace: "defragmentowanie pałacu pamięci…",
+      defragmentingMemoryLane: "defragmentowanie wspomnień…",
       filingLooseThoughts: "porządkowanie luźnych myśli…",
       connectingDots: "łączenie odległych punktów…",
       compostingContext: "kompostowanie starych okien kontekstu…",
@@ -5137,7 +5144,14 @@ export const pl: TranslationMap = {
         scopeSessionHint:
           "Serwer jest zapisany jako globalnie wyłączony i włączony tylko dla tej sesji.",
         scopeEverywhereHint: "Serwer jest zapisany i włączony dla każdej sesji.",
-        toolAccess: "Dostęp do narzędzi",
+        toolAccess: {
+          label: "Dostęp do narzędzi",
+          loading: "Ładowanie narzędzi…",
+          loadFailed: "Nie udało się załadować narzędzi.",
+          noTools: "Brak narzędzi dostępnych dla tego konektora.",
+          summary: "Włączone narzędzia: {enabled} z {total}",
+          summaryOne: "Włączone narzędzie: {enabled} z {total}",
+        },
         enabledCount: "{count} wł.",
         loadingSkills: "Ładowanie umiejętności…",
         skillsLoadFailed: "Nie udało się załadować umiejętności.",

@@ -2423,7 +2423,9 @@ export const hi: TranslationMap = {
       description:
         "ठीक एक memory plugin memory slot का स्वामी होता है। किसी engine को चुनने से वह सक्षम हो जाता है और बाकी अक्षम हो जाते हैं।",
       rowTitle: "Memory engine",
+      openClawMemory: "OpenClaw मेमोरी",
       off: "बंद",
+      unavailable: "अनुपलब्ध",
       autoHint: "config में कोई engine पिन नहीं है, इसलिए slot अपने डिफ़ॉल्ट स्वामी पर वापस चला जाता है।",
       explicitHint: "यह engine config में plugins.slots.memory के तहत पिन किया गया है।",
       offHint: "config में memory बंद है: plugins.slots.memory none पर सेट है।",
@@ -2715,6 +2717,11 @@ export const hi: TranslationMap = {
       title: "टूल खोज",
       description:
         "एक सीमित टूल निर्देशिका दृश्यमान रखें और बाकी को खोज के पीछे स्थगित करें, ताकि बड़े MCP और प्लगइन कैटलॉग प्रॉम्प्ट में भीड़ न लगाएँ।",
+    },
+    loopDetection: {
+      title: "टूल-लूप का पता लगाना",
+      description:
+        "रोलिंग-हिस्ट्री सुरक्षा उपाय सक्षम करें, जो एजेंट की प्रगति रुकने पर बार-बार की जाने वाली टूल कॉल के लिए चेतावनी देते हैं या उन्हें ब्लॉक करते हैं।",
     },
     localModelLean: {
       title: "स्थानीय मॉडलों के लिए लीन टूल",
@@ -3737,12 +3744,12 @@ export const hi: TranslationMap = {
       loadingPage: "Wiki पेज लोड हो रहा है…",
       dreamsTab: "Dreams",
       insightsTab: "इम्पोर्टेड इनसाइट्स",
-      palaceTab: "मेमोरी पैलेस",
+      wikiTab: "मेमोरी विकी",
       dreamsExplainer:
         "यह कच्ची ड्रीम डायरी है जिसे सिस्टम मेमोरी को रीप्ले और समेकित करते समय लिखता है; इसका उपयोग यह जांचने के लिए करें कि मेमोरी सिस्टम क्या नोटिस कर रहा है, और यह कहाँ अभी भी शोरगुल भरा या पतला दिखता है।",
       insightsExplainer:
         "ये बाहरी इतिहास से क्लस्टर की गई इम्पोर्टेड इनसाइट्स हैं; इनका उपयोग यह समीक्षा करने के लिए करें कि टिकाऊ मेमोरी में शामिल होने से पहले इम्पोर्ट्स ने क्या सामने लाया।",
-      palaceExplainer:
+      wikiExplainer:
         "यह संकलित मेमोरी wiki सतह है जिसे सिस्टम खोज सकता है और उस पर तर्क कर सकता है; इसका उपयोग कच्चे इम्पोर्टेड स्रोत चैट्स के बजाय वास्तविक मेमोरी पेजों, दावों, खुले सवालों और विरोधाभासों की जांच के लिए करें।",
       copyArchivePath: "आर्काइव पाथ कॉपी करें",
       loadingInsights: "इम्पोर्टेड इनसाइट्स लोड हो रही हैं…",
@@ -3758,9 +3765,9 @@ export const hi: TranslationMap = {
       riskReasons: "जोखिम कारण:",
       labels: "लेबल:",
       openSourcePage: "स्रोत पृष्ठ खोलें",
-      loadingPalace: "मेमोरी पैलेस लोड हो रहा है…",
-      emptyPalace: "मेमोरी पैलेस अभी भरा नहीं गया है",
-      emptyPalaceHint:
+      loadingWiki: "मेमोरी विकी लोड हो रही है…",
+      emptyWiki: "मेमोरी विकी में अभी कोई सामग्री नहीं है",
+      emptyWikiHint:
         "अभी विकी में ज़्यादातर कच्चे स्रोत आयात और परिचालन रिपोर्ट हैं। यह टैब तब उपयोगी बनता है जब संश्लेषण, एंटिटीज़, या अवधारणाएँ लिखी जाने लगती हैं।",
       claims: "दावे",
       openQuestions: "खुले प्रश्न",
@@ -3837,7 +3844,7 @@ export const hi: TranslationMap = {
       tidyingKnowledgeGraph: "नॉलेज ग्राफ़ को व्यवस्थित किया जा रहा है…",
       replayingConversations: "आज की बातचीतों को फिर से चलाया जा रहा है…",
       weavingShortTerm: "अल्पकालिक को दीर्घकालिक में बुना जा रहा है…",
-      defragmentingMindPalace: "माइंड पैलेस को डीफ़्रैगमेंट किया जा रहा है…",
+      defragmentingMemoryLane: "मेमोरी लेन को डीफ़्रैगमेंट किया जा रहा है…",
       filingLooseThoughts: "बिखरे विचारों को फ़ाइल किया जा रहा है…",
       connectingDots: "दूरस्थ बिंदुओं को जोड़ा जा रहा है…",
       compostingContext: "पुरानी कॉन्टेक्स्ट विंडो को कम्पोस्ट किया जा रहा है…",
@@ -5026,7 +5033,14 @@ export const hi: TranslationMap = {
         scopeSessionHint:
           "सर्वर को वैश्विक रूप से अक्षम स्थिति में सहेजा जाता है और केवल इस सत्र के लिए सक्षम किया जाता है।",
         scopeEverywhereHint: "सर्वर को हर सत्र के लिए सहेजा और सक्षम किया जाता है।",
-        toolAccess: "टूल एक्सेस",
+        toolAccess: {
+          label: "टूल एक्सेस",
+          loading: "टूल लोड हो रहे हैं…",
+          loadFailed: "टूल लोड नहीं किए जा सके।",
+          noTools: "इस कनेक्टर के लिए कोई टूल उपलब्ध नहीं है।",
+          summary: "{total} में से {enabled} टूल चालू",
+          summaryOne: "{total} में से {enabled} टूल चालू",
+        },
         enabledCount: "{count} चालू",
         loadingSkills: "Skills लोड हो रहे हैं…",
         skillsLoadFailed: "Skills लोड नहीं हो सके।",

@@ -2456,7 +2456,9 @@ export const tr: TranslationMap = {
       description:
         "Bellek yuvasına tam olarak bir bellek eklentisi sahip olur. Bir motor seçmek onu etkinleştirir ve diğerlerini devre dışı bırakır.",
       rowTitle: "Bellek motoru",
+      openClawMemory: "OpenClaw Belleği",
       off: "Kapalı",
+      unavailable: "Kullanılamıyor",
       autoHint:
         "Yapılandırmada hiçbir motor sabitlenmemiş, bu nedenle yuva varsayılan sahibine geri döner.",
       explicitHint: "Bu motor, plugins.slots.memory altındaki yapılandırmada sabitlenmiştir.",
@@ -2774,6 +2776,11 @@ export const tr: TranslationMap = {
       title: "Araç Arama",
       description:
         "Sınırlı bir araç dizinini görünür tutun ve geri kalanını aramanın ardında erteleyin; böylece büyük MCP ve eklenti katalogları istemi doldurmayı bıraksın.",
+    },
+    loopDetection: {
+      title: "Araç döngüsü algılama",
+      description:
+        "Bir aracı ilerleme kaydetmeyi bıraktığında tekrarlanan araç çağrıları için uyarı veren veya bunları engelleyen hareketli geçmiş korumalarını etkinleştirin.",
     },
     localModelLean: {
       title: "Yerel modeller için sade araçlar",
@@ -3803,12 +3810,12 @@ export const tr: TranslationMap = {
       loadingPage: "Wiki sayfası yükleniyor…",
       dreamsTab: "Rüyalar",
       insightsTab: "İçe Aktarılan İçgörüler",
-      palaceTab: "Hafıza Sarayı",
+      wikiTab: "Bellek Wiki'si",
       dreamsExplainer:
         "Bu, sistemin belleği yeniden oynatıp pekiştirirken yazdığı ham rüya günlüğüdür; bunu bellek sisteminin neleri fark ettiğini ve hâlâ nerede gürültülü ya da yetersiz göründüğünü incelemek için kullanın.",
       insightsExplainer:
         "Bunlar, harici geçmişten kümelenmiş, içe aktarılan içgörülerdir; bunları içe aktarımların hangi bilgileri kalıcı belleğe geçmeden önce yüzeye çıkardığını gözden geçirmek için kullanın.",
-      palaceExplainer:
+      wikiExplainer:
         "Bu, sistemin arama yapıp üzerine akıl yürütebileceği derlenmiş bellek wiki yüzeyidir; bunu ham içe aktarılan kaynak sohbetler yerine gerçek bellek sayfalarını, iddiaları, açık soruları ve çelişkileri incelemek için kullanın.",
       copyArchivePath: "Arşiv yolunu kopyala",
       loadingInsights: "İçe aktarılan içgörüler yükleniyor…",
@@ -3824,9 +3831,9 @@ export const tr: TranslationMap = {
       riskReasons: "Risk nedenleri:",
       labels: "Etiketler:",
       openSourcePage: "Kaynak sayfasını aç",
-      loadingPalace: "Bellek sarayı yükleniyor…",
-      emptyPalace: "Bellek sarayı henüz doldurulmadı",
-      emptyPalaceHint:
+      loadingWiki: "Bellek wiki'si yükleniyor…",
+      emptyWiki: "Bellek wiki'si henüz doldurulmadı",
+      emptyWikiHint:
         "Şu anda wiki çoğunlukla ham kaynak içe aktarmaları ve operasyonel raporlar içeriyor. Bu sekme, sentezler, varlıklar veya kavramlar yazılmaya başlandığında kullanışlı hale gelir.",
       claims: "İddialar",
       openQuestions: "Açık sorular",
@@ -3902,7 +3909,7 @@ export const tr: TranslationMap = {
       tidyingKnowledgeGraph: "bilgi grafiği düzenleniyor…",
       replayingConversations: "bugünün konuşmaları yeniden oynatılıyor…",
       weavingShortTerm: "kısa vadeli hafıza uzun vadeli hafızaya işleniyor…",
-      defragmentingMindPalace: "zihin sarayı birleştiriliyor…",
+      defragmentingMemoryLane: "anı yolu birleştiriliyor…",
       filingLooseThoughts: "dağınık düşünceler dosyalanıyor…",
       connectingDots: "uzaktaki noktalar birleştiriliyor…",
       compostingContext: "eski bağlam pencereleri kompost ediliyor…",
@@ -5112,7 +5119,14 @@ export const tr: TranslationMap = {
         scopeSessionHint:
           "Sunucu genel olarak devre dışı biçimde kaydedilir ve yalnızca bu oturum için etkinleştirilir.",
         scopeEverywhereHint: "Sunucu her oturum için kaydedilir ve etkinleştirilir.",
-        toolAccess: "Araç erişimi",
+        toolAccess: {
+          label: "Araç erişimi",
+          loading: "Araçlar yükleniyor…",
+          loadFailed: "Araçlar yüklenemedi.",
+          noTools: "Bu bağlayıcı için kullanılabilir araç yok.",
+          summary: "{total} araçtan {enabled} tanesi açık",
+          summaryOne: "{total} araçtan {enabled} tanesi açık",
+        },
         enabledCount: "{count} açık",
         loadingSkills: "Skills yükleniyor…",
         skillsLoadFailed: "Skills yüklenemedi.",

@@ -4761,6 +4761,142 @@
         }
       }
     },
+    "Add Attachment": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Attachment"
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添加附件"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入附件"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adicionar anexo"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anhang hinzufügen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añadir archivo adjunto"
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添付ファイルを追加"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첨부 파일 추가"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter une pièce jointe"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अटैचमेंट जोड़ें"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة مرفق"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi allegato"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ek ekle"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Додати вкладення"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tambahkan Lampiran"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj załącznik"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "เพิ่มไฟล์แนบ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thêm tệp đính kèm"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bijlage toevoegen"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "افزودن پیوست"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Добавить вложение"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lägg till bilaga"
+          }
+        }
+      }
+    },
     "Add Command": {
       "localizations": {
         "en": {
@@ -5165,142 +5301,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lägg till grupp"
-          }
-        }
-      }
-    },
-    "Add Image": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Add Image"
-          }
-        },
-        "zh-CN": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添加图像"
-          }
-        },
-        "zh-TW": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新增圖片"
-          }
-        },
-        "pt-BR": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adicionar imagem"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bild hinzufügen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Agregar imagen"
-          }
-        },
-        "ja-JP": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "画像を追加"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이미지 추가"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ajouter une image"
-          }
-        },
-        "hi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "छवि जोड़ें"
-          }
-        },
-        "ar": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "إضافة صورة"
-          }
-        },
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aggiungi immagine"
-          }
-        },
-        "tr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Görsel Ekle"
-          }
-        },
-        "uk": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Додати зображення"
-          }
-        },
-        "id": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tambahkan Gambar"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dodaj obraz"
-          }
-        },
-        "th": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "เพิ่มรูปภาพ"
-          }
-        },
-        "vi": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Thêm hình ảnh"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Afbeelding toevoegen"
-          }
-        },
-        "fa": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "افزودن تصویر"
-          }
-        },
-        "ru": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Добавить изображение"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lägg till bild"
           }
         }
       }
@@ -14141,6 +14141,142 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bilagan %@ överskrider gränsen på 5 MB efter storleksändring"
+          }
+        }
+      }
+    },
+    "Attachment %@ exceeds the 20 MB video limit": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attachment %@ exceeds the 20 MB video limit"
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "附件 %@ 超出 20 MB 的视频大小限制"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "附件 %@ 超過 20 MB 的影片大小限制"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O anexo %@ excede o limite de 20 MB para vídeos"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anhang %@ überschreitet das Videolimit von 20 MB"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El archivo adjunto %@ supera el límite de 20 MB para videos"
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "添付ファイル %@ は動画の上限サイズ20 MBを超えています"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첨부 파일 %@이(가) 동영상 제한인 20 MB를 초과합니다"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La pièce jointe %@ dépasse la limite de 20 Mo pour les vidéos"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "अटैचमेंट %@ वीडियो की 20 MB सीमा से अधिक है"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يتجاوز المرفق %@ الحد الأقصى للفيديو البالغ 20 ميغابايت"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'allegato %@ supera il limite di 20 MB per i video"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ eki, 20 MB video sınırını aşıyor"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вкладення %@ перевищує обмеження розміру відео у 20 МБ"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lampiran %@ melebihi batas video 20 MB"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Załącznik %@ przekracza limit 20 MB dla filmów"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ไฟล์แนบ %@ มีขนาดเกินขีดจำกัดวิดีโอ 20 MB"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tệp đính kèm %@ vượt quá giới hạn video 20 MB"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bijlage %@ overschrijdt de videolimiet van 20 MB"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پیوست %@ از محدودیت ۲۰ مگابایتی ویدیو فراتر می‌رود"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Вложение %@ превышает ограничение в 20 МБ для видео"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bilagan %@ överskrider gränsen på 20 MB för videor"
           }
         }
       }
@@ -23393,138 +23529,138 @@
         }
       }
     },
-    "Choose Image File": {
+    "Choose Media File": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose Image File"
+            "value": "Choose Media File"
           }
         },
         "zh-CN": {
           "stringUnit": {
             "state": "translated",
-            "value": "选择图片文件"
+            "value": "选择媒体文件"
           }
         },
         "zh-TW": {
           "stringUnit": {
             "state": "translated",
-            "value": "選擇圖片檔案"
+            "value": "選擇媒體檔案"
           }
         },
         "pt-BR": {
           "stringUnit": {
             "state": "translated",
-            "value": "Escolher arquivo de imagem"
+            "value": "Escolher arquivo de mídia"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bilddatei auswählen"
+            "value": "Mediendatei auswählen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Elegir archivo de imagen"
+            "value": "Elegir archivo multimedia"
           }
         },
         "ja-JP": {
           "stringUnit": {
             "state": "translated",
-            "value": "画像ファイルを選択"
+            "value": "メディアファイルを選択"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이미지 파일 선택"
+            "value": "미디어 파일 선택"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choisir un fichier image"
+            "value": "Choisir un fichier multimédia"
           }
         },
         "hi": {
           "stringUnit": {
             "state": "translated",
-            "value": "इमेज फ़ाइल चुनें"
+            "value": "मीडिया फ़ाइल चुनें"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "اختر ملف صورة"
+            "value": "اختيار ملف وسائط"
           }
         },
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Scegli file immagine"
+            "value": "Scegli file multimediale"
           }
         },
         "tr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Görüntü Dosyası Seç"
+            "value": "Medya dosyası seç"
           }
         },
         "uk": {
           "stringUnit": {
             "state": "translated",
-            "value": "Вибрати файл зображення"
+            "value": "Вибрати медіафайл"
           }
         },
         "id": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pilih File Gambar"
+            "value": "Pilih File Media"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wybierz plik obrazu"
+            "value": "Wybierz plik multimedialny"
           }
         },
         "th": {
           "stringUnit": {
             "state": "translated",
-            "value": "เลือกรูปภาพ"
+            "value": "เลือกไฟล์สื่อ"
           }
         },
         "vi": {
           "stringUnit": {
             "state": "translated",
-            "value": "Chọn tệp hình ảnh"
+            "value": "Chọn tệp phương tiện"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Afbeeldingsbestand kiezen"
+            "value": "Mediabestand kiezen"
           }
         },
         "fa": {
           "stringUnit": {
             "state": "translated",
-            "value": "انتخاب فایل تصویر"
+            "value": "انتخاب فایل رسانه‌ای"
           }
         },
         "ru": {
           "stringUnit": {
             "state": "translated",
-            "value": "Выбрать файл изображения"
+            "value": "Выбрать медиафайл"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Välj bildfil"
+            "value": "Välj mediefil"
           }
         }
       }
@@ -64601,6 +64737,142 @@
         }
       }
     },
+    "Legacy pane — this now lives in the Dashboard": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legacy pane — this now lives in the Dashboard"
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旧版面板 — 此功能现已移至 Dashboard"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "舊版面板 — 此功能現已移至 Dashboard"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Painel legado — agora disponível no Dashboard"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bisheriger Bereich — dieser befindet sich jetzt im Dashboard"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panel heredado — ahora se encuentra en el Dashboard"
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "従来のペイン — 現在はDashboardにあります"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기존 창 — 이제 Dashboard에서 사용할 수 있습니다"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancien volet — il se trouve désormais dans le Dashboard"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लेगेसी पेन — यह अब Dashboard में मौजूद है"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لوحة قديمة — أصبحت الآن في لوحة المعلومات"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pannello legacy — ora si trova nella Dashboard"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eski panel — artık Dashboard'da bulunuyor"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Застаріла панель — тепер вона доступна на панелі керування"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panel lama — kini tersedia di Dasbor"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starszy panel — teraz znajduje się w Dashboard"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "แผงแบบเดิม — ขณะนี้อยู่ใน Dashboard"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bảng cũ — nội dung này hiện nằm trong Dashboard"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verouderd paneel — dit staat nu in het Dashboard"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پنل قدیمی — اکنون در Dashboard قرار دارد"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Устаревшая панель — теперь она находится в Dashboard"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Äldre panel – den finns nu i Dashboard"
+          }
+        }
+      }
+    },
     "Let bundled skill command-line tools run without prompting.": {
       "localizations": {
         "en": {
@@ -84185,6 +84457,142 @@
         }
       }
     },
+    "Only image and video attachments are supported right now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only image and video attachments are supported right now"
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前仅支持图片和视频附件"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "目前僅支援圖片和影片附件"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No momento, apenas anexos de imagem e vídeo são compatíveis"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Derzeit werden nur Bild- und Videoanhänge unterstützt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Por ahora, solo se admiten archivos adjuntos de imagen y video"
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在サポートされている添付ファイルは画像と動画のみです"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재는 이미지 및 동영상 첨부 파일만 지원됩니다"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Seules les pièces jointes de type image et vidéo sont actuellement prises en charge"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "फ़िलहाल केवल इमेज और वीडियो अटैचमेंट समर्थित हैं"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا تُدعم حاليًا سوى مرفقات الصور والفيديو"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al momento sono supportati solo allegati di immagini e video"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Şu anda yalnızca resim ve video ekleri destekleniyor"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Наразі підтримуються лише вкладення із зображеннями та відео"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saat ini hanya lampiran gambar dan video yang didukung"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obecnie obsługiwane są tylko załączniki w postaci obrazów i filmów"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ขณะนี้รองรับเฉพาะไฟล์แนบรูปภาพและวิดีโอเท่านั้น"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiện chỉ hỗ trợ tệp đính kèm là hình ảnh và video"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Momenteel worden alleen afbeeldingen en video's als bijlage ondersteund"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "در حال حاضر فقط پیوست‌های تصویری و ویدیویی پشتیبانی می‌شوند"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Сейчас поддерживаются только изображения и видео"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Endast bild- och videobilagor stöds för närvarande"
+          }
+        }
+      }
+    },
     "Only image attachments are supported right now": {
       "localizations": {
         "en": {
@@ -86629,6 +87037,142 @@
           "stringUnit": {
             "state": "translated",
             "value": "Öppna hjälp…"
+          }
+        }
+      }
+    },
+    "Open in Dashboard": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in Dashboard"
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Dashboard 中打开"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Dashboard 中開啟"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir no Dashboard"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Im Dashboard öffnen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir en el Dashboard"
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboardで開く"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard에서 열기"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir dans le Dashboard"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard में खोलें"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح في لوحة المعلومات"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apri nella Dashboard"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard'da aç"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Відкрити на панелі керування"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buka di Dasbor"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz w Dashboard"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "เปิดใน Dashboard"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mở trong Dashboard"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Openen in Dashboard"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "باز کردن در Dashboard"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Открыть в Dashboard"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öppna i Dashboard"
           }
         }
       }
@@ -98869,6 +99413,142 @@
           "stringUnit": {
             "state": "translated",
             "value": "Förbereder ljud…"
+          }
+        }
+      }
+    },
+    "Preparing playback…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing playback…"
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在准备播放…"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在準備播放…"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparando reprodução…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiedergabe wird vorbereitet…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparando la reproducción…"
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生を準備中…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "재생 준비 중…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Préparation de la lecture…"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "प्लेबैक तैयार किया जा रहा है…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ تحضير التشغيل…"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparazione della riproduzione…"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oynatma hazırlanıyor…"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Підготовка до відтворення…"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menyiapkan pemutaran…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Przygotowywanie odtwarzania…"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "กำลังเตรียมเล่น…"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Đang chuẩn bị phát…"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afspelen voorbereiden…"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "در حال آماده‌سازی پخش…"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Подготовка к воспроизведению…"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Förbereder uppspelning…"
           }
         }
       }
@@ -122129,6 +122809,142 @@
         }
       }
     },
+    "Settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajustes"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einstellungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configuración"
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "सेटिंग्स"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإعدادات"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostazioni"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ayarlar"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Налаштування"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pengaturan"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ustawienia"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "การตั้งค่า"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cài đặt"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Instellingen"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تنظیمات"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Настройки"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inställningar"
+          }
+        }
+      }
+    },
     "Settings could not be read": {
       "localizations": {
         "en": {
@@ -125661,6 +126477,142 @@
           "stringUnit": {
             "state": "translated",
             "value": "Visa mer"
+          }
+        }
+      }
+    },
+    "Show native settings panes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show native settings panes"
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示原生设置面板"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "顯示原生設定面板"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar painéis de ajustes nativos"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Native Einstellungsbereiche anzeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar paneles de configuración nativos"
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ネイティブ設定ペインを表示"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "네이티브 설정 창 표시"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher les volets de réglages natifs"
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "नेटिव सेटिंग्स पेन दिखाएँ"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إظهار لوحات الإعدادات الأصلية"
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostra i pannelli delle impostazioni native"
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yerel ayarlar panellerini göster"
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показувати нативні панелі налаштувань"
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tampilkan panel pengaturan native"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokaż natywne panele ustawień"
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "แสดงแผงการตั้งค่าแบบเนทีฟ"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiển thị các bảng cài đặt gốc"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Systeemeigen instellingenpanelen tonen"
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نمایش پنل‌های تنظیمات بومی"
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Показывать нативные панели настроек"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visa inbyggda inställningspaneler"
           }
         }
       }
@@ -140625,6 +141577,142 @@
         }
       }
     },
+    "The legacy native pane can be re-enabled in Settings > Debug.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The legacy native pane can be re-enabled in Settings > Debug."
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可在“设置”>“调试”中重新启用旧版原生面板。"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "您可以在「Settings > Debug」中重新啟用舊版原生面板。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O painel nativo legado pode ser reativado em Ajustes > Depuração."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Der bisherige native Bereich kann unter Einstellungen > Debug wieder aktiviert werden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El panel nativo heredado se puede volver a habilitar en Settings > Debug."
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "従来のネイティブペインは、Settings > Debugで再度有効にできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기존 네이티브 창은 Settings > Debug에서 다시 활성화할 수 있습니다."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’ancien volet natif peut être réactivé dans Réglages > Débogage."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "लेगेसी नेटिव पेन को Settings > Debug में फिर से सक्षम किया जा सकता है।"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يمكن إعادة تمكين اللوحة الأصلية القديمة في الإعدادات > تصحيح الأخطاء."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il pannello nativo legacy può essere riattivato in Impostazioni > Debug."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eski yerel panel, Ayarlar > Hata Ayıklama bölümünden yeniden etkinleştirilebilir."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Застарілу нативну панель можна знову ввімкнути в розділі Налаштування > Налагодження."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panel native lama dapat diaktifkan kembali di Pengaturan > Debug."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starszy panel natywny można ponownie włączyć w sekcji Ustawienia > Debugowanie."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "คุณสามารถเปิดใช้งานแผงแบบเนทีฟเดิมอีกครั้งได้ใน Settings > Debug"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Có thể bật lại bảng điều khiển gốc cũ trong Cài đặt > Gỡ lỗi."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Het verouderde systeemeigen paneel kan opnieuw worden ingeschakeld via Instellingen > Foutopsporing."
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "پنل بومی قدیمی را می‌توان در Settings > Debug دوباره فعال کرد."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Устаревшую нативную панель можно снова включить в разделе «Настройки» > «Отладка»."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den äldre inbyggda panelen kan aktiveras igen under Inställningar > Felsökning."
+          }
+        }
+      }
+    },
     "The main thread cannot be deleted.": {
       "localizations": {
         "en": {
@@ -142529,6 +143617,142 @@
         }
       }
     },
+    "These panes are being retired in favor of the Dashboard.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These panes are being retired in favor of the Dashboard."
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "这些面板将停用，改用 Dashboard。"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "這些面板即將淘汰，並由 Dashboard 取代。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esses painéis estão sendo descontinuados em favor do Dashboard."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Bereiche werden zugunsten des Dashboards eingestellt."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estos paneles se retirarán en favor del Dashboard."
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "これらのペインは廃止され、Dashboardに移行します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 창들은 Dashboard로 대체되어 지원이 종료될 예정입니다."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ces volets sont progressivement supprimés au profit du Dashboard."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard के पक्ष में इन पेन को हटाया जा रहा है।"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يجري إيقاف هذه اللوحات تدريجيًا لصالح لوحة المعلومات."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questi pannelli verranno dismessi a favore della Dashboard."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu paneller, Dashboard lehine kullanımdan kaldırılıyor."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ці панелі поступово замінюються панеллю керування."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panel-panel ini sedang dihentikan dan digantikan oleh Dasbor."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Te panele są wycofywane na rzecz Dashboard."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "แผงเหล่านี้กำลังจะยุติการใช้งานและเปลี่ยนไปใช้ Dashboard แทน"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Các bảng này đang dần được thay thế bằng Dashboard."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deze panelen worden uitgefaseerd ten gunste van het Dashboard."
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "این پنل‌ها به‌نفع Dashboard کنار گذاشته می‌شوند."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Эти панели выводятся из эксплуатации в пользу Dashboard."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dessa paneler fasas ut till förmån för Dashboard."
+          }
+        }
+      }
+    },
     "Thinking": {
       "localizations": {
         "en": {
@@ -143069,6 +144293,142 @@
           "stringUnit": {
             "state": "translated",
             "value": "Den här appen, WhatsApp, Telegram, Discord, Slack — du väljer."
+          }
+        }
+      }
+    },
+    "This configuration lives on your gateway and is managed in the Dashboard.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This configuration lives on your gateway and is managed in the Dashboard."
+          }
+        },
+        "zh-CN": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此配置存储在您的 Gateway 上，并在 Dashboard 中进行管理。"
+          }
+        },
+        "zh-TW": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此設定儲存在您的 Gateway 上，並於 Dashboard 中管理。"
+          }
+        },
+        "pt-BR": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta configuração fica no seu Gateway e é gerenciada no Dashboard."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Konfiguration befindet sich auf deinem Gateway und wird im Dashboard verwaltet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta configuración se encuentra en tu Gateway y se gestiona desde el Dashboard."
+          }
+        },
+        "ja-JP": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この設定はGatewayに保存されており、Dashboardで管理されます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 구성은 Gateway에 저장되며 Dashboard에서 관리됩니다."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette configuration se trouve sur votre Gateway et est gérée dans le Dashboard."
+          }
+        },
+        "hi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "यह कॉन्फ़िगरेशन आपके Gateway पर मौजूद है और Dashboard में प्रबंधित किया जाता है।"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "توجد هذه التهيئة على Gateway وتُدار في لوحة المعلومات."
+          }
+        },
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Questa configurazione si trova sul tuo Gateway ed è gestita nella Dashboard."
+          }
+        },
+        "tr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bu yapılandırma Gateway'inizde bulunur ve Dashboard üzerinden yönetilir."
+          }
+        },
+        "uk": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ця конфігурація зберігається на вашому Gateway і керується на панелі керування."
+          }
+        },
+        "id": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konfigurasi ini berada di Gateway Anda dan dikelola di Dasbor."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ta konfiguracja znajduje się w Gateway i jest zarządzana w Dashboard."
+          }
+        },
+        "th": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "การกำหนดค่านี้อยู่บน Gateway ของคุณและจัดการผ่าน Dashboard"
+          }
+        },
+        "vi": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cấu hình này nằm trên Gateway của bạn và được quản lý trong Dashboard."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deze configuratie staat op je Gateway en wordt beheerd in het Dashboard."
+          }
+        },
+        "fa": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "این پیکربندی روی Gateway شما قرار دارد و در Dashboard مدیریت می‌شود."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Эта конфигурация хранится на вашем Gateway и управляется в Dashboard."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Den här konfigurationen finns på din gateway och hanteras i Dashboard."
           }
         }
       }

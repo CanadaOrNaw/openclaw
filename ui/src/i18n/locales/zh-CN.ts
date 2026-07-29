@@ -2367,7 +2367,9 @@ export const zh_CN: TranslationMap = {
       title: "引擎",
       description: "恰好只有一个记忆插件占用记忆槽位。选择某个引擎会启用它并禁用其他引擎。",
       rowTitle: "记忆引擎",
+      openClawMemory: "OpenClaw Memory",
       off: "关闭",
+      unavailable: "不可用",
       autoHint: "配置中未固定任何引擎，因此该槽位回退到其默认占用者。",
       explicitHint: "此引擎在配置的 plugins.slots.memory 下被固定。",
       offHint: "记忆已在配置中关闭：plugins.slots.memory 设置为 none。",
@@ -2653,6 +2655,11 @@ export const zh_CN: TranslationMap = {
       title: "工具搜索",
       description:
         "保持有限的工具目录可见，其余的通过搜索延后显示，以便大型 MCP 和插件目录不再挤占提示词。",
+    },
+    loopDetection: {
+      title: "工具循环检测",
+      description:
+        "启用滚动历史防护机制，在智能体停止取得进展时，对重复的工具调用发出警告或进行阻止。",
     },
     localModelLean: {
       title: "为本地模型精简工具",
@@ -3666,12 +3673,12 @@ export const zh_CN: TranslationMap = {
       loadingPage: "正在加载 wiki 页面…",
       dreamsTab: "梦境",
       insightsTab: "已导入的洞察",
-      palaceTab: "记忆宫殿",
+      wikiTab: "记忆 Wiki",
       dreamsExplainer:
         "这是系统在回放和整合记忆时所写的原始梦境日记；用它来检查记忆系统正在注意到什么，以及哪些地方仍然显得杂乱或稀疏。",
       insightsExplainer:
         "这些是从外部历史中聚类得出的已导入洞察；用它来回顾导入所呈现的内容，然后其中任何一部分才会升级为持久记忆。",
-      palaceExplainer:
+      wikiExplainer:
         "这是系统可以搜索和推理的已编译记忆 wiki 界面；用它来检查实际的记忆页面、主张、未解问题和矛盾，而不是原始导入的源聊天。",
       copyArchivePath: "复制存档路径",
       loadingInsights: "正在加载已导入的洞察…",
@@ -3686,9 +3693,9 @@ export const zh_CN: TranslationMap = {
       riskReasons: "风险原因：",
       labels: "标签：",
       openSourcePage: "打开源页面",
-      loadingPalace: "正在加载记忆宫殿…",
-      emptyPalace: "记忆宫殿尚未填充内容",
-      emptyPalaceHint:
+      loadingWiki: "正在加载记忆 Wiki…",
+      emptyWiki: "记忆 Wiki 尚无内容",
+      emptyWikiHint:
         "目前 wiki 中主要是原始来源导入和运行报告。一旦开始编写综合内容、实体或概念，此选项卡才会变得有用。",
       claims: "主张",
       openQuestions: "未解问题",
@@ -3764,7 +3771,7 @@ export const zh_CN: TranslationMap = {
       tidyingKnowledgeGraph: "正在整理知识图谱…",
       replayingConversations: "正在重放今天的对话…",
       weavingShortTerm: "正在将短期记忆编织进长期记忆…",
-      defragmentingMindPalace: "正在整理心智宫殿的碎片…",
+      defragmentingMemoryLane: "正在整理记忆碎片…",
       filingLooseThoughts: "正在归档零散思绪…",
       connectingDots: "正在连接遥远的线索…",
       compostingContext: "正在将旧上下文窗口化作养分…",
@@ -4933,7 +4940,14 @@ export const zh_CN: TranslationMap = {
         scopeEverywhere: "所有位置",
         scopeSessionHint: "服务器已保存为全局禁用，仅对此会话启用。",
         scopeEverywhereHint: "服务器已保存并对所有会话启用。",
-        toolAccess: "工具访问权限",
+        toolAccess: {
+          label: "工具访问权限",
+          loading: "正在加载工具…",
+          loadFailed: "无法加载工具。",
+          noTools: "此连接器没有可用工具。",
+          summary: "已启用 {total} 个工具中的 {enabled} 个",
+          summaryOne: "已启用 {total} 个工具中的 {enabled} 个",
+        },
         enabledCount: "{count} 个已开启",
         loadingSkills: "正在加载 Skills…",
         skillsLoadFailed: "无法加载 Skills。",

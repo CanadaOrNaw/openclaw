@@ -2417,7 +2417,9 @@ export const ar: TranslationMap = {
       title: "المحرك",
       description: "إضافة ذاكرة واحدة فقط تملك خانة الذاكرة. اختيار محرك يُفعّله ويعطّل الآخرين.",
       rowTitle: "محرك الذاكرة",
+      openClawMemory: "ذاكرة OpenClaw",
       off: "إيقاف",
+      unavailable: "غير متاح",
       autoHint: "لا يوجد محرك مثبّت في الإعدادات، لذا تعود الخانة إلى مالكها الافتراضي.",
       explicitHint: "هذا المحرك مثبّت في الإعدادات ضمن plugins.slots.memory.",
       offHint: "الذاكرة معطّلة في الإعدادات: plugins.slots.memory مضبوط على none.",
@@ -2711,6 +2713,11 @@ export const ar: TranslationMap = {
       title: "بحث الأدوات",
       description:
         "أبقِ دليل أدوات محدوداً مرئياً وأجّل البقية خلف البحث، حتى تتوقف كتالوجات MCP والمكوّنات الإضافية الكبيرة عن ازدحام الطلب.",
+    },
+    loopDetection: {
+      title: "اكتشاف حلقات الأدوات",
+      description:
+        "فعّل وسائل حماية تعتمد على السجل المتجدد لتحذير المستخدم من استدعاءات الأدوات المتكررة أو حظرها عندما يتوقف الوكيل عن إحراز تقدم.",
     },
     localModelLean: {
       title: "أدوات مبسّطة للنماذج المحلية",
@@ -3735,12 +3742,12 @@ export const ar: TranslationMap = {
       loadingPage: "جارٍ تحميل صفحة الويكي…",
       dreamsTab: "الأحلام",
       insightsTab: "الرؤى المستوردة",
-      palaceTab: "قصر الذاكرة",
+      wikiTab: "ويكي الذاكرة",
       dreamsExplainer:
         "هذه هي يوميات الأحلام الأولية التي يكتبها النظام أثناء إعادة تشغيل الذاكرة ودمجها؛ استخدمها لفحص ما يلاحظه نظام الذاكرة والمواضع التي لا تزال تبدو مشوشة أو شحيحة.",
       insightsExplainer:
         "هذه رؤى مستوردة جُمعت في مجموعات من السجل الخارجي؛ استخدمها لمراجعة ما أظهرته عمليات الاستيراد قبل أن ينتقل أي منها إلى الذاكرة الدائمة.",
-      palaceExplainer:
+      wikiExplainer:
         "هذه هي واجهة ويكي الذاكرة المجمّعة التي يمكن للنظام البحث فيها والاستدلال بناءً عليها؛ استخدمها لفحص صفحات الذاكرة الفعلية والادعاءات والأسئلة المفتوحة والتناقضات بدلًا من محادثات المصدر الأولية المستوردة.",
       copyArchivePath: "نسخ مسار الأرشيف",
       loadingInsights: "جارٍ تحميل الرؤى المستوردة…",
@@ -3755,9 +3762,9 @@ export const ar: TranslationMap = {
       riskReasons: "أسباب المخاطر:",
       labels: "التسميات:",
       openSourcePage: "فتح صفحة المصدر",
-      loadingPalace: "جارٍ تحميل قصر الذاكرة…",
-      emptyPalace: "لم تتم تعبئة قصر الذاكرة بعد",
-      emptyPalaceHint:
+      loadingWiki: "جارٍ تحميل ويكي الذاكرة…",
+      emptyWiki: "لم تتم تعبئة ويكي الذاكرة بعد",
+      emptyWikiHint:
         "تحتوي الويكي حاليًا في الغالب على عمليات استيراد المصادر الخام والتقارير التشغيلية. ستصبح علامة التبويب هذه مفيدة بمجرد البدء في كتابة التوليفات أو الكيانات أو المفاهيم.",
       claims: "الادعاءات",
       openQuestions: "الأسئلة المفتوحة",
@@ -3833,7 +3840,7 @@ export const ar: TranslationMap = {
       tidyingKnowledgeGraph: "جارٍ ترتيب الرسم البياني للمعرفة…",
       replayingConversations: "جارٍ إعادة تشغيل محادثات اليوم…",
       weavingShortTerm: "جارٍ نسج قصير الأجل في طويل الأجل…",
-      defragmentingMindPalace: "جارٍ إلغاء تجزئة قصر العقل…",
+      defragmentingMemoryLane: "إلغاء تجزئة مسار الذاكرة…",
       filingLooseThoughts: "جارٍ أرشفة الأفكار المتناثرة…",
       connectingDots: "جارٍ وصل النقاط البعيدة…",
       compostingContext: "جارٍ تدوير نوافذ السياق القديمة…",
@@ -5024,7 +5031,14 @@ export const ar: TranslationMap = {
         scopeEverywhere: "في كل مكان",
         scopeSessionHint: "يُحفظ الخادم معطّلًا عموميًا، ولا يُمكّن إلا لهذه الجلسة.",
         scopeEverywhereHint: "يُحفظ الخادم ويُمكّن لكل جلسة.",
-        toolAccess: "الوصول إلى الأدوات",
+        toolAccess: {
+          label: "الوصول إلى الأدوات",
+          loading: "جارٍ تحميل الأدوات…",
+          loadFailed: "تعذّر تحميل الأدوات.",
+          noTools: "لا تتوفر أدوات لهذا الموصّل.",
+          summary: "{enabled} من أصل {total} من الأدوات مفعّلة",
+          summaryOne: "{enabled} من أصل {total} من الأدوات مفعّلة",
+        },
         enabledCount: "{count} مُفعَّل",
         loadingSkills: "جارٍ تحميل المهارات…",
         skillsLoadFailed: "تعذّر تحميل المهارات.",

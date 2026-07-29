@@ -2450,7 +2450,9 @@ export const id: TranslationMap = {
       description:
         "Tepat satu plugin memori memiliki slot memori. Memilih engine akan mengaktifkannya dan menonaktifkan yang lain.",
       rowTitle: "Engine memori",
+      openClawMemory: "Memori OpenClaw",
       off: "Nonaktif",
+      unavailable: "Tidak tersedia",
       autoHint: "Tidak ada engine yang dipatok di config, jadi slot kembali ke pemilik defaultnya.",
       explicitHint: "Engine ini dipatok di config di bawah plugins.slots.memory.",
       offHint: "Memory dimatikan dalam konfigurasi: plugins.slots.memory disetel ke none.",
@@ -2754,6 +2756,11 @@ export const id: TranslationMap = {
       title: "Pencarian Alat",
       description:
         "Jaga direktori alat yang terbatas tetap terlihat dan tunda sisanya di balik pencarian, sehingga katalog MCP dan plugin yang besar berhenti memenuhi prompt.",
+    },
+    loopDetection: {
+      title: "Deteksi loop alat",
+      description:
+        "Aktifkan perlindungan riwayat berjalan yang memperingatkan atau memblokir pemanggilan alat berulang saat agen berhenti membuat kemajuan.",
     },
     localModelLean: {
       title: "Alat ramping untuk model lokal",
@@ -3785,12 +3792,12 @@ export const id: TranslationMap = {
       loadingPage: "Memuat halaman wiki…",
       dreamsTab: "Dreams",
       insightsTab: "Wawasan yang Diimpor",
-      palaceTab: "Memory Palace",
+      wikiTab: "Wiki Memori",
       dreamsExplainer:
         "Ini adalah diary mimpi mentah yang ditulis sistem saat memutar ulang dan mengonsolidasikan memori; gunakan untuk memeriksa apa yang diperhatikan sistem memori, dan di mana ia masih tampak berisik atau tipis.",
       insightsExplainer:
         "Ini adalah wawasan yang diimpor yang dikelompokkan dari riwayat eksternal; gunakan untuk meninjau apa yang muncul dari impor sebelum ada yang berkembang menjadi memori yang tahan lama.",
-      palaceExplainer:
+      wikiExplainer:
         "Ini adalah permukaan wiki memori terkompilasi yang dapat dicari dan dinalar oleh sistem; gunakan untuk memeriksa halaman memori aktual, klaim, pertanyaan terbuka, dan kontradiksi alih-alih obrolan sumber yang diimpor mentah.",
       copyArchivePath: "Salin path arsip",
       loadingInsights: "Memuat wawasan yang diimpor…",
@@ -3806,9 +3813,9 @@ export const id: TranslationMap = {
       riskReasons: "Alasan risiko:",
       labels: "Label:",
       openSourcePage: "Buka halaman sumber",
-      loadingPalace: "Memuat istana memori…",
-      emptyPalace: "Istana memori belum terisi",
-      emptyPalaceHint:
+      loadingWiki: "Memuat wiki memori…",
+      emptyWiki: "Wiki memori belum terisi",
+      emptyWikiHint:
         "Saat ini wiki sebagian besar berisi impor sumber mentah dan laporan operasional. Tab ini menjadi berguna setelah sintesis, entitas, atau konsep mulai ditulis.",
       claims: "Klaim",
       openQuestions: "Pertanyaan terbuka",
@@ -3885,7 +3892,7 @@ export const id: TranslationMap = {
       tidyingKnowledgeGraph: "merapikan knowledge graph…",
       replayingConversations: "memutar ulang percakapan hari ini…",
       weavingShortTerm: "merangkai jangka pendek menjadi jangka panjang…",
-      defragmentingMindPalace: "mendefragmentasi istana pikiran…",
+      defragmentingMemoryLane: "mendefragmentasi jalur memori…",
       filingLooseThoughts: "merapikan pikiran yang tercecer…",
       connectingDots: "menghubungkan titik-titik yang berjauhan…",
       compostingContext: "mengomposkan jendela konteks lama…",
@@ -5090,7 +5097,14 @@ export const id: TranslationMap = {
         scopeSessionHint:
           "Server disimpan dalam keadaan dinonaktifkan secara global dan hanya diaktifkan untuk sesi ini.",
         scopeEverywhereHint: "Server disimpan dan diaktifkan untuk setiap sesi.",
-        toolAccess: "Akses alat",
+        toolAccess: {
+          label: "Akses alat",
+          loading: "Memuat alat…",
+          loadFailed: "Tidak dapat memuat alat.",
+          noTools: "Tidak ada alat yang tersedia untuk konektor ini.",
+          summary: "{enabled} dari {total} alat aktif",
+          summaryOne: "{enabled} dari {total} alat aktif",
+        },
         enabledCount: "{count} aktif",
         loadingSkills: "Memuat Skills…",
         skillsLoadFailed: "Tidak dapat memuat Skills.",

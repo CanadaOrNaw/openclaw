@@ -2433,7 +2433,9 @@ export const ko: TranslationMap = {
       description:
         "정확히 하나의 메모리 플러그인이 메모리 슬롯을 소유합니다. 엔진을 선택하면 해당 엔진이 활성화되고 나머지는 비활성화됩니다.",
       rowTitle: "메모리 엔진",
+      openClawMemory: "OpenClaw 메모리",
       off: "끔",
+      unavailable: "사용 불가",
       autoHint: "config에 고정된 엔진이 없으므로 슬롯이 기본 소유자로 폴백됩니다.",
       explicitHint: "이 엔진은 config의 plugins.slots.memory 아래에 고정되어 있습니다.",
       offHint:
@@ -2735,6 +2737,11 @@ export const ko: TranslationMap = {
       title: "도구 검색",
       description:
         "제한된 도구 디렉터리를 표시하고 나머지는 검색 뒤로 미뤄, 대규모 MCP 및 플러그인 카탈로그가 프롬프트를 혼잡하게 만들지 않도록 합니다.",
+    },
+    loopDetection: {
+      title: "도구 루프 감지",
+      description:
+        "에이전트가 더 이상 진전을 보이지 않을 때 반복되는 도구 호출을 경고하거나 차단하는 최근 기록 기반 보호 기능을 활성화합니다.",
     },
     localModelLean: {
       title: "로컬 모델용 경량 도구",
@@ -3759,12 +3766,12 @@ export const ko: TranslationMap = {
       loadingPage: "위키 페이지 로드 중…",
       dreamsTab: "Dreams",
       insightsTab: "가져온 인사이트",
-      palaceTab: "메모리 팰리스",
+      wikiTab: "메모리 위키",
       dreamsExplainer:
         "이것은 시스템이 메모리를 재생하고 통합하는 동안 작성하는 원본 꿈 일기입니다. 메모리 시스템이 무엇을 인식하고 있는지, 그리고 어디가 아직 노이즈가 많거나 빈약해 보이는지 살펴보는 데 사용하세요.",
       insightsExplainer:
         "이것은 외부 기록에서 클러스터링된 가져온 인사이트입니다. 어떤 것이든 지속적인 메모리로 승격되기 전에 가져오기가 무엇을 드러냈는지 검토하는 데 사용하세요.",
-      palaceExplainer:
+      wikiExplainer:
         "이것은 시스템이 검색하고 추론할 수 있는 컴파일된 메모리 위키 표면입니다. 원본으로 가져온 소스 채팅이 아니라 실제 메모리 페이지, 주장, 미해결 질문, 모순을 살펴보는 데 사용하세요.",
       copyArchivePath: "아카이브 경로 복사",
       loadingInsights: "가져온 인사이트 로드 중…",
@@ -3780,9 +3787,9 @@ export const ko: TranslationMap = {
       riskReasons: "위험 사유:",
       labels: "라벨:",
       openSourcePage: "소스 페이지 열기",
-      loadingPalace: "기억 궁전 불러오는 중…",
-      emptyPalace: "기억 궁전이 아직 채워지지 않았습니다",
-      emptyPalaceHint:
+      loadingWiki: "메모리 위키를 불러오는 중…",
+      emptyWiki: "메모리 위키에 아직 내용이 없습니다",
+      emptyWikiHint:
         "현재 위키에는 대부분 원시 소스 가져오기와 운영 보고서만 있습니다. 이 탭은 종합, 엔터티 또는 개념이 작성되기 시작하면 유용해집니다.",
       claims: "주장",
       openQuestions: "미해결 질문",
@@ -3858,7 +3865,7 @@ export const ko: TranslationMap = {
       tidyingKnowledgeGraph: "지식 그래프를 정리하는 중…",
       replayingConversations: "오늘의 대화를 다시 살펴보는 중…",
       weavingShortTerm: "단기 기억을 장기 기억으로 엮는 중…",
-      defragmentingMindPalace: "마인드 팰리스를 조각 모음하는 중…",
+      defragmentingMemoryLane: "메모리 경로 조각 모음 중…",
       filingLooseThoughts: "흩어진 생각을 정리하는 중…",
       connectingDots: "멀리 떨어진 점들을 연결하는 중…",
       compostingContext: "오래된 컨텍스트 창을 퇴비화하는 중…",
@@ -5056,7 +5063,14 @@ export const ko: TranslationMap = {
         scopeSessionHint:
           "서버는 전역적으로 비활성화된 상태로 저장되며 이 세션에서만 활성화됩니다.",
         scopeEverywhereHint: "서버가 저장되고 모든 세션에서 활성화됩니다.",
-        toolAccess: "도구 액세스",
+        toolAccess: {
+          label: "도구 액세스",
+          loading: "도구를 불러오는 중…",
+          loadFailed: "도구를 불러올 수 없습니다.",
+          noTools: "이 커넥터에 사용할 수 있는 도구가 없습니다.",
+          summary: "도구 {total}개 중 {enabled}개 사용 중",
+          summaryOne: "도구 {total}개 중 {enabled}개 사용 중",
+        },
         enabledCount: "{count}개 켜짐",
         loadingSkills: "Skills 로드 중…",
         skillsLoadFailed: "Skills를 로드할 수 없습니다.",

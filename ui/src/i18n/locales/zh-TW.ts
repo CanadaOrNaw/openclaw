@@ -2377,7 +2377,9 @@ export const zh_TW: TranslationMap = {
       title: "引擎",
       description: "記憶插槽僅由一個記憶外掛擁有。選取某引擎會啟用它並停用其他引擎。",
       rowTitle: "記憶引擎",
+      openClawMemory: "OpenClaw 記憶體",
       off: "關閉",
+      unavailable: "無法使用",
       autoHint: "設定中未固定任何引擎，因此插槽會回退至其預設擁有者。",
       explicitHint: "此引擎已在設定中固定於 plugins.slots.memory 之下。",
       offHint: "記憶已在設定中關閉：plugins.slots.memory 設為 none。",
@@ -2663,6 +2665,10 @@ export const zh_TW: TranslationMap = {
       title: "工具搜尋",
       description:
         "保持有限的工具目錄可見，並將其餘工具延後放在搜尋之後，讓龐大的 MCP 與外掛目錄不再擠佔提示。",
+    },
+    loopDetection: {
+      title: "工具循環偵測",
+      description: "啟用滾動歷程防護機制，在代理程式停止取得進展時，警告或封鎖重複的工具呼叫。",
     },
     localModelLean: {
       title: "為本地模型精簡工具",
@@ -3676,12 +3682,12 @@ export const zh_TW: TranslationMap = {
       loadingPage: "正在載入 Wiki 頁面…",
       dreamsTab: "夢境",
       insightsTab: "匯入的洞察",
-      palaceTab: "記憶宮殿",
+      wikiTab: "記憶 Wiki",
       dreamsExplainer:
         "這是系統在重播與整合記憶時所寫下的原始夢境日記；用它來檢視記憶系統正在注意什麼，以及哪些地方仍顯得雜亂或稀疏。",
       insightsExplainer:
         "這些是從外部歷史紀錄叢集而來的匯入洞察；用它們來檢視匯入所呈現的內容，然後其中任何一項才會晉升為持久記憶。",
-      palaceExplainer:
+      wikiExplainer:
         "這是系統可搜尋和推理的已編譯記憶維基介面；使用它來檢視實際的記憶頁面、主張、開放問題和矛盾，而非原始匯入的來源聊天內容。",
       copyArchivePath: "複製封存路徑",
       loadingInsights: "正在載入匯入的洞察…",
@@ -3696,9 +3702,9 @@ export const zh_TW: TranslationMap = {
       riskReasons: "風險原因：",
       labels: "標籤：",
       openSourcePage: "開啟來源頁面",
-      loadingPalace: "正在載入記憶宮殿…",
-      emptyPalace: "記憶宮殿尚未填入內容",
-      emptyPalaceHint:
+      loadingWiki: "正在載入記憶 Wiki…",
+      emptyWiki: "記憶 Wiki 尚無內容",
+      emptyWikiHint:
         "目前維基主要包含原始來源匯入和操作報告。一旦開始寫入綜合內容、實體或概念，此分頁便會派上用場。",
       claims: "主張",
       openQuestions: "開放問題",
@@ -3774,7 +3780,7 @@ export const zh_TW: TranslationMap = {
       tidyingKnowledgeGraph: "正在整理知識圖譜…",
       replayingConversations: "正在重播今天的對話…",
       weavingShortTerm: "正在將短期記憶編織進長期記憶…",
-      defragmentingMindPalace: "正在重組心智宮殿…",
+      defragmentingMemoryLane: "正在重組記憶之路…",
       filingLooseThoughts: "正在整理零散思緒…",
       connectingDots: "正在連結遙遠的線索…",
       compostingContext: "正在堆肥舊的上下文視窗…",
@@ -4946,7 +4952,14 @@ export const zh_TW: TranslationMap = {
         scopeEverywhere: "所有位置",
         scopeSessionHint: "伺服器會儲存為全域停用，且僅為此工作階段啟用。",
         scopeEverywhereHint: "伺服器會儲存並為每個工作階段啟用。",
-        toolAccess: "工具存取權",
+        toolAccess: {
+          label: "工具存取權",
+          loading: "正在載入工具…",
+          loadFailed: "無法載入工具。",
+          noTools: "此連接器沒有可用的工具。",
+          summary: "已開啟 {total} 個工具中的 {enabled} 個",
+          summaryOne: "已開啟 {total} 個工具中的 {enabled} 個",
+        },
         enabledCount: "{count} 已開啟",
         loadingSkills: "正在載入 Skills…",
         skillsLoadFailed: "無法載入 Skills。",
