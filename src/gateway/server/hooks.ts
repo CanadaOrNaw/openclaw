@@ -8,7 +8,7 @@ import { normalizeOptionalString } from "@openclaw/normalization-core/string-coe
 import { truncateUtf16Safe } from "@openclaw/normalization-core/utf16-slice";
 import type { CliDeps } from "../../cli/deps.types.js";
 import { getRuntimeConfig } from "../../config/io.js";
-import { resolveAgentMainSessionKey } from "../../config/sessions.js";
+import { canonicalizeMainSessionAlias, resolveAgentMainSessionKey } from "../../config/sessions.js";
 import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import type {
   CronAgentAdmissionDisposition,
@@ -21,6 +21,7 @@ import { resolveSystemEventQueueKey } from "../../infra/system-event-queue-key.j
 import { enqueueSystemEvent } from "../../infra/system-events.js";
 import type { createSubsystemLogger } from "../../logging/subsystem.js";
 import { runWithGatewayIndependentRootWorkContinuation } from "../../process/gateway-work-admission.js";
+import { toAgentStoreSessionKey } from "../../routing/session-key.js";
 import type { HookAgentDispatchPayload, HooksConfigResolved } from "../hooks.js";
 import {
   createHooksRequestHandler,
@@ -42,11 +43,25 @@ const HOOK_AGENT_SESSION_CONFLICT_ERROR =
   "hook agent run was rejected because the target session changed";
 const HOOK_AGENT_PREPARATION_ERROR = "hook agent run failed before entering the agent runner";
 
-function resolveHookEventSessionKey(params: { cfg: OpenClawConfig; agentId: string }): string {
+function resolveHookEventSessionKey(params: {
+  cfg: OpenClawConfig;
+  agentId: string;
+  sessionKey?: string;
+}): string {
   if (params.cfg.session?.scope === "global") {
     return "global";
   }
-  return resolveAgentMainSessionKey({ cfg: params.cfg, agentId: params.agentId });
+  return canonicalizeMainSessionAlias({
+    cfg: params.cfg,
+    agentId: params.agentId,
+    sessionKey: params.sessionKey
+      ? toAgentStoreSessionKey({
+          agentId: params.agentId,
+          requestKey: params.sessionKey,
+          mainKey: params.cfg.session?.mainKey,
+        })
+      : resolveAgentMainSessionKey({ cfg: params.cfg, agentId: params.agentId }),
+  });
 }
 
 function enqueueHookSystemEvent(params: {
@@ -182,11 +197,11 @@ export function createGatewayHooksRequestHandler(params: {
     (isolatedAgentModulePromise ??= import("../../cron/isolated-agent.js"));
 
   const dispatchWakeHook = (
-    value: { text: string; mode: "now" | "next-heartbeat" },
+    value: { text: string; mode: "now" | "next-heartbeat"; sessionKey?: string },
     agentId: string,
   ) => {
     const cfg = getRuntimeConfig();
-    const sessionKey = resolveHookEventSessionKey({ cfg, agentId });
+    const sessionKey = resolveHookEventSessionKey({ cfg, agentId, sessionKey: value.sessionKey });
     enqueueHookSystemEvent({ text: value.text, sessionKey, agentId });
     if (value.mode === "now") {
       requestHeartbeat({

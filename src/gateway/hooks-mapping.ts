@@ -319,7 +319,7 @@ function mergeAction(
       kind: "wake",
       text,
       mode,
-      agentId: override.agentId ?? baseWake?.agentId,
+      agentId: override.agentId ?? base.agentId,
       sessionKey: override.sessionKey ?? baseWake?.sessionKey,
       sessionKeySource: resolveMergedSessionKeySource(baseWake, override),
     });

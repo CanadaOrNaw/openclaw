@@ -50,7 +50,7 @@ export type HooksRequestHandler = (req: IncomingMessage, res: ServerResponse) =>
 
 type HookDispatchers = {
   dispatchWakeHook: (
-    value: { text: string; mode: "now" | "next-heartbeat" },
+    value: { text: string; mode: "now" | "next-heartbeat"; sessionKey?: string },
     agentId: string,
   ) => void;
   dispatchAgentHook: (
@@ -459,26 +459,43 @@ export function createHooksRequestHandler(
             return true;
           }
           if (mapped.action.kind === "wake") {
-            if (!isHookAgentAllowed(hooksConfig, mapped.action.agentId)) {
+            const action = mapped.action;
+            if (!isHookAgentAllowed(hooksConfig, action.agentId)) {
               sendJson(res, 400, { ok: false, error: getHookAgentPolicyError() });
               return true;
             }
-            const targetAgentId = resolveEffectiveHookTargetAgentId(
-              hooksConfig,
-              mapped.action.agentId,
-            );
+            const targetAgentId = resolveEffectiveHookTargetAgentId(hooksConfig, action.agentId);
             if (!targetAgentId) {
               sendJson(res, 400, { ok: false, error: getHookAgentSelectionError() });
               return true;
             }
+            let dispatchSessionKey: string | undefined;
+            if (action.sessionKey) {
+              const sessionKey = resolveHookSessionKey({
+                hooksConfig,
+                source:
+                  action.sessionKeySource === "static" ? "mapping-static" : "mapping-templated",
+                sessionKey: action.sessionKey,
+              });
+              if (!sessionKey.ok) {
+                sendJson(res, 400, { ok: false, error: sessionKey.error });
+                return true;
+              }
+              dispatchSessionKey =
+                resolveDispatchSessionKeyOrRespond(sessionKey.value, targetAgentId) ?? undefined;
+              if (!dispatchSessionKey) {
+                return true;
+              }
+            }
             dispatchWakeHook(
               {
-                text: mapped.action.text,
-                mode: mapped.action.mode,
+                text: action.text,
+                mode: action.mode,
+                ...(dispatchSessionKey ? { sessionKey: dispatchSessionKey } : {}),
               },
               targetAgentId,
             );
-            sendJson(res, 200, { ok: true, mode: mapped.action.mode });
+            sendJson(res, 200, { ok: true, mode: action.mode });
             return true;
           }
           const action = mapped.action;

@@ -531,13 +531,16 @@ describe("gateway server hooks", () => {
     setMainAndHooksAgents();
 
     await withGatewayServer(async ({ port }) => {
-      const direct = await postHook(port, "/hooks/wake", { text: "Direct wake" });
+      const direct = await postHook(port, "/hooks/wake", {
+        text: "Direct wake",
+        agentId: "hooks",
+      });
       expect(direct.status).toBe(200);
-      await waitForSystemEvent(5_000);
-      const directEvents = peekSystemEventEntries(resolveMainKey());
+      await waitForSystemEventTexts(HOOKS_MAIN_SESSION_KEY, 5_000);
+      const directEvents = peekSystemEventEntries(HOOKS_MAIN_SESSION_KEY);
       expect(directEvents).toHaveLength(1);
       expect(directEvents[0]?.text).toBe("Direct wake");
-      drainSystemEvents(resolveMainKey());
+      drainSystemEvents(HOOKS_MAIN_SESSION_KEY);
 
       const mapped = await postHook(port, "/hooks/mapped-wake", { subject: "Email" });
       expect(mapped.status).toBe(200);
@@ -551,8 +554,12 @@ describe("gateway server hooks", () => {
     testState.sessionConfig = { scope: "global" };
     await withGatewayServer(async ({ port }) => {
       expect((await postHook(port, "/hooks/mapped-wake", { subject: "Global" })).status).toBe(200);
-      await waitForSystemEventTexts("global");
-      expect(peekSystemEvents("global")).toContain("Mapped wake: Global");
+      const hooksGlobalQueueKey = resolveSystemEventQueueKey({
+        sessionKey: "global",
+        agentId: "hooks",
+      });
+      await waitForSystemEventTexts(hooksGlobalQueueKey);
+      expect(peekSystemEvents(hooksGlobalQueueKey)).toContain("Mapped wake: Global");
     });
   });
 
