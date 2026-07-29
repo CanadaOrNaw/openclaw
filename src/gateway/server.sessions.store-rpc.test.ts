@@ -10,7 +10,9 @@ import {
   loadTranscriptEvents,
   persistSessionTranscriptTurn,
 } from "../config/sessions/session-accessor.js";
+import { resolveSqliteTargetFromSessionStorePath } from "../config/sessions/session-sqlite-target.js";
 import type { CronJob } from "../cron/types.js";
+import { openOpenClawAgentDatabase } from "../state/openclaw-agent-db.js";
 import { deliveryContextFromSession } from "../utils/delivery-context.shared.js";
 import { agentDiscoveryMock, rpcReq, testState, writeSessionStore } from "./test-helpers.js";
 import {
@@ -664,6 +666,15 @@ test("sessions.list configuredAgentsOnly keeps configured-agent children and hid
     agentId: "local",
     entries: { main: { sessionId: "sess-local", updatedAt: 10 } },
   });
+  const diskOnlyDatabase = openOpenClawAgentDatabase({
+    agentId: "local",
+    path: resolveSqliteTargetFromSessionStorePath(diskOnlyStorePath, { agentId: "local" }).path,
+  });
+  diskOnlyDatabase.db
+    .prepare(
+      "INSERT INTO session_nodes (session_key, current_session_id, entry_json, updated_at) VALUES ('main', 'legacy-local', ?, 1)",
+    )
+    .run(JSON.stringify({ sessionId: "legacy-local", updatedAt: 1 }));
 
   const configuredOnly = await directSessionHandlerReq<{ sessions: Array<{ key: string }> }>(
     "sessions.list",
@@ -675,6 +686,7 @@ test("sessions.list configuredAgentsOnly keeps configured-agent children and hid
     "agent:codex:subagent:app-server-child",
     "agent:main:main",
   ]);
+  diskOnlyDatabase.db.prepare("DELETE FROM session_nodes WHERE session_key = 'main'").run();
 
   const broad = await directSessionHandlerReq<{ sessions: Array<{ key: string }> }>(
     "sessions.list",

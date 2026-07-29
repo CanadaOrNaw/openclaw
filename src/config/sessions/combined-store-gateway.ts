@@ -37,6 +37,7 @@ import {
   listKnownSessionStoreAgentIds,
   resolveAgentSessionStoreTargetsSync,
   resolveAllAgentSessionStoreTargetsSync,
+  resolveSessionStoreTargets,
   type SessionStoreTarget,
 } from "./targets.js";
 import type { SessionEntry } from "./types.js";
@@ -290,6 +291,7 @@ function mergeOpenIncognitoStores(params: {
 
 function resolveCombinedDurableTargets(params: {
   cfg: OpenClawConfig;
+  configuredAgentsOnly: boolean;
   defaultAgentId: string;
   diagnostics: string[];
   requestedAgentId?: string;
@@ -298,7 +300,9 @@ function resolveCombinedDurableTargets(params: {
   if (!storeConfig || isStorePathTemplate(storeConfig)) {
     const targets = params.requestedAgentId
       ? resolveAgentSessionStoreTargetsSync(params.cfg, params.requestedAgentId)
-      : resolveAllAgentSessionStoreTargetsSync(params.cfg);
+      : params.configuredAgentsOnly
+        ? resolveSessionStoreTargets(params.cfg, { allAgents: true })
+        : resolveAllAgentSessionStoreTargetsSync(params.cfg);
     return {
       durableStorePath: resolveCombinedStorePath(
         targets.map((target) => target.storePath),
@@ -372,6 +376,7 @@ export function loadCombinedSessionStoreForGateway(
     : configuredAgentIds;
   const resolved = resolveCombinedDurableTargets({
     cfg,
+    configuredAgentsOnly: opts.configuredAgentsOnly === true,
     defaultAgentId,
     diagnostics,
     ...(requestedAgentId ? { requestedAgentId } : {}),
