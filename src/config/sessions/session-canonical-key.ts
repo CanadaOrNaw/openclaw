@@ -19,7 +19,7 @@ type CanonicalSessionDatabase = Pick<
   OpenClawAgentKyselyDatabase,
   "session_key_contract" | "session_key_revisions" | "session_nodes"
 >;
-export type CanonicalSessionKeyToken = { revision: number };
+type CanonicalSessionKeyToken = { revision: number };
 const validatedDatabases = new WeakMap<
   DatabaseSync,
   { mainKey: string; token: CanonicalSessionKeyToken }

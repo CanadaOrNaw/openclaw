@@ -153,7 +153,7 @@ export function deriveSqliteSessionTitle(
   );
 }
 
-export function deriveSessionTitleFromEventJson(
+function deriveSessionTitleFromEventJson(
   entry: SessionEntry,
   eventJsonRows: Iterable<string>,
 ): string | undefined {
