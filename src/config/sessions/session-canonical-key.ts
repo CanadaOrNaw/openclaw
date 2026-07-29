@@ -17,7 +17,7 @@ import type { SessionEntry } from "./types.js";
 const SESSION_CANONICAL_KEY_REPAIR_COMMAND = "openclaw doctor --fix";
 type CanonicalSessionDatabase = Pick<
   OpenClawAgentKyselyDatabase,
-  "session_key_revisions" | "session_nodes"
+  "session_key_contract" | "session_key_revisions" | "session_nodes"
 >;
 export type CanonicalSessionKeyToken = { revision: number };
 const validatedDatabases = new WeakMap<
@@ -100,12 +100,20 @@ export function assertCanonicalSqliteSessionKeysCurrent(
   mainKey?: string,
 ): CanonicalSessionKeyToken {
   const token = readCanonicalSessionKeyToken(database.db);
-  const canonicalMainKey = normalizeMainKey(mainKey);
   const cached = validatedDatabases.get(database.db);
-  if (cached?.mainKey === canonicalMainKey && canonicalSessionKeyTokensEqual(cached.token, token)) {
+  if (
+    cached &&
+    (mainKey === undefined || cached.mainKey === normalizeMainKey(mainKey)) &&
+    canonicalSessionKeyTokensEqual(cached.token, token)
+  ) {
     return token;
   }
   const db = getNodeSqliteKysely<CanonicalSessionDatabase>(database.db);
+  const storedMainKey = executeSqliteQueryTakeFirstSync(
+    database.db,
+    db.selectFrom("session_key_contract").select("main_key").where("id", "=", 1),
+  )?.main_key;
+  const canonicalMainKey = normalizeMainKey(mainKey ?? storedMainKey);
   for (const row of executeSqliteQuerySync(
     database.db,
     db.selectFrom("session_nodes").select("session_key"),
@@ -126,6 +134,26 @@ export function assertCanonicalSqliteSessionKeysCurrent(
     validatedDatabases.set(database.db, { mainKey: canonicalMainKey, token });
   }
   return token;
+}
+
+export function setCanonicalSqliteSessionMainKey(
+  database: Pick<OpenClawAgentDatabase, "db">,
+  mainKey: string | undefined,
+): void {
+  const canonicalMainKey = normalizeMainKey(mainKey);
+  const db = getNodeSqliteKysely<CanonicalSessionDatabase>(database.db);
+  executeSqliteQuerySync(
+    database.db,
+    db
+      .insertInto("session_key_contract")
+      .values({ id: 1, main_key: canonicalMainKey, updated_at: Date.now() })
+      .onConflict((conflict) =>
+        conflict.column("id").doUpdateSet({
+          main_key: canonicalMainKey,
+          updated_at: Date.now(),
+        }),
+      ),
+  );
 }
 
 export function canonicalSqliteSessionKeyTokenIsCurrent(

@@ -99,6 +99,14 @@ CREATE TABLE IF NOT EXISTS session_key_revisions (
 
 INSERT OR IGNORE INTO session_key_revisions (id, revision) VALUES (1, 0);
 
+CREATE TABLE IF NOT EXISTS session_key_contract (
+  id INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+  main_key TEXT NOT NULL,
+  updated_at INTEGER NOT NULL
+) STRICT;
+
+INSERT OR IGNORE INTO session_key_contract (id, main_key, updated_at) VALUES (1, 'main', 0);
+
 CREATE TRIGGER IF NOT EXISTS session_key_revisions_after_insert
 AFTER INSERT ON session_nodes
 BEGIN
@@ -113,6 +121,12 @@ END;
 
 CREATE TRIGGER IF NOT EXISTS session_key_revisions_after_key_update
 AFTER UPDATE OF session_key ON session_nodes
+BEGIN
+  UPDATE session_key_revisions SET revision = revision + 1 WHERE id = 1;
+END;
+
+CREATE TRIGGER IF NOT EXISTS session_key_revisions_after_contract_update
+AFTER UPDATE OF main_key ON session_key_contract
 BEGIN
   UPDATE session_key_revisions SET revision = revision + 1 WHERE id = 1;
 END;
