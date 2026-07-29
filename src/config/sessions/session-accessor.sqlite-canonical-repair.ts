@@ -23,10 +23,7 @@ import {
   resolveSqliteStoreScope,
   toDatabaseOptions,
 } from "./session-accessor.sqlite-scope.js";
-import {
-  deriveSqliteSessionTitle,
-  refreshSqliteSessionTitleProjection,
-} from "./session-accessor.sqlite-session-row.js";
+import { refreshSqliteSessionTitleProjection } from "./session-accessor.sqlite-session-row.js";
 import { parseSqliteSessionEntryJson } from "./session-accessor.sqlite-status.js";
 import type { SessionEntryListScope } from "./session-accessor.types.js";
 import {
@@ -385,21 +382,7 @@ function copySqliteSessionOwnedStateForRepair(params: {
   }
   if (params.preferSource) {
     if (params.preferredEntry && params.preferredSessionKey) {
-      const sourceTitle = executeSqliteQueryTakeFirstSync(
-        params.source.db,
-        sourceDb
-          .selectFrom("session_nodes")
-          .select("display_name")
-          .where("session_key", "=", params.preferredSessionKey),
-      )?.display_name;
-      const derivedTitle = deriveSqliteSessionTitle(params.source.db, params.preferredEntry);
-      executeSqliteQuerySync(
-        params.destination.db,
-        destinationDb
-          .updateTable("session_nodes")
-          .set({ display_name: sourceTitle ?? derivedTitle })
-          .where("session_key", "=", params.canonicalKey),
-      );
+      refreshSqliteSessionTitleProjection(params.destination.db, params.preferredEntry.sessionId);
     }
   }
 }

@@ -143,7 +143,7 @@ export function assertCanonicalSqliteSessionKeysCurrent(
   const canonicalMainKey = normalizeMainKey(mainKey ?? storedMainKey);
   for (const row of executeSqliteQuerySync(
     database.db,
-    db.selectFrom("session_nodes").select("session_key"),
+    db.selectFrom("session_nodes").select(["session_key", "parent_session_key", "spawned_by"]),
   ).rows) {
     const trimmed = row.session_key.trim();
     const parsed = parseAgentSessionKey(trimmed);
@@ -155,6 +155,20 @@ export function assertCanonicalSqliteSessionKeysCurrent(
       (parsed && parsed.rest === "main" && canonicalMainKey !== "main")
     ) {
       throw nonCanonicalSessionKeyRowError(trimmed || row.session_key);
+    }
+    for (const lineageKey of [row.parent_session_key, row.spawned_by]) {
+      if (!lineageKey) {
+        continue;
+      }
+      const normalized = normalizeStoreSessionKey(lineageKey);
+      const lineageParsed = parseAgentSessionKey(normalized);
+      if (
+        normalized !== lineageKey ||
+        (!lineageParsed && normalized !== "global" && normalized !== "unknown") ||
+        (lineageParsed?.rest === "main" && canonicalMainKey !== "main")
+      ) {
+        throw nonCanonicalSessionKeyRowError(normalized || lineageKey);
+      }
     }
   }
   if (!database.db.isTransaction) {

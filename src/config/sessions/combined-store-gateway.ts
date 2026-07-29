@@ -212,16 +212,29 @@ function mergeGatewayEntries(params: {
     if (key !== canonicalKey) {
       throw nonCanonicalSessionKeyRowError(canonicalKey);
     }
+    const projectedEntry = projectCombinedSessionEntry({
+      agentId: canonicalAgentId,
+      cfg: params.cfg,
+      entry,
+    });
+    if (
+      params.combined[canonicalKey] &&
+      (canonicalKey === "global" || canonicalKey === "unknown")
+    ) {
+      exact = false;
+      const preferredAgentId =
+        params.requestedAgentId ?? normalizeAgentId(resolveDefaultAgentId(params.cfg));
+      if (canonicalAgentId === preferredAgentId) {
+        params.combined[canonicalKey] = projectedEntry;
+      }
+      continue;
+    }
     if (params.combined[canonicalKey]) {
       exact = false;
     }
     mergeSessionEntryIntoCombined({
       combined: params.combined,
-      entry: projectCombinedSessionEntry({
-        agentId: canonicalAgentId,
-        cfg: params.cfg,
-        entry,
-      }),
+      entry: projectedEntry,
       canonicalKey,
     });
   }
@@ -311,13 +324,18 @@ function resolveCombinedDurableTargets(params: {
       targets,
     };
   }
-  const ownerIds = new Set([
-    ...listAgentEntries(params.cfg).map((entry) => normalizeAgentId(entry.id)),
-    ...listKnownSessionStoreAgentIds(params.cfg),
-    params.defaultAgentId,
-    LEGACY_IMPLICIT_AGENT_ID,
-    ...(params.requestedAgentId ? [params.requestedAgentId] : []),
-  ]);
+  const ownerIds = new Set(
+    params.requestedAgentId
+      ? [params.requestedAgentId]
+      : params.configuredAgentsOnly
+        ? listConfiguredSessionStoreAgentIds(params.cfg)
+        : [
+            ...listAgentEntries(params.cfg).map((entry) => normalizeAgentId(entry.id)),
+            ...listKnownSessionStoreAgentIds(params.cfg),
+            params.defaultAgentId,
+            LEGACY_IMPLICIT_AGENT_ID,
+          ],
+  );
   return {
     durableStorePath: resolveStorePath(storeConfig, { agentId: params.defaultAgentId }),
     targets: dedupeSessionStoreTargetsBySqliteTarget(
