@@ -88,7 +88,10 @@ export function buildAgentSessionPatch(params: {
         groupChannel: parentEntry?.groupChannel,
         groupSpace: parentEntry?.space,
       });
-    } catch {
+    } catch (error) {
+      if ((error as { code?: unknown })?.code === "SESSION_CANONICAL_KEY_MIGRATION_REQUIRED") {
+        throw error;
+      }
       inheritedGroup = undefined;
     }
   }

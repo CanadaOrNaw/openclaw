@@ -5,7 +5,10 @@ import {
   hasLegacyMemoryRecallMetadataColumns,
   migrateMemoryIndexSourcesIdentity,
 } from "../../packages/memory-host-sdk/src/host/memory-schema.js";
-import { deriveSqliteSessionTitle } from "../config/sessions/session-accessor.sqlite-session-row.js";
+import {
+  deriveSessionTitleFromEventJson,
+  deriveSqliteSessionTitle,
+} from "../config/sessions/session-accessor.sqlite-session-row.js";
 import type { SessionEntry } from "../config/sessions/types.js";
 import { executeSqliteQuerySync, getNodeSqliteKysely } from "../infra/kysely-sync.js";
 import {
@@ -428,6 +431,15 @@ function backfillSessionTitleProjection(db: DatabaseSync): void {
     updated_at: number;
   }>;
   const update = db.prepare("UPDATE session_nodes SET display_name = ? WHERE session_key = ?");
+  const hasActiveProjection = db.prepare(
+    "SELECT 1 FROM session_transcript_active_events WHERE session_id = ? LIMIT 1",
+  );
+  const readProvenance = db.prepare(
+    "SELECT session_entry_provenance FROM session_windows WHERE session_id = ?",
+  );
+  const rawEvents = db.prepare(
+    "SELECT event_json FROM transcript_events WHERE session_id = ? ORDER BY seq ASC",
+  );
   for (const row of rows) {
     const parsed = parseMigratedSessionEntry(row.entry_json);
     if (!parsed) {
@@ -438,7 +450,20 @@ function backfillSessionTitleProjection(db: DatabaseSync): void {
       sessionId: migratedText(parsed.sessionId) ?? row.current_session_id,
       updatedAt: migratedNumber(parsed.updatedAt) ?? row.updated_at,
     } as SessionEntry;
-    update.run(deriveSqliteSessionTitle(db, entry), row.session_key);
+    const provenance = readProvenance.get(entry.sessionId) as
+      | { session_entry_provenance?: unknown }
+      | undefined;
+    const legacyWithoutActiveProjection =
+      provenance?.session_entry_provenance === 0 && !hasActiveProjection.get(entry.sessionId);
+    const title = legacyWithoutActiveProjection
+      ? (deriveSessionTitleFromEventJson(
+          entry,
+          [...(rawEvents.iterate(entry.sessionId) as Iterable<{ event_json: string }>)].map(
+            (event) => event.event_json,
+          ),
+        ) ?? null)
+      : deriveSqliteSessionTitle(db, entry);
+    update.run(title, row.session_key);
   }
   db.exec(`
     UPDATE session_nodes SET pinned_at = NULL WHERE pinned_at <= 0;

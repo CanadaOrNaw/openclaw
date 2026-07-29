@@ -77,6 +77,7 @@ import {
   type SqliteSessionEntryListQueryResult,
 } from "./session-accessor.sqlite-status.js";
 import type { SessionEntryListQuery, SessionEntryListScope } from "./session-accessor.types.js";
+import { assertCanonicalSqliteSessionKeysCurrent } from "./session-canonical-key.js";
 import { preserveSqliteSameKeySessionRolloverLineage } from "./session-entry-lineage.js";
 import { buildSessionCreationStamp } from "./session-entry-provenance.js";
 import { kickSessionHistoryDiskBudgetMaintenance } from "./session-history-eviction.js";
@@ -381,6 +382,7 @@ function listSqliteSessionEntriesFromDatabase(
   resolved: ResolvedSqliteScope,
   scope: SessionEntryListScope,
 ): SessionEntrySummary[] {
+  assertCanonicalSqliteSessionKeysCurrent(database);
   const snapshot = readSessionEntrySnapshot(database, resolved, scope.readConsistency);
   const entries = scope.projection === "list" ? snapshot.listEntries : snapshot.entries;
   return snapshot.keys.flatMap((sessionKey) => {
