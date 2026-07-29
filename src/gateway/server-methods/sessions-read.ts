@@ -3,7 +3,6 @@ import { normalizeOptionalString } from "@openclaw/normalization-core/string-coe
 import {
   ErrorCodes,
   errorShape,
-  type SessionsListParams,
   validateSessionsCleanupParams,
   validateSessionsDescribeParams,
   validateSessionsListParams,
@@ -24,7 +23,6 @@ import {
 } from "../../config/sessions.js";
 import { listSessionEntriesReadOnly } from "../../config/sessions/session-accessor.js";
 import { searchSessionTranscripts } from "../../config/sessions/session-transcript-search.js";
-import type { OpenClawConfig } from "../../config/types.openclaw.js";
 import { buildProjectedAgentRunIndex } from "../../infra/agent-events.js";
 import {
   measureDiagnosticsTimelineSpan,
@@ -36,11 +34,9 @@ import {
   normalizeAgentId,
   parseAgentSessionKey,
 } from "../../routing/session-key.js";
-import { listOpenIncognitoAgentDatabases } from "../../state/openclaw-agent-db.js";
 import { resolveRequestedSessionAgentId as resolveRequestedGlobalAgentId } from "../session-create-service.js";
 import {
   canAccessIncognitoSession,
-  createSessionListEntryFilter,
   isGatewayAdmin,
   resolveSessionSharingRole,
   resolveSessionSharingTarget,
@@ -61,7 +57,6 @@ import type {
 } from "../session-utils-store-lookup.js";
 import {
   buildGatewaySessionRow,
-  buildSessionListSqlQuery,
   listSessionsFromStoreAsync,
   loadCombinedSessionStoreForGateway,
   resolveCanonicalSessionEntryFromStoreKeys,
@@ -81,43 +76,16 @@ import {
 import { emitSessionsChanged } from "./session-change-event.js";
 import {
   filterSessionStoreToConfiguredAgents,
+  createSessionListVisibilityFilter,
+  filterVisibleSessionListRows,
   loadSessionEntriesForTarget,
+  prepareGatewaySessionListQuery,
   requireSessionKey,
+  getSessionListOperationState,
+  runSessionListOperation,
 } from "./sessions-shared.js";
-import type { GatewayClient, GatewayRequestContext, GatewayRequestHandlers } from "./types.js";
+import type { GatewayRequestHandlers } from "./types.js";
 import { assertValidParams } from "./validation.js";
-
-const sessionListsByContext = new WeakMap<
-  GatewayRequestContext,
-  { config: OpenClawConfig; inFlight: Map<string, Promise<unknown>> }
->();
-
-function sessionListVisibilityIdentity(client: GatewayClient | null): string {
-  if (isGatewayAdmin(client)) {
-    return "admin";
-  }
-  const profileId = gatewayClientSessionCreator(client)?.id;
-  return profileId ? `profile:${profileId}` : "anonymous";
-}
-
-function sessionListWorkKey(params: SessionsListParams, client: GatewayClient | null): string {
-  return JSON.stringify([
-    sessionListVisibilityIdentity(client),
-    Object.entries(params).toSorted(([left], [right]) => left.localeCompare(right)),
-  ]);
-}
-
-function sessionListInflightMap(
-  context: GatewayRequestContext,
-  config: OpenClawConfig,
-): Map<string, Promise<unknown>> {
-  let state = sessionListsByContext.get(context);
-  if (!state || state.config !== config) {
-    state = { config, inFlight: new Map() };
-    sessionListsByContext.set(context, state);
-  }
-  return state.inFlight;
-}
 
 export const sessionReadHandlers: GatewayRequestHandlers = {
   "sessions.search": async ({ params, respond, context, client }) => {
@@ -265,49 +233,47 @@ export const sessionReadHandlers: GatewayRequestHandlers = {
     if (!assertValidParams(params, validateSessionsListParams, "sessions.list", respond)) {
       return;
     }
-    const p = params as SessionsListParams;
+    const p = params;
     const cfg = context.getRuntimeConfig();
     const configuredAgentsOnly = p.configuredAgentsOnly === true;
-    const workKey = sessionListWorkKey(p, client);
-    const inFlight = sessionListInflightMap(context, cfg);
-    const pending = inFlight.get(workKey);
+    const listOperation = getSessionListOperationState(client, cfg, context, p);
+    const { inFlight, pending, workKey } = listOperation;
     if (pending) {
       respond(true, await pending, undefined);
       return;
     }
-    const now = Date.now();
-    const identity = gatewayClientSessionCreator(client);
-    const hasOpenIncognito = listOpenIncognitoAgentDatabases().length > 0;
-    // This is exactly when createSessionListEntryFilter can remove rows after SQL selection.
-    const requiresClientVisibilityFilter = !isGatewayAdmin(client) && Boolean(identity);
-    const hasFacetResidualFilters =
-      Boolean(normalizeOptionalString(p.search)) ||
-      Boolean(p.boardFace) ||
-      Boolean(normalizeOptionalString(p.spawnedBy)) ||
-      p.requireLastInteraction === true ||
-      configuredAgentsOnly ||
-      hasOpenIncognito ||
-      !p.agentId ||
-      !isPerAgentSessionStoreConfig(cfg.session?.store) ||
-      requiresClientVisibilityFilter;
-    const hasResidualFilters =
-      hasFacetResidualFilters ||
-      !p.agentId ||
-      !isPerAgentSessionStoreConfig(cfg.session?.store) ||
-      hasOpenIncognito ||
-      requiresClientVisibilityFilter;
-    const { lineage: lineageQuery, query } = buildSessionListSqlQuery(p, {
-      bounded: !hasResidualFilters,
-      includeCreatorFilter: !hasFacetResidualFilters,
-      mainKey: cfg.session?.mainKey,
-      now,
+    const {
+      hasFacetResidualFilters,
+      hasResidualFilters,
+      identity,
+      lineage: lineageQuery,
+      query,
+    } = prepareGatewaySessionListQuery({
+      client,
+      config: cfg,
+      configuredAgentsOnly,
+      list: p,
     });
     const run = () =>
       measureDiagnosticsTimelineSpan(
         "gateway.sessions.list",
         async function listVisibleSessions(
           remainingVisibilityRetries = 1,
+          excludedSessionKeys: ReadonlySet<string> = new Set(),
         ): Promise<Awaited<ReturnType<typeof listSessionsFromStoreAsync>>> {
+          const modelCatalog = await measureDiagnosticsTimelineSpan(
+            "gateway.sessions.list.model_catalog",
+            () =>
+              loadOptionalServerMethodModelCatalog(
+                context,
+                "sessions.list",
+                p.agentId ? { loadParams: { agentId: p.agentId } } : undefined,
+              ),
+            {
+              config: cfg,
+              phase: "sessions.list",
+            },
+          );
           const loaded = measureDiagnosticsTimelineSpanSync(
             "gateway.sessions.list.store_load",
             () =>
@@ -327,7 +293,7 @@ export const sessionReadHandlers: GatewayRequestHandlers = {
               },
             },
           );
-          const entryFilter = createSessionListEntryFilter({ client });
+          const entryFilter = createSessionListVisibilityFilter(client, excludedSessionKeys);
           const listStore = configuredAgentsOnly
             ? filterSessionStoreToConfiguredAgents(cfg, loaded.store)
             : loaded.store;
@@ -347,19 +313,6 @@ export const sessionReadHandlers: GatewayRequestHandlers = {
           const visibleStorePath = includesIncognito
             ? loaded.storePath
             : (loaded.durableStorePath ?? loaded.storePath);
-          const modelCatalog = await measureDiagnosticsTimelineSpan(
-            "gateway.sessions.list.model_catalog",
-            () =>
-              loadOptionalServerMethodModelCatalog(
-                context,
-                "sessions.list",
-                p.agentId ? { loadParams: { agentId: p.agentId } } : undefined,
-              ),
-            {
-              config: cfg,
-              phase: "sessions.list",
-            },
-          );
           const result = await measureDiagnosticsTimelineSpan(
             "gateway.sessions.list.rows",
             () =>
@@ -518,21 +471,16 @@ export const sessionReadHandlers: GatewayRequestHandlers = {
           );
           // Canonical-key duplicates fail earlier with the doctor diagnostic. This retry only
           // rebuilds a page after a concurrent visibility change made the initial snapshot stale.
-          const canSeeDrafts = !identityId || isGatewayAdmin(client);
-          const visibleSessions = canSeeDrafts
-            ? sessions
-            : sessions.filter(
-                (session) =>
-                  !session.incognito &&
-                  (session.visibility !== "draft" || session.sharingRole === "owner"),
-              );
-          if (visibleSessions.length !== sessions.length) {
+          const { retryExclusions, visibleSessions } = filterVisibleSessionListRows(
+            sessions,
+            !identityId || isGatewayAdmin(client),
+            excludedSessionKeys,
+          );
+          if (retryExclusions.size > excludedSessionKeys.size) {
             if (remainingVisibilityRetries === 0) {
               throw new Error("session visibility changed during list reconciliation");
             }
-            // Rebuild the complete canonical page so totals, offsets, creator
-            // facets, and replacement rows describe the same visible snapshot.
-            return await listVisibleSessions(remainingVisibilityRetries - 1);
+            return await listVisibleSessions(remainingVisibilityRetries - 1, retryExclusions);
           }
           return {
             ...result,
@@ -548,23 +496,7 @@ export const sessionReadHandlers: GatewayRequestHandlers = {
           },
         },
       );
-    // The delayed computation is the shared promise, so every failure reaches all followers.
-    const operation = new Promise<void>((done) => {
-      setImmediate(done);
-    }).then(() => {
-      // Only the pre-start socket burst may share. Once loading begins, an intervening session
-      // mutation must make the next request build a fresh projection instead of joining this one.
-      inFlight.delete(workKey);
-      return run();
-    });
-    inFlight.set(workKey, operation);
-    try {
-      respond(true, await operation, undefined);
-    } finally {
-      if (inFlight.get(workKey) === operation) {
-        inFlight.delete(workKey);
-      }
-    }
+    respond(true, await runSessionListOperation({ inFlight, run, workKey }), undefined);
   },
   "sessions.cleanup": async ({ params, respond, context }) => {
     if (!assertValidParams(params, validateSessionsCleanupParams, "sessions.cleanup", respond)) {
