@@ -41,7 +41,11 @@ type SessionTitleDatabase = Pick<
 
 export function setSessionProjectedTitle(entry: SessionEntry, title: string | null): void {
   if (title) {
-    (entry as ProjectedTitleEntry)[PROJECTED_TITLE] = title;
+    Object.defineProperty(entry, PROJECTED_TITLE, {
+      configurable: true,
+      value: title,
+      writable: true,
+    });
   } else {
     delete (entry as ProjectedTitleEntry)[PROJECTED_TITLE];
   }
