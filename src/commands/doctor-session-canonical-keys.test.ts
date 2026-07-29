@@ -194,6 +194,54 @@ describe("doctor canonical session-key repair", () => {
     });
   });
 
+  it("normalizes persisted lineage keys before runtime SQL filtering", async () => {
+    await withStateDirEnv("openclaw-doctor-canonical-lineage-", async ({ stateDir }) => {
+      const env = { ...process.env, OPENCLAW_STATE_DIR: stateDir };
+      const storeTemplate = path.join(stateDir, "agents", "{agentId}", "sessions.json");
+      const storePath = resolveStorePath(storeTemplate, { agentId: "main", env });
+      const cfg = {
+        agents: { list: [{ id: "main", default: true }] },
+        session: { store: storeTemplate },
+      } as OpenClawConfig;
+      replaceSessionEntrySync(
+        { agentId: "main", env, sessionKey: "agent:main:child", storePath },
+        {
+          parentSessionKey: "Agent:Main:Parent ",
+          sessionId: "child",
+          spawnedBy: " ",
+          updatedAt: 10,
+        },
+      );
+
+      expect(await repairCanonicalSessionKeys({ apply: true, cfg, env })).toMatchObject({
+        foundGroups: 1,
+        repairedGroups: 1,
+      });
+      expect(
+        loadExactSessionEntryReadOnly({
+          agentId: "main",
+          env,
+          sessionKey: "agent:main:child",
+          storePath,
+        })?.entry,
+      ).toMatchObject({
+        parentSessionKey: "agent:main:parent",
+      });
+      expect(
+        loadExactSessionEntryReadOnly({
+          agentId: "main",
+          env,
+          sessionKey: "agent:main:child",
+          storePath,
+        })?.entry.spawnedBy,
+      ).toBeUndefined();
+      expect(await repairCanonicalSessionKeys({ apply: true, cfg, env })).toMatchObject({
+        foundGroups: 0,
+        repairedGroups: 0,
+      });
+    });
+  });
+
   it("moves a lone alias row to its canonical key", async () => {
     await withStateDirEnv("openclaw-doctor-canonical-single-alias-", async ({ stateDir }) => {
       const env = { ...process.env, OPENCLAW_STATE_DIR: stateDir };

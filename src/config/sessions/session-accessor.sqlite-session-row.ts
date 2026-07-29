@@ -32,7 +32,11 @@ const PROJECTED_TITLE = Symbol("projectedTitle");
 type ProjectedTitleEntry = SessionEntry & { [PROJECTED_TITLE]?: string };
 type SessionTitleDatabase = Pick<
   OpenClawAgentKyselyDatabase,
-  "session_nodes" | "session_transcript_active_events" | "session_windows" | "transcript_events"
+  | "session_nodes"
+  | "session_transcript_active_events"
+  | "session_windows"
+  | "transcript_events"
+  | "transcript_rewrite_watermarks"
 >;
 
 export function setSessionProjectedTitle(entry: SessionEntry, title: string | null): void {
@@ -109,6 +113,13 @@ export function deriveSqliteSessionTitle(
         .select("active_position")
         .where("session_id", "=", entry.sessionId)
         .limit(1),
+    ) ??
+    executeSqliteQueryTakeFirstSync(
+      database,
+      db
+        .selectFrom("transcript_rewrite_watermarks")
+        .select("generation")
+        .where("session_id", "=", entry.sessionId),
     ),
   );
   if (hasActiveProjection) {

@@ -67,7 +67,10 @@ import {
   querySqliteSessionEntries,
   querySqliteSessionEntriesReadOnly,
 } from "./session-accessor.sqlite-entry.js";
-import { getSessionProjectedTitle } from "./session-accessor.sqlite-session-row.js";
+import {
+  getSessionProjectedTitle,
+  refreshSqliteSessionTitleProjection,
+} from "./session-accessor.sqlite-session-row.js";
 import {
   applySqliteSessionEntryLifecycleMutation,
   appendSqliteTranscriptEventSync,
@@ -578,6 +581,44 @@ describe("session accessor seam", () => {
         .get(scope.sessionKey),
     ).toEqual({ display_name: "Recover the existing session title" });
     closeOpenClawAgentDatabasesForTest();
+  });
+
+  it("does not derive a title from inactive events when the active projection is empty", () => {
+    const scope = {
+      agentId: "main",
+      sessionKey: "agent:main:empty-active",
+      storePath,
+    };
+    replaceSqliteSessionEntrySync(scope, { sessionId: "empty-active-session", updatedAt: 10 });
+    const database = openOpenClawAgentDatabase({
+      agentId: "main",
+      path: resolveSqliteTargetFromSessionStorePath(storePath, { agentId: "main" }).path,
+    });
+    database.db
+      .prepare(
+        "INSERT INTO transcript_events (session_id, seq, event_json, created_at) VALUES (?, 0, ?, 10)",
+      )
+      .run(
+        "empty-active-session",
+        JSON.stringify({
+          id: "inactive-message",
+          message: { content: "inactive title", role: "user" },
+          parentId: null,
+          type: "message",
+        }),
+      );
+    database.db
+      .prepare(
+        "INSERT INTO transcript_rewrite_watermarks (session_id, generation, updated_at) VALUES (?, 'generation-1', 10)",
+      )
+      .run("empty-active-session");
+
+    refreshSqliteSessionTitleProjection(database.db, "empty-active-session");
+    expect(
+      database.db
+        .prepare("SELECT display_name FROM session_nodes WHERE session_key = ?")
+        .get(scope.sessionKey),
+    ).toEqual({ display_name: "empty-ac (1970-01-01)" });
   });
 
   it("derives a scoped key owner before fixed-store read and write target resolution", async () => {

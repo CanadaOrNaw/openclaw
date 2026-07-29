@@ -27,6 +27,8 @@ type CanonicalSessionCandidate = {
   agentId: string;
   canonicalKey: string;
   entry: SessionEntry;
+  expectedEntry: SessionEntry;
+  lineageRepairRequired: boolean;
   rawEntryJson?: string;
   sessionKey: string;
   sqlitePath: string;
@@ -41,7 +43,7 @@ function createCanonicalRepairRemoval(
     archiveRemovedTranscript: params.archiveRemovedTranscript,
     deleteOwnedWindows: params.deleteOwnedWindows,
     exactStoredKey: true,
-    expectedEntry: candidate.entry,
+    expectedEntry: candidate.expectedEntry,
     sessionKey: candidate.sessionKey,
   } satisfies SessionEntryLifecycleRemoval;
   return candidate.rawEntryJson === undefined
@@ -91,6 +93,29 @@ function collectCanonicalSessionCandidates(
       clone: false,
       storePath: target.storePath,
     })) {
+      const canonicalizeLineageKey = (value: string | undefined) =>
+        value
+          ? resolveStoredSessionKeyForAgentStore({
+              cfg: params.cfg,
+              agentId: target.agentId,
+              sessionKey: value,
+            })
+          : undefined;
+      const parentSessionKey = canonicalizeLineageKey(entry.parentSessionKey);
+      const spawnedBy = canonicalizeLineageKey(entry.spawnedBy);
+      const normalizedEntry = { ...entry };
+      if (parentSessionKey) {
+        normalizedEntry.parentSessionKey = parentSessionKey;
+      } else {
+        delete normalizedEntry.parentSessionKey;
+      }
+      if (spawnedBy) {
+        normalizedEntry.spawnedBy = spawnedBy;
+      } else {
+        delete normalizedEntry.spawnedBy;
+      }
+      const lineageRepairRequired =
+        parentSessionKey !== entry.parentSessionKey || spawnedBy !== entry.spawnedBy;
       candidates.push({
         agentId: target.agentId,
         canonicalKey: resolveStoredSessionKeyForAgentStore({
@@ -98,7 +123,9 @@ function collectCanonicalSessionCandidates(
           agentId: target.agentId,
           sessionKey,
         }),
-        entry,
+        entry: normalizedEntry,
+        expectedEntry: entry,
+        lineageRepairRequired,
         ...(rawEntryJson !== undefined ? { rawEntryJson } : {}),
         sessionKey,
         sqlitePath: target.sqlitePath,
@@ -173,6 +200,7 @@ function groupRepairCandidates(
       group.some(
         (candidate) =>
           candidate.rawEntryJson !== undefined ||
+          candidate.lineageRepairRequired ||
           candidate.sessionKey !== candidate.canonicalKey ||
           candidate.sqlitePath !== destination.sqlitePath,
       )
