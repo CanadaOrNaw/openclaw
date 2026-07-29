@@ -322,6 +322,7 @@ export function listSqliteSessionGenerationIdsForCanonicalRepair(params: {
   return readSqliteSessionGenerationIdsForKeys(
     database,
     resolveSqliteCanonicalRepairLookupKeys(params.canonicalKey, params.sourceKeys),
+    { exactStoredKeys: true },
   );
 }
 

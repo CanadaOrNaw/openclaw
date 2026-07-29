@@ -286,8 +286,11 @@ export function planSqliteSessionStateAfterEntryRemoval(params: {
 export function readSqliteSessionGenerationIdsForKeys(
   database: OpenClawAgentDatabase,
   keys: Iterable<string>,
+  options: { exactStoredKeys?: boolean } = {},
 ): string[] {
-  const sessionKeys = uniqueStrings([...keys].map((key) => key.trim()));
+  const sessionKeys = uniqueStrings(
+    [...keys].map((key) => (options.exactStoredKeys ? key : key.trim())),
+  );
   if (sessionKeys.length === 0) {
     return [];
   }

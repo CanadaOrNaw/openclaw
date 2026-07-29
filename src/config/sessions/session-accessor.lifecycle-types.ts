@@ -98,6 +98,8 @@ type SessionEntryLifecycleRemovalBase = {
   sessionKey: string;
   /** Doctor repair only: address a malformed persisted key without normalizing it first. */
   exactStoredKey?: boolean;
+  /** Doctor cross-store repair only: copied/archived windows may be removed with the source node. */
+  deleteOwnedWindows?: boolean;
   archiveRemovedTranscript?: boolean;
   expectedSessionId?: string;
   expectedLifecycleRevision?: string;

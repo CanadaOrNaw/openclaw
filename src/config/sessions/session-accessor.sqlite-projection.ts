@@ -466,7 +466,9 @@ export async function applySqliteSessionEntryLifecycleMutation(params: {
             { rehomeMembers: replacement.rehomeMembers },
           );
         } else {
-          deleteSqliteSessionEntryRows(transactionDb, removal.sessionKey);
+          deleteSqliteSessionEntryRows(transactionDb, removal.sessionKey, {
+            deleteOwnedWindows: removal.removal.deleteOwnedWindows === true,
+          });
         }
         removedSessionKeys.push(removal.sessionKey);
       }

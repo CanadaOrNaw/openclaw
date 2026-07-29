@@ -286,6 +286,7 @@ async function repairCanonicalSessionGroup(
       agentId: storeCandidate.agentId,
       removals: storeCandidates.map((candidate) => ({
         archiveRemovedTranscript: true,
+        deleteOwnedWindows: true,
         exactStoredKey: true,
         expectedEntry: candidate.entry,
         ...(candidate.rawEntryJson !== undefined
