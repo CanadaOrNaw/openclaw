@@ -16,7 +16,10 @@ import {
   deriveSqliteSessionTitle,
   refreshSqliteSessionTitleProjection,
 } from "./session-accessor.sqlite-session-row.js";
-import { deleteSessionTranscriptIndexInTransaction } from "./session-transcript-index.js";
+import {
+  deleteSessionTranscriptIndexInTransaction,
+  reconcileSessionTranscriptIndexInTransaction,
+} from "./session-transcript-index.js";
 import { normalizeStoreSessionKey } from "./store-entry.js";
 import type { SessionEntry } from "./types.js";
 
@@ -231,6 +234,7 @@ export function copySqliteSessionOwnedStateForRepair(params: {
     if (copyTranscripts) {
       // Search and active-event tables are derived from transcript_events; force their canonical rebuild.
       deleteSessionTranscriptIndexInTransaction(params.destination.db, sessionId);
+      reconcileSessionTranscriptIndexInTransaction(params.destination.db, sessionId);
       refreshSqliteSessionTitleProjection(params.destination.db, sessionId);
     }
   }

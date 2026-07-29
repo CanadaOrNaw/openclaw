@@ -101,7 +101,7 @@ function collectCanonicalSessionCandidates(
         entry,
         ...(rawEntryJson !== undefined ? { rawEntryJson } : {}),
         sessionKey,
-        sqlitePath,
+        sqlitePath: target.sqlitePath,
         storePath: target.storePath,
       });
     }
