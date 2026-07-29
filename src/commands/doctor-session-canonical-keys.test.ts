@@ -794,6 +794,7 @@ describe("doctor canonical session-key repair", () => {
         { session_key: "agent:main:shared" },
         { session_key: "agent:main:shared" },
         { session_key: "agent:main:shared" },
+        { session_key: "agent:main:shared" },
       ]);
       expect(
         mainDatabase.db
