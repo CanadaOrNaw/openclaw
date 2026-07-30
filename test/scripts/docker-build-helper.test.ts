@@ -2665,6 +2665,10 @@ fi
     expect(updateRestartAuth).toContain(
       'openclaw_e2e_wait_gateway_ready "$gateway_pid" "$log_file" 360 "$port"',
     );
+    expect(runner).toContain(
+      'export HOME="$account_home"\n  export USERPROFILE="$account_home"\n  unset OPENCLAW_HOME\n  export OPENCLAW_STATE_DIR="$account_home/.openclaw"',
+    );
+    expect(runner).toContain('export OPENCLAW_CONFIG_PATH="$OPENCLAW_STATE_DIR/openclaw.json"');
   });
 
   it("keeps upgrade survivor auto-auth success summary set -u safe", () => {
@@ -4371,7 +4375,7 @@ heartbeat_elapsed="\${BASH_REMATCH[1]}"
     expectTextToIncludeAll(scenario, [
       'command_timeout="${OPENCLAW_DOCKER_DOCTOR_SWITCH_COMMAND_TIMEOUT:-900s}"',
       'account_home="$(getent passwd "$(id -u)" | cut -d: -f6)"',
-      'export HOME="$account_home"\n  unset OPENCLAW_HOME OPENCLAW_STATE_DIR OPENCLAW_CONFIG_PATH',
+      'export HOME="$account_home"\n  export USERPROFILE="$account_home"\n  unset OPENCLAW_HOME OPENCLAW_STATE_DIR OPENCLAW_CONFIG_PATH',
       'openclaw_e2e_maybe_timeout "$command_timeout" bash -c "$install_cmd"',
       'openclaw_e2e_maybe_timeout "$command_timeout" bash -c "$doctor_cmd"',
       'openclaw_e2e_maybe_timeout "$command_timeout" "$npm_bin" gateway install --wrapper "$wrapper" --force',
@@ -4382,6 +4386,7 @@ heartbeat_elapsed="\${BASH_REMATCH[1]}"
       scenario.match(/unset OPENCLAW_HOME OPENCLAW_STATE_DIR OPENCLAW_CONFIG_PATH/gu),
     ).toHaveLength(1);
     expect(scenario.match(/export HOME="\$account_home"/gu)).toHaveLength(1);
+    expect(scenario.match(/export USERPROFILE="\$account_home"/gu)).toHaveLength(1);
 
     expect(scenario).not.toMatch(/^\s*if ! timeout "\$command_timeout"/mu);
   });

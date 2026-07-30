@@ -342,6 +342,16 @@ NODE
 }
 
 openclaw_e2e_eval_test_state_from_b64 "${OPENCLAW_TEST_STATE_SCRIPT_B64:?missing OPENCLAW_TEST_STATE_SCRIPT_B64}"
+if [ "$UPDATE_RESTART_MODE" = "auto-auth" ]; then
+  account_home="$(getent passwd "$(id -u)" | cut -d: -f6)"
+  test -n "$account_home"
+  export HOME="$account_home"
+  export USERPROFILE="$account_home"
+  unset OPENCLAW_HOME
+  export OPENCLAW_STATE_DIR="$account_home/.openclaw"
+  export OPENCLAW_CONFIG_PATH="$OPENCLAW_STATE_DIR/openclaw.json"
+  mkdir -p "$OPENCLAW_STATE_DIR"
+fi
 node scripts/e2e/lib/upgrade-survivor/assertions.mjs seed
 
 openclaw_e2e_install_package "$OPENCLAW_UPGRADE_SURVIVOR_ARTIFACT_ROOT/install.log" "upgrade survivor package" "$npm_config_prefix"
