@@ -828,7 +828,7 @@ describe("runGuidedOnboarding", () => {
       issues: [],
       config,
     });
-    const detect = vi.fn(async ({ targetAgentId }: { targetAgentId?: string }) =>
+    const detect = vi.fn(async ({ targetAgentId }: { targetAgentId?: string } = {}) =>
       detection({
         candidates: [
           {
