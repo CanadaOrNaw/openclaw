@@ -11,11 +11,38 @@ title: "FIPS runtime wiring"
 
 OpenClaw does not ship or validate a cryptographic module. It can run on a
 Node.js runtime whose OpenSSL provider is configured for FIPS mode, and it
-provides wiring and runtime checks that let operators prove that boundary is
-active.
+provides wiring and runtime checks that report whether FIPS mode is active in
+the final Node.js process and selected cryptographic operations succeed.
 
 This is deliberately not a deployment profile. The default OpenClaw image and
 installation paths remain unchanged.
+
+## Support and attestation boundary
+
+OpenClaw maintains the `fips-runtime` assembly target, runtime checker, and
+their documented contract. A passing report establishes only that the observed
+Node.js process:
+
+- reports `crypto.getFips() === 1`;
+- completes the listed Node cryptographic and TLS operations; and
+- exposes the recorded Node.js, OpenSSL, and startup-wiring evidence.
+
+It does not establish:
+
+- validation or approval status for a provider or cryptographic module;
+- image provenance, signature, approval, or supply-chain policy;
+- build/runtime ABI compatibility beyond a successful build and run;
+- TLS behavior outside the observed Node.js process;
+- cryptographic coverage for plugins, browsers, native libraries, WASM, or
+  child processes; or
+- compliance, certification, or authorization for the deployed system.
+
+OpenClaw supports the assembly seam and checker on the supported Node.js
+versions. Operators own the supplied images, provider, ABI compatibility,
+deployment controls, and the resulting security or compliance claims. Rebuild
+the target and rerun the checker after changes to OpenClaw, dependencies, either
+image, the Node.js/OpenSSL runtime, provider configuration, or enabled feature
+inventory.
 
 ## Runtime contract
 
@@ -97,6 +124,10 @@ pnpm security:fips-check
 
 A passing report is runtime evidence. It is not a FIPS validation or proof that
 every enabled OpenClaw feature uses the same validated module.
+
+This documentation does not claim a positive FIPS container result for the
+default Node.js image. Positive deployment evidence must come from the final
+operator-supplied image and host environment.
 
 ## Managed services
 
