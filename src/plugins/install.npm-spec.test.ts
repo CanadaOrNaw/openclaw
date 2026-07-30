@@ -34,6 +34,7 @@ vi.resetModules();
 
 const { installPluginFromNpmPackArchive, installPluginFromNpmSpec, PLUGIN_INSTALL_ERROR_CODE } =
   await import("./install.js");
+const { isNpmManagedOverrideCompatibilityError } = await import("./install-managed-npm-state.js");
 
 const suiteTempRootTracker = createSuiteTempRootTracker("openclaw-plugin-install-npm-spec");
 let previousNpmGlobalConfig: string | undefined;
@@ -731,6 +732,13 @@ beforeAll(async () => {
 });
 
 describe("installPluginFromNpmSpec", () => {
+  it.each([
+    "npm ERR! Invalid comparator: npm:@nolyfill/domexception@1.0.28",
+    'npm error code EINVALIDTAGNAME\nnpm error Invalid tag name "0.2.2>ip" of package "werift-ice@0.2.2>ip"',
+  ])("detects npm-incompatible managed override errors", (stderr) => {
+    expect(isNpmManagedOverrideCompatibilityError({ stdout: "", stderr })).toBe(true);
+  });
+
   it("classifies npm metadata command failures", async () => {
     runCommandWithTimeoutMock.mockResolvedValue(failedSpawn("registry unavailable"));
 
@@ -2968,7 +2976,7 @@ describe("installPluginFromNpmSpec", () => {
     }
   });
 
-  it("retries without npm alias overrides when npm rejects alias comparators", async () => {
+  it("retries without npm-incompatible overrides when npm rejects pnpm selector keys", async () => {
     const npmRoot = path.join(suiteTempRootTracker.makeTempDir(), "npm");
     const hostRoot = suiteTempRootTracker.makeTempDir();
     fs.writeFileSync(
@@ -2988,6 +2996,7 @@ describe("installPluginFromNpmSpec", () => {
         "overrides:",
         "  axios: 1.18.0",
         '  node-domexception: "npm:@nolyfill/domexception@1.0.28"',
+        '  "werift-ice@0.2.2>ip": "npm:neoip@3.1.0"',
         "  nested:",
         '    alias: "npm:@scope/alias@1.0.0"',
         "    semver: 1.2.3",
@@ -3020,15 +3029,18 @@ describe("installPluginFromNpmSpec", () => {
             expect(manifest.overrides?.["node-domexception"]).toBe(
               "npm:@nolyfill/domexception@1.0.28",
             );
+            expect(manifest.overrides?.["werift-ice@0.2.2>ip"]).toBe("npm:neoip@3.1.0");
             expect(manifest.openclaw?.managedOverrides).toEqual([
               "axios",
               "nested",
               "node-domexception",
+              "werift-ice@0.2.2>ip",
             ]);
             return {
               code: 1,
               stdout: "",
-              stderr: "npm ERR! Invalid comparator: npm:@nolyfill/domexception@1.0.28",
+              stderr:
+                'npm error code EINVALIDTAGNAME\nnpm error Invalid tag name "0.2.2>ip" of package "werift-ice@0.2.2>ip"',
               signal: null,
               killed: false,
               termination: "exit" as const,
@@ -3056,7 +3068,7 @@ describe("installPluginFromNpmSpec", () => {
     expect(result.ok).toBe(true);
     expect(installAttempts).toBe(2);
     expect(warnings).toContain(
-      "npm rejected managed npm alias overrides; retrying plugin install without alias overrides for this npm version.",
+      "npm rejected managed npm overrides; retrying plugin install without npm-incompatible overrides for this npm version.",
     );
   });
 

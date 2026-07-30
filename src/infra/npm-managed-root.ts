@@ -188,7 +188,7 @@ function filterUnsupportedManagedNpmRootOverrides(value: unknown): Record<string
   const overrides = readOverrideRecord(value);
   const filtered: Record<string, unknown> = {};
   for (const [key, raw] of Object.entries(overrides)) {
-    if (isUnsupportedManagedNpmOverride(raw)) {
+    if (key.includes(">") || isUnsupportedManagedNpmOverride(raw)) {
       continue;
     }
     if (isRecord(raw)) {

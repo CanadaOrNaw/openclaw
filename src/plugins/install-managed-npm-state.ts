@@ -35,11 +35,15 @@ const MANAGED_NPM_PROJECT_REBUILD_ARTIFACTS = [
   "npm-shrinkwrap.json",
 ] as const;
 
-export function isNpmAliasOverrideComparatorError(result: {
+export function isNpmManagedOverrideCompatibilityError(result: {
   stdout: string;
   stderr: string;
 }): boolean {
-  return `${result.stderr}\n${result.stdout}`.includes("Invalid comparator: npm:");
+  const output = `${result.stderr}\n${result.stdout}`;
+  return (
+    output.includes("Invalid comparator: npm:") ||
+    (output.includes("EINVALIDTAGNAME") && /Invalid tag name "[^"]*>[^"]*"/u.test(output))
+  );
 }
 
 export async function rollbackManagedNpmPluginInstall(params: {

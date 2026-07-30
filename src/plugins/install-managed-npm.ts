@@ -27,7 +27,7 @@ import {
   formatManagedNpmProjectQuarantineArtifacts,
   formatNpmCommandFailureOutput,
   isManagedNpmProjectCorruptionInstallFailure,
-  isNpmAliasOverrideComparatorError,
+  isNpmManagedOverrideCompatibilityError,
   listManagedNpmRootPackageNames,
   listNewManagedNpmRootPackageDirs,
   quarantineManagedNpmProjectRebuildArtifacts,
@@ -298,9 +298,9 @@ export async function installPluginFromManagedNpmRoot(
       }),
     };
     let install = await runCommandWithTimeout(npmInstallArgs, npmInstallOptions);
-    if (install.code !== 0 && isNpmAliasOverrideComparatorError(install)) {
+    if (install.code !== 0 && isNpmManagedOverrideCompatibilityError(install)) {
       logger.warn?.(
-        "npm rejected managed npm alias overrides; retrying plugin install without alias overrides for this npm version.",
+        "npm rejected managed npm overrides; retrying plugin install without npm-incompatible overrides for this npm version.",
       );
       omitUnsupportedManagedOverrides = true;
       await upsertManagedNpmRootDependency({
