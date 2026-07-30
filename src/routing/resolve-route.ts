@@ -175,6 +175,16 @@ export function pickFirstExistingAgentId(cfg: OpenClawConfig, agentId: string): 
   if (resolved) {
     return resolved;
   }
+  // Physical main remains a valid explicit binding even when the configured
+  // roster omits it; other stale binding owners must still fail closed.
+  if (normalized === DEFAULT_AGENT_ID) {
+    return DEFAULT_AGENT_ID;
+  }
+  // Shipped binding-only configs may omit the roster entirely; in that shape
+  // an explicit binding id is authoritative because there is no roster to contradict it.
+  if (lookup.byNormalizedId.size === 0) {
+    return sanitizeAgentId(trimmed);
+  }
   throw new AgentSelectionRequiredError([...lookup.byNormalizedId.values()], {
     surface: "route binding",
     hint: `Update the binding agentId "${trimmed}" to a configured agent.`,

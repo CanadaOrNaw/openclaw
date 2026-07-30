@@ -117,34 +117,37 @@ describe("resolveAgentRoute", () => {
     });
   });
 
-  test("preserves explicit main bindings when agents.entries has other agents", () => {
-    const cfg: OpenClawConfig = {
-      agents: {
-        entries: { alpha: {} },
-      },
-      bindings: [
-        {
-          type: "route",
-          agentId: "main",
-          match: { channel: "discord", accountId: "default" },
+  test.each(["main", "MAIN"])(
+    "preserves explicit %s bindings when agents.entries has other agents",
+    (bindingAgentId) => {
+      const cfg: OpenClawConfig = {
+        agents: {
+          entries: { alpha: {} },
         },
-      ],
-    };
+        bindings: [
+          {
+            type: "route",
+            agentId: bindingAgentId,
+            match: { channel: "discord", accountId: "default" },
+          },
+        ],
+      };
 
-    const route = resolveAgentRoute({
-      cfg,
-      channel: "discord",
-      accountId: "default",
-      peer: { kind: "direct", id: "user-1" },
-    });
+      const route = resolveAgentRoute({
+        cfg,
+        channel: "discord",
+        accountId: "default",
+        peer: { kind: "direct", id: "user-1" },
+      });
 
-    expectResolvedRoute(route, {
-      agentId: "main",
-      sessionKey: "agent:main:main",
-      matchedBy: "binding.account",
-      lastRoutePolicy: "main",
-    });
-  });
+      expectResolvedRoute(route, {
+        agentId: "main",
+        sessionKey: "agent:main:main",
+        matchedBy: "binding.account",
+        lastRoutePolicy: "main",
+      });
+    },
+  );
 
   test("resolves exact main bindings through a configured normalized main-like roster entry", () => {
     const cfg: OpenClawConfig = {
