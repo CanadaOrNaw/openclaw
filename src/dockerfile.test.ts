@@ -114,8 +114,14 @@ describe("Dockerfile", () => {
     expect(fipsRuntime).toContain(
       "COPY --from=fips-runtime-assets /app/node_modules ./node_modules",
     );
+    expect(fipsRuntime).toContain(
+      "COPY --from=fips-runtime-assets /app/${OPENCLAW_BUNDLED_PLUGIN_DIR} ./${OPENCLAW_BUNDLED_PLUGIN_DIR}",
+    );
     expect(fipsRuntime).not.toContain(
       "COPY --from=runtime-assets /app/node_modules ./node_modules",
+    );
+    expect(fipsRuntime).not.toContain(
+      "COPY --from=runtime-assets /app/${OPENCLAW_BUNDLED_PLUGIN_DIR} ./${OPENCLAW_BUNDLED_PLUGIN_DIR}",
     );
     expect(fipsRuntime).toContain(
       "COPY --from=build /app/scripts/security/fips-check.mjs ./scripts/security/fips-check.mjs",
