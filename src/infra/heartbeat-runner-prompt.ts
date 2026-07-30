@@ -1,10 +1,9 @@
 import { timestampMsToIsoString } from "@openclaw/normalization-core/number-coercion";
 import { truncateUtf16Safe } from "@openclaw/normalization-core/utf16-slice";
-import { tryResolveSoleAgentId } from "../agents/agent-scope-config.js";
 import { isHeartbeatContentEffectivelyEmpty } from "../auto-reply/heartbeat.js";
 import { listDueCommitmentsForSession } from "../commitments/store.js";
 import type { CommitmentRecord } from "../commitments/types.js";
-import { tryGetLegacyDefaultAgentId } from "../config/legacy.default-agent-owner.js";
+import { tryResolveLegacyCompatibilityAgentId } from "../config/legacy.default-agent-owner.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { readHeartbeatMonitorScratch } from "../cron/scratch-store.js";
 import { resolveCronJobsStorePathFromConfig } from "../cron/store.js";
@@ -145,8 +144,7 @@ export async function resolveHeartbeatPreflight(params: {
     agentId: params.agentId,
   });
   const eventQueueKeys = new Set([physicalEventQueueKey]);
-  const legacyQueueOwnerId =
-    tryGetLegacyDefaultAgentId(params.cfg) ?? tryResolveSoleAgentId(params.cfg);
+  const legacyQueueOwnerId = tryResolveLegacyCompatibilityAgentId(params.cfg);
   // The raw global queue predates per-agent physical queues. Only its compatibility
   // owner may drain it, or one fleet heartbeat could consume another agent's event.
   if (physicalEventQueueKey === session.sessionKey || legacyQueueOwnerId === params.agentId) {

@@ -333,6 +333,68 @@ describe("telegram state migrations", () => {
     }
   });
 
+  it("imports the physical-main topic cache for an explicit fleet", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "openclaw-telegram-state-migration-"));
+    const env = { ...process.env, OPENCLAW_STATE_DIR: dir };
+    const mainStorePath = resolveStorePath(undefined, { env, agentId: "main" });
+    const persistedPath = resolveTopicNameCachePath(mainStorePath);
+    const namespace = resolveTopicNameCacheNamespace(resolveTopicNameCacheScope(mainStorePath));
+    try {
+      await mkdir(path.dirname(persistedPath), { recursive: true });
+      await writeFile(
+        persistedPath,
+        JSON.stringify({
+          "7:44": {
+            name: "Physical Main Deployments",
+            iconColor: 0x6fb9f2,
+            updatedAt: 1736380002,
+          },
+        }),
+      );
+      const cfg = {
+        agents: {
+          ownership: "explicit",
+          entries: { ops: {}, research: {} },
+        },
+        channels: {
+          telegram: {
+            accounts: { ops: { botToken: "123456:secret" } },
+          },
+        },
+      } as OpenClawConfig;
+
+      const plans = await detectTelegramLegacyStateMigrations({ cfg, env });
+      const topicNamePlan = plans.find(
+        (plan) =>
+          plan.kind === "plugin-state-import" &&
+          plan.label === "Telegram forum topic-name cache" &&
+          plan.sourcePath === persistedPath,
+      );
+
+      expect(topicNamePlan).toMatchObject({
+        kind: "plugin-state-import",
+        sourcePath: persistedPath,
+        targetPath: `plugin state:${namespace}`,
+        namespace,
+      });
+      if (!topicNamePlan || topicNamePlan.kind !== "plugin-state-import") {
+        throw new Error("expected physical-main topic-name import plan");
+      }
+      await expect(topicNamePlan.readEntries()).resolves.toStrictEqual([
+        {
+          key: "7:44",
+          value: {
+            name: "Physical Main Deployments",
+            iconColor: 0x6fb9f2,
+            updatedAt: 1736380002,
+          },
+        },
+      ]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("detects remaining Telegram JSON sidecars for plugin-state import", async () => {
     const dir = await mkdtemp(path.join(os.tmpdir(), "openclaw-telegram-state-migration-"));
     const env = { ...process.env, OPENCLAW_STATE_DIR: dir };

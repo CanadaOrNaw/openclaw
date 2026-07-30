@@ -795,6 +795,7 @@ describe("runGuidedOnboarding", () => {
 
     await runGuidedOnboarding({ acceptRisk: true, agent: "ops" }, runtime, deps);
 
+    expect(deps.detect).toHaveBeenCalledWith({ targetAgentId: "ops" });
     expect(deps.applySetup).toHaveBeenCalledWith({
       workspace: "/tmp/ops-workspace",
       targetAgentId: "ops",

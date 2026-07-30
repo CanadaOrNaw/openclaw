@@ -1,5 +1,6 @@
 import path from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { retainLegacyDefaultAgentId } from "../config/legacy.default-agent-owner.js";
 import { resolveStorePath } from "../config/sessions.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
 import { runHeartbeatOnce } from "./heartbeat-runner.js";
@@ -95,6 +96,46 @@ describe("runHeartbeatOnce identity", () => {
       });
     },
   );
+
+  it("lets the sole remaining agent drain the raw global compatibility queue", async () => {
+    await withTempHeartbeatSandbox(async ({ tmpDir, replySpy }) => {
+      const storeTemplate = path.join(tmpDir, "agents", "{agentId}", "sessions.json");
+      const cfg = retainLegacyDefaultAgentId(
+        {
+          agents: {
+            defaults: {
+              workspace: tmpDir,
+              heartbeat: { every: "5m", target: "last" },
+            },
+            entries: { research: {} },
+          },
+          session: { scope: "global", store: storeTemplate },
+        },
+        "ops",
+      );
+      const researchStorePath = resolveStorePath(storeTemplate, { agentId: "research" });
+      await seedSessionStore(researchStorePath, "global", {
+        lastChannel: "slack",
+        lastProvider: "slack",
+        lastTo: "channel:RESEARCH",
+      });
+      enqueueSystemEvent("legacy global wake", { sessionKey: "global" });
+      replySpy.mockResolvedValue({ text: "handled" });
+
+      await runHeartbeatOnce({
+        cfg,
+        agentId: "research",
+        deps: {
+          getReplyFromConfig: replySpy,
+          slack: vi.fn().mockResolvedValue({ messageId: "m1", channelId: "RESEARCH" }),
+          getQueueSize: () => 0,
+        },
+      });
+
+      expect(JSON.stringify(replySpy.mock.calls[0]?.[0])).toContain("legacy global wake");
+      expect(drainSystemEvents("global")).toEqual([]);
+    });
+  });
 
   it.each([
     { name: "alert", replyText: "needs attention", showOk: false },

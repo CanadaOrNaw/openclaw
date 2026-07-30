@@ -36,6 +36,12 @@ describe("fixed session store ownership", () => {
     expect(resolveSessionStoreCompatibilityAgentId(restarted)).toBe("ops");
   });
 
+  it("falls back from a departed retained owner to the sole live agent", () => {
+    const cfg = retainLegacyDefaultAgentId({ agents: { entries: { research: {} } } }, "ops");
+
+    expect(resolveSessionStoreCompatibilityAgentId(cfg)).toBe("research");
+  });
+
   it("keeps a colliding target on the retained legacy owner", async () => {
     await withTempHome(async (home) => {
       const env = { ...process.env, OPENCLAW_STATE_DIR: path.join(home, ".openclaw") };

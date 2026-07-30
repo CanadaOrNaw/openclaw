@@ -462,11 +462,9 @@ function detectTelegramTopicNameCacheLegacyStateMigration(params: {
   const sourcesByKey = new Map(
     [
       ...accountSources,
+      topicNameCacheImportSource({ sourceStorePath: legacyMainStorePath }),
       ...(defaultStorePath
-        ? [
-            topicNameCacheImportSource({ sourceStorePath: defaultStorePath }),
-            topicNameCacheImportSource({ sourceStorePath: legacyMainStorePath }),
-          ]
+        ? [topicNameCacheImportSource({ sourceStorePath: defaultStorePath })]
         : []),
       topicNameCacheImportSource({
         sourceStorePath: legacyStorePath,

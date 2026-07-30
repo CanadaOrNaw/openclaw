@@ -94,7 +94,10 @@ export async function listManualSetupInferenceOptions(
     // Derived from config only (no probing): a pre-existing default model must
     // keep classifying the install as configured even when scanning declined.
     setupComplete: Boolean(
-      resolveAgentEffectiveModelPrimary(cfg, resolveSystemAgentTargetAgentId(cfg)),
+      resolveAgentEffectiveModelPrimary(
+        cfg,
+        resolveSystemAgentTargetAgentId(cfg, deps.targetAgentId),
+      ),
     ),
   };
 }
@@ -108,7 +111,10 @@ export async function detectSetupInference(
     throw new Error(invalidSetupConfigError(snapshot));
   }
   const cfg = snapshot.runtimeConfig ?? snapshot.config;
-  const detected = await (deps.detectInferenceBackends ?? detectInferenceBackends)({ config: cfg });
+  const detected = await (deps.detectInferenceBackends ?? detectInferenceBackends)({
+    config: cfg,
+    agentId: deps.targetAgentId,
+  });
   const unavailableCandidates: SetupInferenceUnavailableCandidate[] = [];
   const deferredUnavailableCandidates: SetupInferenceUnavailableCandidate[] = [];
   const probe = deps.probeLocalCommand ?? probeLocalCommand;

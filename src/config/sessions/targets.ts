@@ -1,12 +1,7 @@
 // Session store target discovery maps configured and on-disk agent stores to canonical targets.
 import fsSync from "node:fs";
 import path from "node:path";
-import {
-  listAgentEntries,
-  listAgentIds,
-  resolveDefaultAgentId,
-  tryResolveSoleAgentId,
-} from "../../agents/agent-scope.js";
+import { listAgentEntries, listAgentIds, resolveDefaultAgentId } from "../../agents/agent-scope.js";
 import { resolveAgentSessionDirsFromAgentsDirSync } from "../../agents/session-dirs.js";
 import {
   isValidAgentId,
@@ -19,7 +14,7 @@ import {
   isSameOpenClawAgentDatabasePath,
   listOpenClawRegisteredAgentDatabases,
 } from "../../state/openclaw-agent-db-registry.js";
-import { tryGetLegacyDefaultAgentId } from "../legacy.default-agent-owner.js";
+import { tryResolveLegacyCompatibilityAgentId } from "../legacy.default-agent-owner.js";
 import { resolveStateDir } from "../paths.js";
 import type { OpenClawConfig } from "../types.openclaw.js";
 import { resolveAgentsDirFromSessionStorePath, resolveStorePath } from "./paths.js";
@@ -131,7 +126,7 @@ export function listConfiguredSessionStoreAgentIds(cfg: OpenClawConfig): string[
  * Registered and database-recorded owners still take precedence in the durable resolver.
  */
 export function resolveSessionStoreCompatibilityAgentId(cfg: OpenClawConfig): string {
-  return tryGetLegacyDefaultAgentId(cfg) ?? tryResolveSoleAgentId(cfg) ?? LEGACY_IMPLICIT_AGENT_ID;
+  return tryResolveLegacyCompatibilityAgentId(cfg) ?? LEGACY_IMPLICIT_AGENT_ID;
 }
 
 /** Lists configured owners plus persisted owners whose registered DB still matches this store. */

@@ -134,6 +134,42 @@ describe("onboarding recommendations scope migration", () => {
     );
   });
 
+  it("uses the sole live workspace when the retained owner departed", async () => {
+    await withOpenClawTestState(
+      { label: "onboarding-recommendations-departed-owner" },
+      async (state) => {
+        const database = { env: state.env };
+        insertRecommendationRow({
+          database,
+          configKey: "primary",
+          inventoryHash: "legacy-inventory",
+        });
+        const cfg = retainLegacyDefaultAgentId(
+          {
+            agents: {
+              entries: { research: { workspace: state.workspaceDir } },
+            },
+          } as OpenClawConfig,
+          "ops",
+        );
+
+        expect(migrateLegacyOnboardingRecommendationsScope({ cfg, env: state.env })).toEqual({
+          changes: [
+            "Migrated onboarding recommendation state to the legacy owner workspace scope.",
+          ],
+          warnings: [],
+        });
+        expect(
+          createOnboardingRecommendationsStore({
+            workspaceDir: state.workspaceDir,
+            database,
+          }).read(),
+        ).toMatchObject({ inventoryHash: "legacy-inventory" });
+        expect(readRecommendationKey(database, "primary")).toBeUndefined();
+      },
+    );
+  });
+
   it("keeps an existing scoped row when legacy state is also present", async () => {
     await withOpenClawTestState(
       { label: "onboarding-recommendations-migration-conflict" },

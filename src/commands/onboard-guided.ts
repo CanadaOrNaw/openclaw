@@ -221,7 +221,7 @@ async function runGuidedOnboardingFlow(
 
   if (wantsDiscovery) {
     const detectionProgress = prompter.progress(t("wizard.guided.detecting"));
-    detection = await detect();
+    detection = await detect({ targetAgentId: opts.agent?.trim() });
     detectionProgress.stop(t("wizard.guided.detected"));
     if (detection.candidates.length === 0) {
       await prompter.note(t("wizard.guided.foundNothing"), t("wizard.guided.detectedTitle"));
@@ -315,7 +315,7 @@ async function runGuidedOnboardingFlow(
       unavailableCandidates: [],
       // Install suggestions come from scanning; a declined scan offers none.
       recommendedInstalls: [],
-      ...(await listManualOptions()),
+      ...(await listManualOptions({ targetAgentId: opts.agent?.trim() })),
     };
   }
 

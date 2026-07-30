@@ -10,7 +10,7 @@ import {
   type ThinkLevel,
   type VerboseLevel,
 } from "../../auto-reply/thinking.js";
-import { tryGetLegacyDefaultAgentId } from "../../config/legacy.default-agent-owner.js";
+import { tryResolveLegacyCompatibilityAgentId } from "../../config/legacy.default-agent-owner.js";
 import { hasProviderOwnedSession } from "../../config/sessions/entry-freshness.js";
 import {
   hasTerminalMainSessionTranscriptNewerThanRegistrySync,
@@ -181,8 +181,7 @@ function collectSessionIdMatchesForRequest(opts: {
 }): SessionIdMatchSet {
   const candidates: SessionIdMatchCandidate[] = [];
   const configuredAgentIds = listAgentIds(opts.cfg).map(normalizeAgentId);
-  const compatibilityAgentId =
-    tryGetLegacyDefaultAgentId(opts.cfg) ?? tryResolveSoleAgentId(opts.cfg);
+  const compatibilityAgentId = tryResolveLegacyCompatibilityAgentId(opts.cfg);
   const configuredStoreOwners = new Map<string, Set<string>>();
   for (const agentId of configuredAgentIds) {
     const configuredStorePath = path.resolve(
@@ -328,7 +327,7 @@ export function resolveSessionKeyForRequest(opts: {
       : undefined);
   const scopedSessionAgentId = parseAgentSessionKey(explicitSessionKey)?.agentId;
   const sessionIdScanAnchor = requestedSessionId
-    ? (tryGetLegacyDefaultAgentId(opts.cfg) ?? tryResolveSoleAgentId(opts.cfg) ?? "main")
+    ? (tryResolveLegacyCompatibilityAgentId(opts.cfg) ?? "main")
     : undefined;
   const defaultAgentId = normalizeAgentId(
     requestedAgentId ??
