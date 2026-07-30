@@ -28,7 +28,6 @@ import {
 import {
   appendLegacyOwnershipWarnings,
   inheritLegacyDefaultAgentId,
-  listLegacyOwnershipWarnings,
   tryGetLegacyDefaultAgentId,
 } from "./legacy.default-agent-owner.js";
 import {
@@ -46,6 +45,7 @@ import {
   normalizeBundledChannelId,
 } from "./validation-channel-rules.js";
 import { validateConfigObjectRaw } from "./validation-core.js";
+import { refreshMaterializedAgentOwnershipWarnings } from "./validation-ownership-warnings.js";
 import {
   collectExplicitPluginReferences,
   resolveExplicitPluginReferencePath,
@@ -152,35 +152,17 @@ function materializeLegacyActiveChannelOwners(
     manifestRegistry?.plugins,
   );
   const config = materialized.config;
-  const ambientChannelIds = listChannelIdsForOwnershipMigration({
-    config,
+  const warnings = refreshMaterializedAgentOwnershipWarnings({
+    warnings: result.warnings,
+    before: result.config,
+    after: config,
     env,
-    ...(manifestRegistry?.plugins ? { manifestRecords: manifestRegistry.plugins } : {}),
+    manifestRecords: manifestRegistry?.plugins,
   });
-  const staleOwnershipWarnings = new Set(
-    collectAgentOwnershipWarnings(result.config, ambientChannelIds).map(
-      (warning) => `${warning.path}\0${warning.message}`,
-    ),
-  );
-  const warnings = [
-    ...result.warnings.filter(
-      (warning) => !staleOwnershipWarnings.has(`${warning.path}\0${warning.message}`),
-    ),
-    ...collectAgentOwnershipWarnings(config, ambientChannelIds),
-    ...listLegacyOwnershipWarnings(config),
-  ];
-  const seenWarnings = new Set<string>();
   return {
     ...result,
     config,
-    warnings: warnings.filter((warning) => {
-      const key = `${warning.path}\0${warning.message}`;
-      if (seenWarnings.has(key)) {
-        return false;
-      }
-      seenWarnings.add(key);
-      return true;
-    }),
+    warnings,
   };
 }
 
