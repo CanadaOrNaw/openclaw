@@ -139,6 +139,9 @@ run_flow() {
 
   echo "== Flow: $name =="
   openclaw_test_state_create "switch-${name}" empty
+  account_home="$(getent passwd "$(id -u)" | cut -d: -f6)"
+  test -n "$account_home"
+  export HOME="$account_home"
   unset OPENCLAW_HOME OPENCLAW_STATE_DIR OPENCLAW_CONFIG_PATH
   export USER="testuser"
 
