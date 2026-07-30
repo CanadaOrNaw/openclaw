@@ -124,6 +124,8 @@ describe("Dockerfile", () => {
       "COPY --from=runtime-assets /app/openclaw.mjs /usr/local/bin/openclaw",
     );
     expect(fipsRuntime).not.toMatch(/^USER /mu);
+    expect(fipsRuntime).toContain("HEALTHCHECK NONE");
+    expect(fipsRuntime).not.toContain("CMD node -e");
     expect(fipsRuntime).toContain("ENTRYPOINT []");
     expect(fipsRuntime).toContain('CMD ["node", "openclaw.mjs", "gateway"]');
     expect(fipsRuntime).not.toContain("apt-get");

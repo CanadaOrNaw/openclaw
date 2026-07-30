@@ -95,6 +95,11 @@ It preserves the runtime image's configured user and clears any inherited
 entrypoint before starting OpenClaw directly with Node.js. The `openclaw`
 launcher remains available on `PATH`.
 
+The target also clears inherited Docker health checks. A generic probe cannot
+assume that the supplied image contains a shell or that the Gateway exposes
+plaintext HTTP. Configure liveness and readiness at the deployment layer
+against `/healthz` and `/readyz` using the final TLS, trust, and bind settings.
+
 ## Activate and verify
 
 Mount the approved OpenSSL configuration and provider module into the final

@@ -286,8 +286,9 @@ COPY --from=build /app/scripts/security/fips-check.mjs ./scripts/security/fips-c
 ENV NODE_ENV=production
 
 STOPSIGNAL SIGTERM
-HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+# The supplied runtime may be shell-free, and the final health endpoint may use
+# operator-owned TLS. Configure the protocol-aware probe at the deployment layer.
+HEALTHCHECK NONE
 ENTRYPOINT []
 CMD ["node", "openclaw.mjs", "gateway"]
 
