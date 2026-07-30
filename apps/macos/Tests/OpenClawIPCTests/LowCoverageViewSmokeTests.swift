@@ -54,10 +54,15 @@ struct LowCoverageViewSmokeTests {
 
     @Test func `notify overlay presents and dismisses`() async {
         let controller = NotifyOverlayController()
-        controller.present(title: "Hello", body: "World", autoDismissAfter: 0)
+        controller.present(title: "Hello", body: "World", autoDismissAfter: 60)
         controller.present(title: "Updated", body: "Again", autoDismissAfter: 0)
+        try? await Task.sleep(nanoseconds: 250_000_000)
+        #expect(controller.model.isVisible)
+        #expect(controller.model.title == "Updated")
+
         controller.dismiss()
         try? await Task.sleep(nanoseconds: 250_000_000)
+        #expect(!controller.model.isVisible)
     }
 
     @Test func `talk overlay presents twice and dismisses`() async {
