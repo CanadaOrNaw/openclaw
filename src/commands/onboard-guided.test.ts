@@ -45,10 +45,10 @@ const logPathTracker = createSuiteLogPathTracker("openclaw-guided-onboard-log-")
 
 vi.mock("../config/config.js", () => ({ readConfigFileSnapshot }));
 vi.mock("./onboard-agent.js", () => ({
-  ensureOnboardingAgent: async ({ config, agentId }: AgentParams) => ({
+  ensureOnboardingAgent: vi.fn(async ({ config, agentId }: AgentParams) => ({
     config,
     agentId: agentId?.trim().toLowerCase() || "main",
-  }),
+  })),
 }));
 
 vi.mock("./onboard-helpers.js", () => ({
@@ -378,6 +378,7 @@ describe("runGuidedOnboarding", () => {
       kind: "claude-cli",
       modelRef: "claude-cli/opus",
       workspace: "/tmp/work",
+      targetAgentId: "main",
       surface: "cli",
       runtime,
     });
@@ -641,6 +642,7 @@ describe("runGuidedOnboarding", () => {
       kind: "provider-auth",
       authChoice: "openai",
       workspace: "/tmp/work",
+      targetAgentId: "main",
       surface: "cli",
       runtime,
       prompter,
@@ -803,6 +805,65 @@ describe("runGuidedOnboarding", () => {
       runtime,
     });
     expect(deps.launchHatchTui).toHaveBeenCalledWith("/tmp/ops-workspace");
+  });
+
+  it("probes the interactively selected agent model before applying setup", async () => {
+    const config = {
+      agents: {
+        ownership: "explicit",
+        defaults: { model: "openai/gpt-5.5" },
+        entries: {
+          ops: { model: "anthropic/claude-opus-4-8", workspace: "/tmp/ops-workspace" },
+          research: {
+            model: "google/gemini-3.1-pro-preview",
+            workspace: "/tmp/research-workspace",
+          },
+        },
+      },
+    } satisfies OpenClawConfig;
+    readConfigFileSnapshot.mockResolvedValue({
+      exists: true,
+      valid: true,
+      path: "/tmp/openclaw.json",
+      issues: [],
+      config,
+    });
+    const detect = vi.fn(async ({ targetAgentId }: { targetAgentId?: string }) =>
+      detection({
+        candidates: [
+          {
+            ...existingModelCandidate(),
+            modelRef:
+              targetAgentId === "ops"
+                ? "anthropic/claude-opus-4-8"
+                : "google/gemini-3.1-pro-preview",
+          },
+        ],
+      }),
+    );
+    const prompter = createWizardPrompter(undefined, {
+      selectValues: ["full", "ops", "use"],
+    });
+    const deps = setupDeps({ prompter, detect });
+    const runtime = makeRuntime();
+
+    await runGuidedOnboarding({ acceptRisk: true }, runtime, deps);
+
+    expect(detect).toHaveBeenCalledWith({ targetAgentId: "ops" });
+    expect(deps.activate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelRef: "anthropic/claude-opus-4-8",
+        targetAgentId: "ops",
+        workspace: "/tmp/ops-workspace",
+      }),
+    );
+    expect(deps.applySetup).toHaveBeenCalledWith(
+      expect.objectContaining({ targetAgentId: "ops", workspace: "/tmp/ops-workspace" }),
+    );
+    const { ensureOnboardingAgent } = await import("./onboard-agent.js");
+    expect(ensureOnboardingAgent).toHaveBeenLastCalledWith(
+      expect.objectContaining({ agentId: "ops" }),
+    );
   });
 
   it("cancels before detection or activation when risk is declined", async () => {

@@ -43,7 +43,11 @@ export function readSubagentSessionStore<T extends SessionDepthEntry = SessionDe
   return {};
 }
 
-function buildKeyCandidates(rawKey: string, cfg?: OpenClawConfig): string[] {
+function buildKeyCandidates(
+  rawKey: string,
+  cfg?: OpenClawConfig,
+  explicitAgentId?: string,
+): string[] {
   if (!cfg) {
     return [rawKey];
   }
@@ -53,7 +57,7 @@ function buildKeyCandidates(rawKey: string, cfg?: OpenClawConfig): string[] {
   if (parseAgentSessionKey(rawKey)) {
     return [rawKey];
   }
-  const defaultAgentId = resolveDefaultAgentId(cfg);
+  const defaultAgentId = explicitAgentId ?? resolveDefaultAgentId(cfg);
   const prefixed = `agent:${defaultAgentId}:${rawKey}`;
   return prefixed === rawKey ? [rawKey] : [rawKey, prefixed];
 }
@@ -78,10 +82,11 @@ export function findSubagentSessionEntryById<T extends SessionDepthEntry>(
 function resolveEntryForSessionKey(params: {
   sessionKey: string;
   cfg?: OpenClawConfig;
+  agentId?: string;
   store?: Record<string, SessionDepthEntry>;
   cache: Map<string, Record<string, SessionDepthEntry>>;
 }): SessionDepthEntry | undefined {
-  const candidates = buildKeyCandidates(params.sessionKey, params.cfg);
+  const candidates = buildKeyCandidates(params.sessionKey, params.cfg, params.agentId);
 
   if (params.store) {
     for (const key of candidates) {
@@ -102,13 +107,14 @@ function resolveEntryForSessionKey(params: {
 
   for (const key of candidates) {
     const parsed = parseAgentSessionKey(key);
-    if (!parsed?.agentId) {
+    const agentId = parsed?.agentId ?? params.agentId;
+    if (!agentId) {
       continue;
     }
-    const storePath = resolveStorePath(params.cfg.session?.store, { agentId: parsed.agentId });
+    const storePath = resolveStorePath(params.cfg.session?.store, { agentId });
     let store = params.cache.get(storePath);
     if (!store) {
-      store = readSubagentSessionStore(storePath, parsed.agentId);
+      store = readSubagentSessionStore(storePath, agentId);
       params.cache.set(storePath, store);
     }
     const entry = store[key] ?? findSubagentSessionEntryById(store, params.sessionKey);
@@ -124,6 +130,7 @@ export function getSubagentDepthFromSessionStore(
   sessionKey: string | undefined | null,
   opts?: {
     cfg?: OpenClawConfig;
+    agentId?: string;
     store?: Record<string, SessionDepthEntry>;
   },
 ): number {
@@ -149,6 +156,7 @@ export function getSubagentDepthFromSessionStore(
     const entry = resolveEntryForSessionKey({
       sessionKey: normalizedKey,
       cfg: opts?.cfg,
+      agentId: opts?.agentId,
       store: opts?.store,
       cache,
     });

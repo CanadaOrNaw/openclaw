@@ -15,6 +15,7 @@ import { resolveUserPath, shortenHomePath } from "../utils.js";
 import { t } from "../wizard/i18n/index.js";
 import type { WizardPrompter } from "../wizard/prompts.js";
 import { requireRiskAcknowledgement } from "../wizard/setup.shared.js";
+import { resolveCliAgentId } from "./agent-selection.js";
 import { resolveOnboardingAgentTarget } from "./onboard-agent-target.js";
 import type {
   probeBrowserHatchGateway,
@@ -187,11 +188,32 @@ async function runGuidedOnboardingFlow(
     }
   }
 
-  // Inference is the only prerequisite for OpenClaw. Use the caller's or
-  // current default workspace as isolated probe context; OpenClaw owns any
-  // workspace choice and persistence after the live completion succeeds.
+  const agentSelectionConfig = snapshot.runtimeConfig ?? snapshot.config;
+  const configuredAgents = listAgentEntries(agentSelectionConfig);
+  const selectedAgentId =
+    configuredAgents.length === 0
+      ? normalizeAgentId(opts.agent?.trim() || "main")
+      : await resolveCliAgentId({
+          cfg: agentSelectionConfig,
+          runtime,
+          agentInput: opts.agent,
+          surface: "onboarding",
+          deps: {
+            interactive: true,
+            selectAgent: (selection) => prompter.select<string>(selection),
+          },
+        });
+  const selectedAgentExists = configuredAgents.some(
+    (entry) => normalizeAgentId(entry.id) === selectedAgentId,
+  );
+
+  // Resolve the target before discovery so probing, activation, workspace,
+  // and final setup all operate on the same agent route.
   const workspace = resolveUserPath(
     opts.workspace?.trim() ||
+      (selectedAgentExists
+        ? resolveOnboardingAgentTarget(agentSelectionConfig, selectedAgentId).workspaceDir
+        : undefined) ||
       acknowledgedConfig.agents?.defaults?.workspace?.trim() ||
       onboardHelpers.DEFAULT_WORKSPACE,
   );
@@ -221,7 +243,7 @@ async function runGuidedOnboardingFlow(
 
   if (wantsDiscovery) {
     const detectionProgress = prompter.progress(t("wizard.guided.detecting"));
-    detection = await detect({ targetAgentId: opts.agent?.trim() });
+    detection = await detect({ targetAgentId: selectedAgentId });
     detectionProgress.stop(t("wizard.guided.detected"));
     if (detection.candidates.length === 0) {
       await prompter.note(t("wizard.guided.foundNothing"), t("wizard.guided.detectedTitle"));
@@ -283,6 +305,7 @@ async function runGuidedOnboardingFlow(
         runtime,
         prompter,
         activate,
+        targetAgentId: selectedAgentId,
         // Legacy chat handoff keeps loud per-candidate failures.
         ...(custodianMode
           ? { collectFailure: (failure: LadderFailure) => ladderFailures.push(failure) }
@@ -315,7 +338,7 @@ async function runGuidedOnboardingFlow(
       unavailableCandidates: [],
       // Install suggestions come from scanning; a declined scan offers none.
       recommendedInstalls: [],
-      ...(await listManualOptions({ targetAgentId: opts.agent?.trim() })),
+      ...(await listManualOptions({ targetAgentId: selectedAgentId })),
     };
   }
 
@@ -360,6 +383,7 @@ async function runGuidedOnboardingFlow(
         runtime,
         prompter,
         activate,
+        targetAgentId: selectedAgentId,
         hasActiveRoute: true,
       });
       // Skip keeps the already-persisted working route instead of aborting.
@@ -388,6 +412,7 @@ async function runGuidedOnboardingFlow(
       runtime,
       prompter,
       activate,
+      targetAgentId: selectedAgentId,
     });
     if (!manualResult) {
       return null;
@@ -449,16 +474,13 @@ async function runGuidedOnboardingFlow(
       config: existingConfig,
       workspace,
       baseConfig: existingConfig,
-      agentId: opts.agent,
+      agentId: selectedAgentId,
       runtime,
     });
-    const selectedAgentExists = listAgentEntries(onboardingAgent.config).some(
-      (entry) => normalizeAgentId(entry.id) === onboardingAgent.agentId,
-    );
     if (!opts.workspace?.trim() && selectedAgentExists) {
       appliedWorkspace = resolveOnboardingAgentTarget(
         onboardingAgent.config,
-        onboardingAgent.agentId,
+        selectedAgentId,
       ).workspaceDir;
     }
     const applySetup =
@@ -468,7 +490,7 @@ async function runGuidedOnboardingFlow(
       const applied = await withConsoleSubsystemsSuppressed(() =>
         applySetup({
           workspace: appliedWorkspace,
-          targetAgentId: onboardingAgent.agentId,
+          targetAgentId: selectedAgentId,
           ...(allowWorkspaceChange ? { allowWorkspaceChange: true } : {}),
           surface: "cli",
           runtime,

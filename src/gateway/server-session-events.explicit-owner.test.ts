@@ -273,4 +273,46 @@ describe("server session events without a compatibility owner", () => {
       expect.objectContaining({ agentId: "work", defaultAgentId: "main" }),
     );
   });
+
+  it("projects a bare transcript session through its selected owner", async () => {
+    loadGatewaySessionRowMock.mockReturnValue({
+      ...globalRow,
+      key: "incident-42",
+      kind: "other",
+    });
+    resolveVisibleActiveSessionRunStateMock.mockReturnValue({
+      active: true,
+      runIds: ["run-work-incident"],
+    });
+    const handler = createTranscriptUpdateBroadcastHandler({
+      broadcastToConnIds,
+      sessionEventSubscribers: { getAll: () => new Set(["conn-1"]) },
+      sessionMessageSubscribers: { get: () => new Set(["conn-1"]) },
+      chatAbortControllers: new Map(),
+    });
+
+    handler({
+      sessionFile: "/tmp/session-work-incident.jsonl",
+      target: {
+        agentId: "work",
+        sessionId: "session-global",
+        sessionKey: "incident-42",
+        storePath: "/tmp/work-sessions.json",
+      },
+      message: { role: "assistant", content: [{ type: "text", text: "done" }] },
+      messageSeq: 1,
+    } as never);
+
+    await vi.waitFor(() => expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalled());
+    expect(resolveVisibleActiveSessionRunStateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestedKey: "incident-42",
+        canonicalKey: "incident-42",
+        agentId: "work",
+      }),
+    );
+    expect(broadcastToConnIds.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({ hasActiveRun: true, activeRunIds: ["run-work-incident"] }),
+    );
+  });
 });

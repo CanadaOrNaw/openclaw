@@ -152,7 +152,23 @@ function materializeLegacyActiveChannelOwners(
     manifestRegistry?.plugins,
   );
   const config = materialized.config;
-  const warnings = [...result.warnings, ...listLegacyOwnershipWarnings(config)];
+  const ambientChannelIds = listChannelIdsForOwnershipMigration({
+    config,
+    env,
+    ...(manifestRegistry?.plugins ? { manifestRecords: manifestRegistry.plugins } : {}),
+  });
+  const staleOwnershipWarnings = new Set(
+    collectAgentOwnershipWarnings(result.config, ambientChannelIds).map(
+      (warning) => `${warning.path}\0${warning.message}`,
+    ),
+  );
+  const warnings = [
+    ...result.warnings.filter(
+      (warning) => !staleOwnershipWarnings.has(`${warning.path}\0${warning.message}`),
+    ),
+    ...collectAgentOwnershipWarnings(config, ambientChannelIds),
+    ...listLegacyOwnershipWarnings(config),
+  ];
   const seenWarnings = new Set<string>();
   return {
     ...result,

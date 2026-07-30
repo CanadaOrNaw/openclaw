@@ -177,6 +177,8 @@ export type ActivateSetupInferenceParams = {
   /** Manual step only: the pasted API key or token. Never logged. */
   apiKey?: string;
   workspace?: string;
+  /** Configured agent whose route is being probed and persisted. */
+  targetAgentId?: string;
   surface: "cli" | "gateway";
   /** False when an enclosing persistent-operation boundary owns the setup audit. */
   recordSetupAudit?: boolean;

@@ -70,6 +70,45 @@ describe("onboarding main-agent creation", () => {
     });
   });
 
+  it("provisions the explicitly requested first agent on a fresh install", async () => {
+    mocks.createAgent.mockResolvedValueOnce({
+      status: "created",
+      agentId: "ops",
+      name: "ops",
+      workspace: "/tmp/ops-work",
+      agentDir: "/tmp/ops-agent",
+      bootstrapPending: true,
+    });
+    mocks.readConfigFileSnapshot
+      .mockReset()
+      .mockResolvedValueOnce({
+        exists: false,
+        valid: true,
+        sourceConfig: {},
+        config: {},
+      })
+      .mockResolvedValueOnce({
+        exists: true,
+        valid: true,
+        sourceConfig: { agents: { entries: { ops: {} } } },
+        config: { agents: { entries: { ops: {} } } },
+      });
+
+    const result = await ensureOnboardingAgent({
+      config: {},
+      workspace: "/tmp/ops-work",
+      agentId: "ops",
+    });
+
+    expect(mocks.createAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entry: expect.objectContaining({ id: "ops", name: "ops" }),
+      }),
+    );
+    expect(mocks.createAgent.mock.calls[0]?.[0]).not.toHaveProperty("bootstrapMain");
+    expect(result.agentId).toBe("ops");
+  });
+
   it("preserves an explicit imported candidate roster", async () => {
     const config = { agents: { list: [{ id: "main", default: true }] } };
 

@@ -5,6 +5,7 @@ import { readConfigFileSnapshot } from "../config/config.js";
 import { createMergePatch } from "../config/merge-patch.js";
 import { applyMergePatch } from "../config/merge-patch.js";
 import type { OpenClawConfig } from "../config/types.openclaw.js";
+import { normalizeAgentId } from "../routing/session-key.js";
 import type { RuntimeEnv } from "../runtime.js";
 import { defaultRuntime } from "../runtime.js";
 import { resolveCliAgentId, type CliAgentSelectionDeps } from "./agent-selection.js";
@@ -108,13 +109,14 @@ export async function ensureOnboardingAgent(params: EnsureOnboardingAgentParams)
       bootstrapPending: false,
     };
   }
+  const initialAgentId = normalizeAgentId(params.agentId?.trim() || "main");
   const created = await createAgent({
     entry: {
-      id: "main",
-      name: "main",
+      id: initialAgentId,
+      name: initialAgentId,
       workspace: params.workspace,
     },
-    bootstrapMain: true,
+    ...(initialAgentId === "main" ? { bootstrapMain: true } : {}),
     skipBootstrap: params.config.agents?.defaults?.skipBootstrap,
     skipOptionalBootstrapFiles: params.config.agents?.defaults?.skipOptionalBootstrapFiles,
   });

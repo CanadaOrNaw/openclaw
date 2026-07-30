@@ -339,7 +339,7 @@ async function handleTranscriptUpdateBroadcast(
           requestedKey: sessionKey,
           canonicalKey: sessionRow.key,
           sessionId: sessionRow.sessionId,
-          ...(sessionRow.key === "global" && routingAgentId ? { agentId: routingAgentId } : {}),
+          ...(routingAgentId ? { agentId: routingAgentId } : {}),
           defaultAgentId: compatibilityDefaultAgentId,
         })
       : null;

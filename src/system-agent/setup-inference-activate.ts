@@ -149,6 +149,7 @@ async function activateSetupInferenceUnredacted(
       pluginWorkspaceDir: workspace,
       agentDir: testAgentDir,
       runtime: params.runtime,
+      ...(params.targetAgentId ? { routeAgentId: params.targetAgentId } : {}),
       ...(params.prompter ? { prompter: params.prompter } : {}),
       ...(params.signal ? { signal: params.signal } : {}),
       ...(params.isCancelled ? { isCancelled: params.isCancelled } : {}),

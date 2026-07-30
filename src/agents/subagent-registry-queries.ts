@@ -317,6 +317,7 @@ export function resolveRequesterForChildSessionFromRuns(
   childSessionKey: string,
 ): {
   requesterSessionKey: string;
+  requesterAgentId?: string;
   requesterOrigin?: DeliveryContext;
 } | null {
   const latest = getLatestSubagentRunByChildSessionKeyFromRuns(runs, childSessionKey);
@@ -325,6 +326,7 @@ export function resolveRequesterForChildSessionFromRuns(
   }
   return {
     requesterSessionKey: latest.requesterSessionKey,
+    requesterAgentId: latest.requesterAgentId,
     requesterOrigin: latest.requesterOrigin,
   };
 }

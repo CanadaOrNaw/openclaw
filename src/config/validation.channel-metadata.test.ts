@@ -835,6 +835,12 @@ describe("validateConfigObjectWithPlugins bundled allowlist compatibility", () =
         agentId: "ops",
         match: { channel: "snapshotchat", accountId: "*" },
       });
+      expect(result.warnings).not.toContainEqual(
+        expect.objectContaining({
+          path: "channels.snapshotchat",
+          message: expect.stringContaining("has no channel-wide owner"),
+        }),
+      );
     }
   });
 
