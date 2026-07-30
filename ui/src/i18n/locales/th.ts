@@ -374,6 +374,8 @@ export const th: TranslationMap = {
       "ติดตั้งการอัปเดตแล้วแต่เวอร์ชันที่ทำงานอยู่ไม่เปลี่ยนแปลง — การรีสตาร์ทอาจถูกบล็อก คาดว่าเป็น v{expectedVersion} แต่กำลังทำงานที่ v{actualVersion}",
     handoffTimeout:
       "เริ่มการส่งต่อการอัปเดตแล้ว แต่ไม่มีการรายงานการเสร็จสิ้นหลังจากเชื่อมต่อใหม่ รัน `openclaw update status` เพื่อดูผลลัพธ์สุดท้าย",
+    outcomeUnknown:
+      "คำขออัปเดตอาจได้รับการยอมรับแล้ว แต่ Gateway ไม่ได้รายงานผลลัพธ์สุดท้ายหลังจากเชื่อมต่อใหม่ ให้รัน `openclaw update status` ก่อนลองใหม่อีกครั้ง",
     failureReasons: {
       dirty: "คอมมิตหรือ stash การเปลี่ยนแปลง แล้วลองใหม่",
       noUpstream: "ตั้งค่าสาขา upstream แล้วลองใหม่",
@@ -2020,6 +2022,7 @@ export const th: TranslationMap = {
       title: "ตั้งค่าโมเดลในเครื่อง",
       intro: "ดาวน์โหลดหรือเตรียมโมเดลในเครื่องบน Gateway นี้",
       button: "ตั้งค่า / ดาวน์โหลดโมเดล",
+      ollamaButton: "ตรวจสอบและตั้งค่า",
       ollamaLabel: "Ollama",
       ollamaHint: "ดาวน์โหลดโมเดลที่รองรับ tools จากเซิร์ฟเวอร์ Ollama ของคุณ",
       llamaCppLabel: "โมเดลในเครื่อง (llama.cpp)",
@@ -2029,15 +2032,24 @@ export const th: TranslationMap = {
       title: "เชื่อมต่อด้วยคีย์ API หรือโทเค็น",
       provider: "ผู้ให้บริการ",
       selectProvider: "เลือกผู้ให้บริการ",
+      selectProviderHint: "เลือกว่าข้อมูลรับรองนี้มาจากที่ใด",
       accessValue: "คีย์ API หรือโทเค็น",
+      accessValueFor: "คีย์ API หรือโทเคนของ {provider}",
       accessValuePlaceholder: "วางคีย์ API หรือโทเค็น",
       connect: "เชื่อมต่อ",
+      connectAndVerify: "เชื่อมต่อและยืนยัน",
+      verifyHint: "OpenClaw จะยืนยันการตอบกลับจากโมเดลจริงก่อนทำเครื่องหมายว่าการเชื่อมต่อพร้อมใช้งาน",
       required: "เลือกผู้ให้บริการและป้อนคีย์ API หรือโทเค็น",
     },
     success: {
       title: "AI ของคุณพร้อมใช้งานแล้ว",
+      body: "OpenClaw ได้รับการตอบกลับจริงจาก {modelRef} คุณสามารถเริ่มแชทได้เลย",
+      activeModel: "โมเดลที่ใช้งานอยู่",
+      latency: "ยืนยันแล้วใน {latencyMs} มิลลิวินาที",
       detail: "{modelRef} · {latencyMs} ms",
       openChat: "เปิดแชท",
+      continueSetup: "ดำเนินการตั้งค่าต่อ",
+      stayHere: "อยู่ในการตั้งค่า",
       configuredModel: "โมเดลที่กำหนดค่าแล้ว",
     },
     failure: {
@@ -2219,6 +2231,11 @@ export const th: TranslationMap = {
       channelDegraded: "{channel} มีประสิทธิภาพลดลง — ถามฉันว่าเกิดอะไรขึ้น",
       channelFallback: "ช่องทาง",
       dismiss: "ปิดการอัปเดตนี้",
+      channelSetupTitle: "เข้าถึง OpenClaw นอกแอปนี้",
+      channelSetupBody:
+        "เว็บแอปใช้งานได้อยู่แล้ว เพิ่มช่องทางเฉพาะเมื่อคุณต้องการส่งข้อความถึง OpenClaw จากบริการอื่น",
+      channelSetupAction: "ตั้งค่าช่องทาง",
+      channelSetupDismiss: "ใช้เว็บแอปต่อไป",
     },
   },
   mcpServers: {
@@ -2232,6 +2249,9 @@ export const th: TranslationMap = {
     targetLabel: "URL หรือคำสั่ง",
     nameInvalid: "ชื่อเซิร์ฟเวอร์ใช้ตัวอักษร ตัวเลข จุด ขีดกลาง หรือขีดล่างได้",
     targetInvalid: "ป้อน URL สำหรับการรับส่งข้อมูลแบบ HTTP หรือบรรทัดคำสั่งที่ถูกต้องสำหรับ stdio",
+    sessionEnableFailed: "เซิร์ฟเวอร์ถูกบันทึกเป็นปิดใช้งานแบบทั่วโลก แต่การเปิดใช้งานสำหรับเซสชันนี้ล้มเหลว: {error}",
+    sessionChanged: "เซสชันที่ใช้งานอยู่มีการเปลี่ยนแปลงก่อนที่จะเปิดใช้งานได้",
+    sessionUnavailable: "เซสชันที่ใช้งานอยู่ไม่พร้อมใช้งาน กรุณารีเฟรชแล้วลองอีกครั้ง",
     nameTaken: "มีเซิร์ฟเวอร์ MCP ชื่อ “{name}” อยู่แล้ว",
     missing: "ไม่พบเซิร์ฟเวอร์ MCP “{name}” ในการกำหนดค่า",
     missingTransport: "ไม่มีการขนส่ง",
@@ -2397,7 +2417,9 @@ export const th: TranslationMap = {
       description:
         "มีปลั๊กอินหน่วยความจำเพียงตัวเดียวเท่านั้นที่ครองสล็อตหน่วยความจำ การเลือกเอนจินจะเปิดใช้งานตัวนั้นและปิดใช้งานตัวอื่น",
       rowTitle: "เอนจินหน่วยความจำ",
+      openClawMemory: "OpenClaw Memory",
       off: "ปิด",
+      unavailable: "ไม่พร้อมใช้งาน",
       autoHint: "ไม่มีเอนจินใดถูกปักหมุดในการตั้งค่า ดังนั้นสล็อตจะย้อนกลับไปใช้เจ้าของเริ่มต้น",
       explicitHint: "เอนจินนี้ถูกปักหมุดในการตั้งค่าภายใต้ plugins.slots.memory",
       offHint: "หน่วยความจำถูกปิดในการตั้งค่า: plugins.slots.memory ตั้งค่าเป็น none",
@@ -2685,6 +2707,11 @@ export const th: TranslationMap = {
       title: "ค้นหาเครื่องมือ",
       description:
         "ทำให้ไดเรกทอรีเครื่องมือที่จำกัดปรากฏให้เห็น และเลื่อนส่วนที่เหลือไว้หลังการค้นหา เพื่อไม่ให้แคตตาล็อก MCP และปลั๊กอินขนาดใหญ่ทำให้พรอมต์แออัด",
+    },
+    loopDetection: {
+      title: "การตรวจจับ Tool-loop",
+      description:
+        "เปิดใช้งานการป้องกันด้วยประวัติแบบต่อเนื่องที่จะเตือนหรือบล็อกการเรียกใช้เครื่องมือซ้ำ ๆ เมื่อเอเจนต์หยุดคืบหน้า",
     },
     localModelLean: {
       title: "เครื่องมือแบบกระชับสำหรับโมเดลในเครื่อง",
@@ -3705,12 +3732,12 @@ export const th: TranslationMap = {
       loadingPage: "กำลังโหลดหน้าวิกิ…",
       dreamsTab: "ความฝัน",
       insightsTab: "ข้อมูลเชิงลึกที่นำเข้า",
-      palaceTab: "วังแห่งความทรงจำ",
+      wikiTab: "Wiki หน่วยความจำ",
       dreamsExplainer:
         "นี่คือไดอารีความฝันดิบที่ระบบเขียนขึ้นในระหว่างการเล่นซ้ำและรวบรวมความทรงจำ ใช้เพื่อตรวจสอบว่าระบบความทรงจำกำลังสังเกตเห็นอะไร และจุดใดที่ยังดูรบกวนหรือบางเบา",
       insightsExplainer:
         "นี่คือข้อมูลเชิงลึกที่นำเข้าซึ่งจัดกลุ่มจากประวัติภายนอก ใช้เพื่อทบทวนสิ่งที่การนำเข้าแสดงออกมาก่อนที่จะเลื่อนขั้นเป็นความทรงจำถาวร",
-      palaceExplainer:
+      wikiExplainer:
         "นี่คือพื้นผิววิกิความทรงจำที่คอมไพล์แล้วซึ่งระบบสามารถค้นหาและใช้เหตุผลได้ ใช้เพื่อตรวจสอบหน้าความทรงจำจริง ข้อกล่าวอ้าง คำถามที่ยังเปิดอยู่ และความขัดแย้ง แทนที่จะเป็นแชตต้นทางที่นำเข้าดิบ",
       copyArchivePath: "คัดลอกเส้นทางที่เก็บถาวร",
       loadingInsights: "กำลังโหลดข้อมูลเชิงลึกที่นำเข้า…",
@@ -3725,9 +3752,9 @@ export const th: TranslationMap = {
       riskReasons: "เหตุผลด้านความเสี่ยง:",
       labels: "ป้ายกำกับ:",
       openSourcePage: "เปิดหน้าต้นฉบับ",
-      loadingPalace: "กำลังโหลดวังความทรงจำ…",
-      emptyPalace: "ยังไม่มีข้อมูลในวังความทรงจำ",
-      emptyPalaceHint:
+      loadingWiki: "กำลังโหลด Wiki หน่วยความจำ…",
+      emptyWiki: "ยังไม่มีข้อมูลใน Wiki หน่วยความจำ",
+      emptyWikiHint:
         "ในขณะนี้ wiki ส่วนใหญ่มีเพียงการนำเข้าต้นฉบับดิบและรายงานการดำเนินงาน แท็บนี้จะมีประโยชน์เมื่อเริ่มมีการเขียนการสังเคราะห์ เอนทิตี หรือแนวคิด",
       claims: "การอ้างสิทธิ์",
       openQuestions: "คำถามที่ยังค้างอยู่",
@@ -3803,7 +3830,7 @@ export const th: TranslationMap = {
       tidyingKnowledgeGraph: "กำลังจัดระเบียบกราฟความรู้…",
       replayingConversations: "กำลังเล่นซ้ำบทสนทนาของวันนี้…",
       weavingShortTerm: "กำลังถักทอความจำระยะสั้นเป็นระยะยาว…",
-      defragmentingMindPalace: "กำลังจัดเรียง mind palace ใหม่…",
+      defragmentingMemoryLane: "กำลังจัดระเบียบความทรงจำ…",
       filingLooseThoughts: "กำลังจัดเก็บความคิดที่กระจัดกระจาย…",
       connectingDots: "กำลังเชื่อมโยงจุดที่ห่างไกล…",
       compostingContext: "กำลังย่อยสลายหน้าต่างบริบทเก่า…",
@@ -3828,6 +3855,7 @@ export const th: TranslationMap = {
     emptySubtitle: "Sign in to a provider or add an API key, then refresh.",
     status: {
       ok: "เชื่อมต่อแล้ว",
+      ready: "พร้อม",
       expiring: "Expiring",
       expired: "หมดอายุ",
       missing: "Not signed in",
@@ -3880,6 +3908,15 @@ export const th: TranslationMap = {
         unknown: "การเชื่อมต่อล้มเหลว",
         no_model: "ไม่มีโมเดลที่พร้อมใช้งาน",
       },
+    },
+    readiness: {
+      title: "การตั้งค่า AI",
+      heading: "เชื่อมต่อ AI ของคุณ",
+      signedInNoModels: "คุณลงชื่อเข้าใช้แล้ว แต่บัญชีนี้ไม่มีโมเดลที่ใช้งานได้ เลือกผู้ให้บริการหรือบัญชีอื่นเพื่อดำเนินการต่อ",
+      notConfigured: "เลือกผู้ให้บริการและตรวจสอบโมเดลที่ OpenClaw จะใช้",
+      noModels: "ไม่มีโมเดลที่ใช้งานได้",
+      modelRequired: "ต้องระบุโมเดล",
+      chooseProvider: "เลือกผู้ให้บริการอื่น",
     },
     logout: {
       action: "ออกจากระบบ",
@@ -4803,6 +4840,7 @@ export const th: TranslationMap = {
       pause: "หยุดชั่วคราว",
       seek: "เลื่อนหาสื่อ",
       download: "ดาวน์โหลด {filename}",
+      preparing: "กำลังเตรียมการเล่น…",
       videoUnavailable: "ไม่สามารถเล่นรูปแบบนี้ได้ — ดาวน์โหลดแทน",
     },
     modelControls: {
@@ -4973,7 +5011,21 @@ export const th: TranslationMap = {
         manageSkills: "จัดการ Skills",
         browseConnectors: "เรียกดูตัวเชื่อมต่อ",
         addMcpServer: "เพิ่มเซิร์ฟเวอร์ MCP…",
-        toolAccess: "การเข้าถึงเครื่องมือ",
+        addMcpServerTitle: "เพิ่มเซิร์ฟเวอร์ MCP",
+        addMcpServerDescription: "กำหนดค่าเซิร์ฟเวอร์และเลือกตำแหน่งที่จะเปิดใช้งาน",
+        scopeLabel: "ความพร้อมใช้งาน",
+        scopeSession: "เซสชันนี้",
+        scopeEverywhere: "ทุกที่",
+        scopeSessionHint: "เซิร์ฟเวอร์จะถูกบันทึกโดยปิดใช้งานแบบทั่วโลกและเปิดใช้งานเฉพาะเซสชันนี้เท่านั้น",
+        scopeEverywhereHint: "เซิร์ฟเวอร์จะถูกบันทึกและเปิดใช้งานสำหรับทุกเซสชัน",
+        toolAccess: {
+          label: "การเข้าถึงเครื่องมือ",
+          loading: "กำลังโหลดเครื่องมือ…",
+          loadFailed: "ไม่สามารถโหลดเครื่องมือได้",
+          noTools: "ไม่มีเครื่องมือสำหรับตัวเชื่อมต่อนี้",
+          summary: "เปิดใช้งาน {enabled} จาก {total} เครื่องมือ",
+          summaryOne: "เปิดใช้งาน {enabled} จาก {total} เครื่องมือ",
+        },
         enabledCount: "เปิด {count}",
         loadingSkills: "กำลังโหลด Skills…",
         skillsLoadFailed: "ไม่สามารถโหลด Skills ได้",

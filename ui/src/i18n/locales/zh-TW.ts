@@ -366,6 +366,8 @@ export const zh_TW: TranslationMap = {
       "更新已安裝，但執行中的版本未變更 — 重新啟動可能已被封鎖。預期 v{expectedVersion}，執行中 v{actualVersion}。",
     handoffTimeout:
       "更新交接已開始，但重新連線後未回報完成。請執行 `openclaw update status` 以取得最終結果。",
+    outcomeUnknown:
+      "更新請求可能已被接受，但 Gateway 在重新連線後未回報最終結果。重試前請執行 `openclaw update status`。",
     failureReasons: {
       dirty: "請提交或暫存變更，然後重試。",
       noUpstream: "請設定上游分支，然後重試。",
@@ -2002,6 +2004,7 @@ export const zh_TW: TranslationMap = {
       title: "設定本機模型",
       intro: "在此 Gateway 上下載或準備本機模型。",
       button: "設定／下載模型",
+      ollamaButton: "檢查並設定",
       ollamaLabel: "Ollama",
       ollamaHint: "從您的 Ollama 伺服器下載支援工具的模型",
       llamaCppLabel: "本機模型（llama.cpp）",
@@ -2011,15 +2014,24 @@ export const zh_TW: TranslationMap = {
       title: "使用 API 金鑰或權杖連線",
       provider: "供應商",
       selectProvider: "選擇供應商",
+      selectProviderHint: "選擇此憑證的來源",
       accessValue: "API 金鑰或權杖",
+      accessValueFor: "{provider} API 金鑰或權杖",
       accessValuePlaceholder: "貼上 API 金鑰或權杖",
       connect: "連線",
+      connectAndVerify: "連線並驗證",
+      verifyHint: "OpenClaw 會在將連線標示為就緒前先驗證實際的模型回覆。",
       required: "請選擇供應商並輸入 API 金鑰或權杖。",
     },
     success: {
       title: "您的 AI 已準備就緒",
+      body: "OpenClaw 已收到來自 {modelRef} 的實際回覆。你現在可以開始聊天了。",
+      activeModel: "使用中的模型",
+      latency: "已於 {latencyMs} 毫秒內驗證",
       detail: "{modelRef} · {latencyMs} ms",
       openChat: "開啟聊天",
+      continueSetup: "繼續設定",
+      stayHere: "留在設定中",
       configuredModel: "已設定的模型",
     },
     failure: {
@@ -2198,6 +2210,11 @@ export const zh_TW: TranslationMap = {
       channelDegraded: "{channel} 已降級——問我發生了什麼事",
       channelFallback: "某個頻道",
       dismiss: "關閉此更新",
+      channelSetupTitle: "在此應用程式之外聯繫 OpenClaw",
+      channelSetupBody:
+        "網頁應用程式已經可以使用。只有在你想從其他服務向 OpenClaw 傳訊息時，才需要新增頻道。",
+      channelSetupAction: "設定頻道",
+      channelSetupDismiss: "繼續使用網頁應用程式",
     },
   },
   mcpServers: {
@@ -2211,6 +2228,9 @@ export const zh_TW: TranslationMap = {
     targetLabel: "URL 或指令",
     nameInvalid: "伺服器名稱只能使用字母、數字、句點、連字號或底線。",
     targetInvalid: "為 HTTP 傳輸輸入 URL，或為 stdio 輸入有效的指令列。",
+    sessionEnableFailed: "伺服器已儲存為全域停用，但為此工作階段啟用時失敗：{error}",
+    sessionChanged: "使用中的工作階段在啟用前已變更。",
+    sessionUnavailable: "使用中的工作階段無法使用；請重新整理後再試一次。",
     nameTaken: "名為「{name}」的 MCP 伺服器已存在。",
     missing: "在設定中找不到 MCP 伺服器「{name}」。",
     missingTransport: "缺少傳輸方式",
@@ -2374,7 +2394,9 @@ export const zh_TW: TranslationMap = {
       title: "引擎",
       description: "記憶插槽僅由一個記憶外掛擁有。選取某引擎會啟用它並停用其他引擎。",
       rowTitle: "記憶引擎",
+      openClawMemory: "OpenClaw Memory",
       off: "關閉",
+      unavailable: "無法使用",
       autoHint: "設定中未固定任何引擎，因此插槽會回退至其預設擁有者。",
       explicitHint: "此引擎已在設定中固定於 plugins.slots.memory 之下。",
       offHint: "記憶已在設定中關閉：plugins.slots.memory 設為 none。",
@@ -2660,6 +2682,10 @@ export const zh_TW: TranslationMap = {
       title: "工具搜尋",
       description:
         "保持有限的工具目錄可見，並將其餘工具延後放在搜尋之後，讓龐大的 MCP 與外掛目錄不再擠佔提示。",
+    },
+    loopDetection: {
+      title: "工具迴圈偵測",
+      description: "啟用滾動歷史防護，當代理停止進展時警告或封鎖重複的工具呼叫。",
     },
     localModelLean: {
       title: "為本地模型精簡工具",
@@ -3673,12 +3699,12 @@ export const zh_TW: TranslationMap = {
       loadingPage: "正在載入 Wiki 頁面…",
       dreamsTab: "夢境",
       insightsTab: "匯入的洞察",
-      palaceTab: "記憶宮殿",
+      wikiTab: "記憶維基",
       dreamsExplainer:
         "這是系統在重播與整合記憶時所寫下的原始夢境日記；用它來檢視記憶系統正在注意什麼，以及哪些地方仍顯得雜亂或稀疏。",
       insightsExplainer:
         "這些是從外部歷史紀錄叢集而來的匯入洞察；用它們來檢視匯入所呈現的內容，然後其中任何一項才會晉升為持久記憶。",
-      palaceExplainer:
+      wikiExplainer:
         "這是系統可搜尋和推理的已編譯記憶維基介面；使用它來檢視實際的記憶頁面、主張、開放問題和矛盾，而非原始匯入的來源聊天內容。",
       copyArchivePath: "複製封存路徑",
       loadingInsights: "正在載入匯入的洞察…",
@@ -3693,9 +3719,9 @@ export const zh_TW: TranslationMap = {
       riskReasons: "風險原因：",
       labels: "標籤：",
       openSourcePage: "開啟來源頁面",
-      loadingPalace: "正在載入記憶宮殿…",
-      emptyPalace: "記憶宮殿尚未填入內容",
-      emptyPalaceHint:
+      loadingWiki: "正在載入記憶維基…",
+      emptyWiki: "記憶維基尚未填入內容",
+      emptyWikiHint:
         "目前維基主要包含原始來源匯入和操作報告。一旦開始寫入綜合內容、實體或概念，此分頁便會派上用場。",
       claims: "主張",
       openQuestions: "開放問題",
@@ -3771,7 +3797,7 @@ export const zh_TW: TranslationMap = {
       tidyingKnowledgeGraph: "正在整理知識圖譜…",
       replayingConversations: "正在重播今天的對話…",
       weavingShortTerm: "正在將短期記憶編織進長期記憶…",
-      defragmentingMindPalace: "正在重組心智宮殿…",
+      defragmentingMemoryLane: "正在整理記憶之路…",
       filingLooseThoughts: "正在整理零散思緒…",
       connectingDots: "正在連結遙遠的線索…",
       compostingContext: "正在堆肥舊的上下文視窗…",
@@ -3796,6 +3822,7 @@ export const zh_TW: TranslationMap = {
     emptySubtitle: "Sign in to a provider or add an API key, then refresh.",
     status: {
       ok: "已連線",
+      ready: "就緒",
       expiring: "Expiring",
       expired: "已過期",
       missing: "Not signed in",
@@ -3848,6 +3875,15 @@ export const zh_TW: TranslationMap = {
         unknown: "連線失敗",
         no_model: "沒有可用的模型",
       },
+    },
+    readiness: {
+      title: "AI 設定",
+      heading: "連接您的 AI",
+      signedInNoModels: "您已登入，但此帳戶未提供可用的模型。請選擇其他供應商或帳戶以繼續。",
+      notConfigured: "選擇供應商並驗證 OpenClaw 將使用的模型。",
+      noModels: "沒有可用的模型",
+      modelRequired: "需要模型",
+      chooseProvider: "選擇其他供應商",
     },
     logout: {
       action: "登出",
@@ -4768,6 +4804,7 @@ export const zh_TW: TranslationMap = {
       pause: "暫停",
       seek: "尋找媒體",
       download: "下載 {filename}",
+      preparing: "正在準備播放…",
       videoUnavailable: "無法播放此格式 — 請改為下載。",
     },
     modelControls: {
@@ -4936,7 +4973,21 @@ export const zh_TW: TranslationMap = {
         manageSkills: "管理 Skills",
         browseConnectors: "瀏覽連接器",
         addMcpServer: "新增 MCP 伺服器…",
-        toolAccess: "工具存取權",
+        addMcpServerTitle: "新增 MCP 伺服器",
+        addMcpServerDescription: "設定伺服器並選擇啟用位置。",
+        scopeLabel: "可用性",
+        scopeSession: "此工作階段",
+        scopeEverywhere: "所有位置",
+        scopeSessionHint: "伺服器將以全域停用狀態儲存，僅在此工作階段啟用。",
+        scopeEverywhereHint: "伺服器將被儲存並在每個工作階段中啟用。",
+        toolAccess: {
+          label: "工具存取權",
+          loading: "正在載入工具…",
+          loadFailed: "無法載入工具。",
+          noTools: "此連接器沒有可用的工具。",
+          summary: "已啟用 {total} 個工具中的 {enabled} 個",
+          summaryOne: "已啟用 {total} 個工具中的 {enabled} 個",
+        },
         enabledCount: "{count} 已開啟",
         loadingSkills: "正在載入 Skills…",
         skillsLoadFailed: "無法載入 Skills。",

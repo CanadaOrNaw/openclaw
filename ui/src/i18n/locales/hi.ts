@@ -380,6 +380,8 @@ export const hi: TranslationMap = {
       "अपडेट इंस्टॉल हुआ लेकिन चल रहा संस्करण नहीं बदला — रीस्टार्ट अवरुद्ध हो सकता है। अपेक्षित v{expectedVersion}, चल रहा v{actualVersion}।",
     handoffTimeout:
       "अपडेट हैंडऑफ़ शुरू हुआ, लेकिन पुनः कनेक्ट होने के बाद पूर्णता की रिपोर्ट नहीं मिली। अंतिम परिणाम के लिए `openclaw update status` चलाएँ।",
+    outcomeUnknown:
+      "अपडेट अनुरोध शायद स्वीकार कर लिया गया हो, लेकिन Gateway ने पुनः कनेक्ट होने के बाद कोई अंतिम परिणाम रिपोर्ट नहीं किया। पुनः प्रयास करने से पहले `openclaw update status` चलाएँ।",
     failureReasons: {
       dirty: "बदलावों को कमिट या स्टैश करें, फिर पुनः प्रयास करें।",
       noUpstream: "एक upstream ब्रांच सेट करें, फिर पुनः प्रयास करें।",
@@ -2037,6 +2039,7 @@ export const hi: TranslationMap = {
       title: "एक स्थानीय मॉडल सेट अप करें",
       intro: "इस Gateway पर एक स्थानीय मॉडल डाउनलोड या तैयार करें।",
       button: "मॉडल सेट अप / डाउनलोड करें",
+      ollamaButton: "जाँचें और सेट अप करें",
       ollamaLabel: "Ollama",
       ollamaHint: "अपने Ollama सर्वर से एक tools-सक्षम मॉडल डाउनलोड करें",
       llamaCppLabel: "लोकल मॉडल (llama.cpp)",
@@ -2046,15 +2049,25 @@ export const hi: TranslationMap = {
       title: "API key या token से कनेक्ट करें",
       provider: "प्रदाता",
       selectProvider: "प्रदाता चुनें",
+      selectProviderHint: "चुनें कि यह क्रेडेंशियल कहाँ से आता है",
       accessValue: "API key या token",
+      accessValueFor: "{provider} API कुंजी या टोकन",
       accessValuePlaceholder: "API key या token पेस्ट करें",
       connect: "कनेक्ट करें",
+      connectAndVerify: "कनेक्ट करें और सत्यापित करें",
+      verifyHint:
+        "OpenClaw कनेक्शन को तैयार के रूप में चिह्नित करने से पहले एक वास्तविक मॉडल उत्तर सत्यापित करता है।",
       required: "प्रदाता चुनें और API key या token दर्ज करें।",
     },
     success: {
       title: "आपका AI तैयार है",
+      body: "OpenClaw को {modelRef} से एक वास्तविक उत्तर मिला। अब आप चैट करना शुरू कर सकते हैं।",
+      activeModel: "सक्रिय मॉडल",
+      latency: "{latencyMs} ms में सत्यापित",
       detail: "{modelRef} · {latencyMs} ms",
       openChat: "चैट खोलें",
+      continueSetup: "सेटअप जारी रखें",
+      stayHere: "सेटिंग्स में रहें",
       configuredModel: "कॉन्फ़िगर किया गया मॉडल",
     },
     failure: {
@@ -2239,6 +2252,11 @@ export const hi: TranslationMap = {
       channelDegraded: "{channel} घट गया है — मुझसे पूछें कि क्या हुआ",
       channelFallback: "एक चैनल",
       dismiss: "इस अपडेट को खारिज करें",
+      channelSetupTitle: "इस ऐप के बाहर OpenClaw तक पहुँचें",
+      channelSetupBody:
+        "वेब ऐप पहले से काम कर रहा है। कोई चैनल तभी जोड़ें जब आप किसी अन्य सेवा से OpenClaw को संदेश भेजना चाहते हों।",
+      channelSetupAction: "एक चैनल सेट अप करें",
+      channelSetupDismiss: "वेब ऐप का उपयोग जारी रखें",
     },
   },
   mcpServers: {
@@ -2252,6 +2270,10 @@ export const hi: TranslationMap = {
     targetLabel: "URL या कमांड",
     nameInvalid: "सर्वर के नाम में अक्षर, संख्याएँ, डॉट, डैश या अंडरस्कोर का उपयोग होता है।",
     targetInvalid: "HTTP ट्रांसपोर्ट के लिए एक URL या stdio के लिए एक मान्य कमांड लाइन दर्ज करें।",
+    sessionEnableFailed:
+      "सर्वर को वैश्विक रूप से अक्षम सहेजा गया था, लेकिन इस सत्र के लिए इसे सक्षम करना विफल रहा: {error}",
+    sessionChanged: "सक्रिय सत्र सक्षम होने से पहले बदल गया।",
+    sessionUnavailable: "सक्रिय सत्र अनुपलब्ध है; रिफ्रेश करें और पुनः प्रयास करें।",
     nameTaken: "“{name}” नाम का एक MCP सर्वर पहले से मौजूद है।",
     missing: "कॉन्फ़िगरेशन में MCP सर्वर “{name}” नहीं मिला।",
     missingTransport: "ट्रांसपोर्ट अनुपस्थित",
@@ -2419,7 +2441,9 @@ export const hi: TranslationMap = {
       description:
         "ठीक एक memory plugin memory slot का स्वामी होता है। किसी engine को चुनने से वह सक्षम हो जाता है और बाकी अक्षम हो जाते हैं।",
       rowTitle: "Memory engine",
+      openClawMemory: "OpenClaw Memory",
       off: "बंद",
+      unavailable: "अनुपलब्ध",
       autoHint: "config में कोई engine पिन नहीं है, इसलिए slot अपने डिफ़ॉल्ट स्वामी पर वापस चला जाता है।",
       explicitHint: "यह engine config में plugins.slots.memory के तहत पिन किया गया है।",
       offHint: "config में memory बंद है: plugins.slots.memory none पर सेट है।",
@@ -2711,6 +2735,11 @@ export const hi: TranslationMap = {
       title: "टूल खोज",
       description:
         "एक सीमित टूल निर्देशिका दृश्यमान रखें और बाकी को खोज के पीछे स्थगित करें, ताकि बड़े MCP और प्लगइन कैटलॉग प्रॉम्प्ट में भीड़ न लगाएँ।",
+    },
+    loopDetection: {
+      title: "टूल-लूप डिटेक्शन",
+      description:
+        "रोलिंग-हिस्ट्री गार्ड सक्षम करें जो एजेंट की प्रगति रुकने पर बार-बार होने वाले टूल कॉल को चेतावनी देते या ब्लॉक करते हैं।",
     },
     localModelLean: {
       title: "स्थानीय मॉडलों के लिए लीन टूल",
@@ -3733,12 +3762,12 @@ export const hi: TranslationMap = {
       loadingPage: "Wiki पेज लोड हो रहा है…",
       dreamsTab: "Dreams",
       insightsTab: "इम्पोर्टेड इनसाइट्स",
-      palaceTab: "मेमोरी पैलेस",
+      wikiTab: "मेमोरी विकी",
       dreamsExplainer:
         "यह कच्ची ड्रीम डायरी है जिसे सिस्टम मेमोरी को रीप्ले और समेकित करते समय लिखता है; इसका उपयोग यह जांचने के लिए करें कि मेमोरी सिस्टम क्या नोटिस कर रहा है, और यह कहाँ अभी भी शोरगुल भरा या पतला दिखता है।",
       insightsExplainer:
         "ये बाहरी इतिहास से क्लस्टर की गई इम्पोर्टेड इनसाइट्स हैं; इनका उपयोग यह समीक्षा करने के लिए करें कि टिकाऊ मेमोरी में शामिल होने से पहले इम्पोर्ट्स ने क्या सामने लाया।",
-      palaceExplainer:
+      wikiExplainer:
         "यह संकलित मेमोरी wiki सतह है जिसे सिस्टम खोज सकता है और उस पर तर्क कर सकता है; इसका उपयोग कच्चे इम्पोर्टेड स्रोत चैट्स के बजाय वास्तविक मेमोरी पेजों, दावों, खुले सवालों और विरोधाभासों की जांच के लिए करें।",
       copyArchivePath: "आर्काइव पाथ कॉपी करें",
       loadingInsights: "इम्पोर्टेड इनसाइट्स लोड हो रही हैं…",
@@ -3754,9 +3783,9 @@ export const hi: TranslationMap = {
       riskReasons: "जोखिम कारण:",
       labels: "लेबल:",
       openSourcePage: "स्रोत पृष्ठ खोलें",
-      loadingPalace: "मेमोरी पैलेस लोड हो रहा है…",
-      emptyPalace: "मेमोरी पैलेस अभी भरा नहीं गया है",
-      emptyPalaceHint:
+      loadingWiki: "मेमोरी विकी लोड हो रही है…",
+      emptyWiki: "मेमोरी विकी अभी तक पॉप्युलेट नहीं हुई है",
+      emptyWikiHint:
         "अभी विकी में ज़्यादातर कच्चे स्रोत आयात और परिचालन रिपोर्ट हैं। यह टैब तब उपयोगी बनता है जब संश्लेषण, एंटिटीज़, या अवधारणाएँ लिखी जाने लगती हैं।",
       claims: "दावे",
       openQuestions: "खुले प्रश्न",
@@ -3833,7 +3862,7 @@ export const hi: TranslationMap = {
       tidyingKnowledgeGraph: "नॉलेज ग्राफ़ को व्यवस्थित किया जा रहा है…",
       replayingConversations: "आज की बातचीतों को फिर से चलाया जा रहा है…",
       weavingShortTerm: "अल्पकालिक को दीर्घकालिक में बुना जा रहा है…",
-      defragmentingMindPalace: "माइंड पैलेस को डीफ़्रैगमेंट किया जा रहा है…",
+      defragmentingMemoryLane: "मेमोरी लेन को डीफ़्रैग किया जा रहा है…",
       filingLooseThoughts: "बिखरे विचारों को फ़ाइल किया जा रहा है…",
       connectingDots: "दूरस्थ बिंदुओं को जोड़ा जा रहा है…",
       compostingContext: "पुरानी कॉन्टेक्स्ट विंडो को कम्पोस्ट किया जा रहा है…",
@@ -3858,6 +3887,7 @@ export const hi: TranslationMap = {
     emptySubtitle: "Sign in to a provider or add an API key, then refresh.",
     status: {
       ok: "कनेक्टेड",
+      ready: "तैयार",
       expiring: "Expiring",
       expired: "समाप्त",
       missing: "Not signed in",
@@ -3910,6 +3940,16 @@ export const hi: TranslationMap = {
         unknown: "कनेक्शन विफल रहा",
         no_model: "कोई मॉडल उपलब्ध नहीं है",
       },
+    },
+    readiness: {
+      title: "AI सेटअप",
+      heading: "अपना AI कनेक्ट करें",
+      signedInNoModels:
+        "आप साइन इन हैं, लेकिन यह खाता कोई उपयोग योग्य मॉडल नहीं दिखाता। जारी रखने के लिए दूसरा प्रदाता या खाता चुनें।",
+      notConfigured: "एक प्रदाता चुनें और OpenClaw द्वारा उपयोग किए जाने वाले मॉडल को सत्यापित करें।",
+      noModels: "कोई मॉडल उपलब्ध नहीं",
+      modelRequired: "मॉडल आवश्यक",
+      chooseProvider: "दूसरा प्रदाता चुनें",
     },
     logout: {
       action: "लॉग आउट करें",
@@ -4844,6 +4884,7 @@ export const hi: TranslationMap = {
       pause: "रोकें",
       seek: "मीडिया खोजें",
       download: "{filename} डाउनलोड करें",
+      preparing: "प्लेबैक तैयार किया जा रहा है…",
       videoUnavailable: "यह फ़ॉर्मेट नहीं चला सकते — इसके बजाय डाउनलोड करें।",
     },
     modelControls: {
@@ -5014,7 +5055,21 @@ export const hi: TranslationMap = {
         manageSkills: "Skills प्रबंधित करें",
         browseConnectors: "कनेक्टर ब्राउज़ करें",
         addMcpServer: "MCP सर्वर जोड़ें…",
-        toolAccess: "टूल एक्सेस",
+        addMcpServerTitle: "MCP सर्वर जोड़ें",
+        addMcpServerDescription: "सर्वर कॉन्फ़िगर करें और चुनें कि यह कहाँ सक्षम है।",
+        scopeLabel: "उपलब्धता",
+        scopeSession: "यह सत्र",
+        scopeEverywhere: "हर जगह",
+        scopeSessionHint: "सर्वर वैश्विक रूप से अक्षम सहेजा जाता है और केवल इस सत्र के लिए सक्षम किया जाता है।",
+        scopeEverywhereHint: "सर्वर हर सत्र के लिए सहेजा और सक्षम किया जाता है।",
+        toolAccess: {
+          label: "टूल एक्सेस",
+          loading: "टूल लोड हो रहे हैं…",
+          loadFailed: "टूल लोड नहीं हो सके।",
+          noTools: "इस कनेक्टर के लिए कोई टूल उपलब्ध नहीं है।",
+          summary: "{total} में से {enabled} टूल चालू",
+          summaryOne: "{total} में से {enabled} टूल चालू",
+        },
         enabledCount: "{count} चालू",
         loadingSkills: "Skills लोड हो रहे हैं…",
         skillsLoadFailed: "Skills लोड नहीं हो सके।",

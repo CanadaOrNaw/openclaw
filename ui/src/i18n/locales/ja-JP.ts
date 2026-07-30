@@ -389,6 +389,8 @@ export const ja_JP: TranslationMap = {
       "更新をインストールしましたが、実行中のバージョンが変わりませんでした — 再起動がブロックされた可能性があります。想定 v{expectedVersion}、実行中 v{actualVersion}。",
     handoffTimeout:
       "更新の引き継ぎが開始されましたが、再接続後に完了が報告されませんでした。最終結果を確認するには `openclaw update status` を実行してください。",
+    outcomeUnknown:
+      "更新リクエストは受理された可能性がありますが、再接続後に Gateway が最終結果を報告しませんでした。再試行する前に `openclaw update status` を実行してください。",
     failureReasons: {
       dirty: "変更をコミットまたはスタッシュしてから、再試行してください。",
       noUpstream: "アップストリームブランチを設定してから、再試行してください。",
@@ -2072,6 +2074,7 @@ export const ja_JP: TranslationMap = {
       title: "ローカルモデルをセットアップ",
       intro: "このGatewayでローカルモデルをダウンロードまたは準備します。",
       button: "モデルをセットアップ / ダウンロード",
+      ollamaButton: "確認してセットアップ",
       ollamaLabel: "Ollama",
       ollamaHint: "Ollama サーバーからツール対応モデルをダウンロードします",
       llamaCppLabel: "ローカルモデル (llama.cpp)",
@@ -2081,15 +2084,24 @@ export const ja_JP: TranslationMap = {
       title: "APIキーまたはトークンで接続",
       provider: "プロバイダー",
       selectProvider: "プロバイダーを選択",
+      selectProviderHint: "この認証情報の提供元を選択してください",
       accessValue: "APIキーまたはトークン",
+      accessValueFor: "{provider} の API キーまたはトークン",
       accessValuePlaceholder: "APIキーまたはトークンを貼り付け",
       connect: "接続",
+      connectAndVerify: "接続して検証",
+      verifyHint: "OpenClaw は接続を準備完了とマークする前に、実際のモデルの応答を検証します。",
       required: "プロバイダーを選択し、APIキーまたはトークンを入力してください。",
     },
     success: {
       title: "AIの準備ができました",
+      body: "OpenClaw は {modelRef} から実際の応答を受信しました。今すぐチャットを開始できます。",
+      activeModel: "アクティブなモデル",
+      latency: "{latencyMs} ミリ秒で検証済み",
       detail: "{modelRef} · {latencyMs} ms",
       openChat: "チャットを開く",
+      continueSetup: "セットアップを続行",
+      stayHere: "設定にとどまる",
       configuredModel: "設定済みのモデル",
     },
     failure: {
@@ -2279,6 +2291,11 @@ export const ja_JP: TranslationMap = {
       channelDegraded: "{channel} が低下しています — 何が起きたか聞いてください",
       channelFallback: "チャネル",
       dismiss: "この更新を閉じる",
+      channelSetupTitle: "このアプリの外で OpenClaw に接続",
+      channelSetupBody:
+        "ウェブアプリはすでに動作しています。別のサービスから OpenClaw にメッセージを送りたい場合のみ、チャネルを追加してください。",
+      channelSetupAction: "チャネルをセットアップ",
+      channelSetupDismiss: "ウェブアプリを使い続ける",
     },
   },
   mcpServers: {
@@ -2293,6 +2310,10 @@ export const ja_JP: TranslationMap = {
     nameInvalid: "サーバー名には英字、数字、ドット、ダッシュ、またはアンダースコアを使用します。",
     targetInvalid:
       "HTTP トランスポートの場合は URL を、stdio の場合は有効なコマンドラインを入力してください。",
+    sessionEnableFailed:
+      "サーバーはグローバルに無効の状態で保存されましたが、このセッションでの有効化に失敗しました: {error}",
+    sessionChanged: "有効化される前にアクティブなセッションが変更されました。",
+    sessionUnavailable: "アクティブなセッションが利用できません。更新して再試行してください。",
     nameTaken: "「{name}」という名前の MCP サーバーは既に存在します。",
     missing: "MCP サーバー「{name}」が設定内に見つかりませんでした。",
     missingTransport: "トランスポートがありません",
@@ -2459,7 +2480,9 @@ export const ja_JP: TranslationMap = {
       description:
         "メモリスロットを所有できるメモリプラグインは常に1つだけです。エンジンを選択すると、それが有効になり、他は無効になります。",
       rowTitle: "メモリエンジン",
+      openClawMemory: "OpenClaw Memory",
       off: "オフ",
+      unavailable: "利用不可",
       autoHint:
         "設定でエンジンが固定されていないため、スロットは既定の所有者にフォールバックします。",
       explicitHint: "このエンジンは plugins.slots.memory の設定で固定されています。",
@@ -2766,6 +2789,11 @@ export const ja_JP: TranslationMap = {
       title: "ツール検索",
       description:
         "限定されたツールディレクトリを表示し、残りは検索の背後に遅延させることで、大規模なMCPおよびプラグインカタログがプロンプトを圧迫しないようにします。",
+    },
+    loopDetection: {
+      title: "ツールループ検出",
+      description:
+        "エージェントが進捗を止めた際に、繰り返されるツール呼び出しを警告またはブロックするローリング履歴ガードを有効にします。",
     },
     localModelLean: {
       title: "ローカルモデル向けの軽量ツール",
@@ -3801,12 +3829,12 @@ export const ja_JP: TranslationMap = {
       loadingPage: "wikiページを読み込み中…",
       dreamsTab: "ドリーム",
       insightsTab: "インポートされたインサイト",
-      palaceTab: "メモリーパレス",
+      wikiTab: "メモリーWiki",
       dreamsExplainer:
         "これは、システムがメモリを再生・統合しながら書き込む生のドリーム日記です。メモリシステムが何に気づいているか、また、どこがまだノイズが多いか希薄に見えるかを調べるのに使用します。",
       insightsExplainer:
         "これらは外部履歴からクラスタリングされてインポートされたインサイトです。いずれかが永続的なメモリに昇格する前に、インポートが何を表面化させたかを確認するのに使用します。",
-      palaceExplainer:
+      wikiExplainer:
         "これは、システムが検索・推論できるコンパイル済みのメモリwikiサーフェスです。生のインポート元チャットではなく、実際のメモリページ、主張、未解決の質問、矛盾を調べるのに使用します。",
       copyArchivePath: "アーカイブパスをコピー",
       loadingInsights: "インポートされたインサイトを読み込み中…",
@@ -3822,9 +3850,9 @@ export const ja_JP: TranslationMap = {
       riskReasons: "リスクの理由:",
       labels: "ラベル:",
       openSourcePage: "ソースページを開く",
-      loadingPalace: "メモリーパレスを読み込み中…",
-      emptyPalace: "メモリーパレスにはまだデータがありません",
-      emptyPalaceHint:
+      loadingWiki: "メモリーWikiを読み込み中…",
+      emptyWiki: "メモリーWikiにはまだ内容がありません",
+      emptyWikiHint:
         "現在、このwikiには主に生のソースインポートと運用レポートのみが含まれています。統合・エンティティ・概念が書き込まれ始めると、このタブが役立つようになります。",
       claims: "主張",
       openQuestions: "未解決の質問",
@@ -3900,7 +3928,7 @@ export const ja_JP: TranslationMap = {
       tidyingKnowledgeGraph: "ナレッジグラフを整頓中…",
       replayingConversations: "今日の会話を再生中…",
       weavingShortTerm: "短期記憶を長期記憶に織り込み中…",
-      defragmentingMindPalace: "マインドパレスをデフラグ中…",
+      defragmentingMemoryLane: "記憶の小道をデフラグ中…",
       filingLooseThoughts: "散らばった思考を整理中…",
       connectingDots: "離れた点をつなぎ合わせ中…",
       compostingContext: "古いコンテキストウィンドウを堆肥化中…",
@@ -3925,6 +3953,7 @@ export const ja_JP: TranslationMap = {
     emptySubtitle: "Sign in to a provider or add an API key, then refresh.",
     status: {
       ok: "接続済み",
+      ready: "準備完了",
       expiring: "Expiring",
       expired: "期限切れ",
       missing: "Not signed in",
@@ -3978,6 +4007,16 @@ export const ja_JP: TranslationMap = {
         unknown: "接続に失敗しました",
         no_model: "利用可能なモデルがありません",
       },
+    },
+    readiness: {
+      title: "AIのセットアップ",
+      heading: "AIを接続",
+      signedInNoModels:
+        "サインインしていますが、このアカウントには利用可能なモデルがありません。続行するには別のプロバイダーまたはアカウントを選択してください。",
+      notConfigured: "プロバイダーを選択し、OpenClawが使用するモデルを確認してください。",
+      noModels: "利用可能なモデルがありません",
+      modelRequired: "モデルが必要です",
+      chooseProvider: "別のプロバイダーを選択",
     },
     logout: {
       action: "ログアウト",
@@ -4933,6 +4972,7 @@ export const ja_JP: TranslationMap = {
       pause: "一時停止",
       seek: "メディアをシーク",
       download: "{filename} をダウンロード",
+      preparing: "再生を準備中…",
       videoUnavailable: "この形式は再生できません。代わりにダウンロードしてください。",
     },
     modelControls: {
@@ -5105,7 +5145,22 @@ export const ja_JP: TranslationMap = {
         manageSkills: "Skills を管理",
         browseConnectors: "コネクタを参照",
         addMcpServer: "MCP サーバーを追加…",
-        toolAccess: "ツールアクセス",
+        addMcpServerTitle: "MCPサーバーを追加",
+        addMcpServerDescription: "サーバーを設定し、有効にする場所を選択します。",
+        scopeLabel: "利用可能範囲",
+        scopeSession: "このセッション",
+        scopeEverywhere: "すべての場所",
+        scopeSessionHint:
+          "サーバーはグローバルでは無効として保存され、このセッションでのみ有効になります。",
+        scopeEverywhereHint: "サーバーは保存され、すべてのセッションで有効になります。",
+        toolAccess: {
+          label: "ツールアクセス",
+          loading: "ツールを読み込み中…",
+          loadFailed: "ツールを読み込めませんでした。",
+          noTools: "このコネクタで利用できるツールはありません。",
+          summary: "{total} 個中 {enabled} 個のツールが有効",
+          summaryOne: "{total} 個中 {enabled} 個のツールが有効",
+        },
         enabledCount: "{count} 個有効",
         loadingSkills: "Skills を読み込み中…",
         skillsLoadFailed: "Skills を読み込めませんでした。",

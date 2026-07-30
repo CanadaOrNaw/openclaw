@@ -387,6 +387,8 @@ export const nl: TranslationMap = {
       "Update geïnstalleerd, maar de actieve versie is niet gewijzigd — de herstart is mogelijk geblokkeerd. Verwacht v{expectedVersion}, actief v{actualVersion}.",
     handoffTimeout:
       "Update-overdracht gestart, maar voltooiing is niet gemeld na opnieuw verbinden. Voer `openclaw update status` uit voor het eindresultaat.",
+    outcomeUnknown:
+      "Het updateverzoek is mogelijk geaccepteerd, maar de Gateway heeft na het opnieuw verbinden geen definitief resultaat gerapporteerd. Voer `openclaw update status` uit voordat u het opnieuw probeert.",
     failureReasons: {
       dirty: "Commit of stash de wijzigingen en probeer het opnieuw.",
       noUpstream: "Stel een upstream-branch in en probeer het opnieuw.",
@@ -2071,6 +2073,7 @@ export const nl: TranslationMap = {
       title: "Een lokaal model instellen",
       intro: "Download of bereid een lokaal model voor op deze Gateway.",
       button: "Model instellen / downloaden",
+      ollamaButton: "Controleren & instellen",
       ollamaLabel: "Ollama",
       ollamaHint: "Download een tools-geschikt model van je Ollama-server",
       llamaCppLabel: "Lokaal model (llama.cpp)",
@@ -2080,15 +2083,25 @@ export const nl: TranslationMap = {
       title: "Verbinding maken met een API-sleutel of token",
       provider: "Provider",
       selectProvider: "Selecteer een provider",
+      selectProviderHint: "Kies waar deze inloggegevens vandaan komen",
       accessValue: "API-sleutel of token",
+      accessValueFor: "{provider} API-sleutel of token",
       accessValuePlaceholder: "Plak een API-sleutel of token",
       connect: "Verbinden",
+      connectAndVerify: "Verbinden & verifiëren",
+      verifyHint:
+        "OpenClaw verifieert een echte modelreactie voordat de verbinding als gereed wordt gemarkeerd.",
       required: "Kies een provider en voer een API-sleutel of token in.",
     },
     success: {
       title: "Je AI is klaar",
+      body: "OpenClaw heeft een echte reactie ontvangen van {modelRef}. U kunt nu beginnen met chatten.",
+      activeModel: "Actief model",
+      latency: "Geverifieerd in {latencyMs} ms",
       detail: "{modelRef} · {latencyMs} ms",
       openChat: "Chat openen",
+      continueSetup: "Doorgaan met instellen",
+      stayHere: "In instellingen blijven",
       configuredModel: "Geconfigureerd model",
     },
     failure: {
@@ -2281,6 +2294,11 @@ export const nl: TranslationMap = {
       channelDegraded: "{channel} is verslechterd — vraag me wat er is gebeurd",
       channelFallback: "Een kanaal",
       dismiss: "Deze update sluiten",
+      channelSetupTitle: "Bereik OpenClaw buiten deze app",
+      channelSetupBody:
+        "De webapp werkt al. Voeg alleen een kanaal toe als u OpenClaw vanuit een andere dienst wilt berichten.",
+      channelSetupAction: "Een kanaal instellen",
+      channelSetupDismiss: "De webapp blijven gebruiken",
     },
   },
   mcpServers: {
@@ -2294,6 +2312,10 @@ export const nl: TranslationMap = {
     targetLabel: "URL of opdracht",
     nameInvalid: "Servernamen gebruiken letters, cijfers, punten, streepjes of underscores.",
     targetInvalid: "Voer een URL in voor HTTP-transporten of een geldige opdrachtregel voor stdio.",
+    sessionEnableFailed:
+      "De server is wereldwijd uitgeschakeld opgeslagen, maar inschakelen voor deze sessie is mislukt: {error}",
+    sessionChanged: "De actieve sessie is gewijzigd voordat deze kon worden ingeschakeld.",
+    sessionUnavailable: "De actieve sessie is niet beschikbaar; vernieuw en probeer het opnieuw.",
     nameTaken: "Er bestaat al een MCP-server met de naam “{name}”.",
     missing: "MCP-server “{name}” is niet gevonden in de configuratie.",
     missingTransport: "transport ontbreekt",
@@ -2464,7 +2486,9 @@ export const nl: TranslationMap = {
       description:
         "Precies één geheugenplug-in bezit de geheugenslot. Een engine selecteren schakelt deze in en de andere uit.",
       rowTitle: "Geheugenengine",
+      openClawMemory: "OpenClaw Memory",
       off: "Uit",
+      unavailable: "Niet beschikbaar",
       autoHint:
         "Er is geen engine vastgezet in de configuratie, dus de slot valt terug op de standaardeigenaar.",
       explicitHint: "Deze engine is vastgezet in de config onder plugins.slots.memory.",
@@ -2775,6 +2799,11 @@ export const nl: TranslationMap = {
       title: "Tool Search",
       description:
         "Houd een begrensde toolmap zichtbaar en stel de rest uit achter zoeken, zodat grote MCP- en plugincatalogi de prompt niet langer overspoelen.",
+    },
+    loopDetection: {
+      title: "Detectie van tool-loops",
+      description:
+        "Schakel bescherming op basis van doorlopende geschiedenis in die waarschuwt of herhaalde toolaanroepen blokkeert wanneer een agent geen voortgang meer boekt.",
     },
     localModelLean: {
       title: "Slanke tools voor lokale modellen",
@@ -3811,12 +3840,12 @@ export const nl: TranslationMap = {
       loadingPage: "Wiki-pagina laden…",
       dreamsTab: "Dromen",
       insightsTab: "Geïmporteerde inzichten",
-      palaceTab: "Memory Palace",
+      wikiTab: "Geheugenwiki",
       dreamsExplainer:
         "Dit is het ruwe droomdagboek dat het systeem schrijft tijdens het opnieuw afspelen en consolideren van geheugen; gebruik het om te inspecteren wat het geheugensysteem opmerkt en waar het nog rommelig of dun oogt.",
       insightsExplainer:
         "Dit zijn geïmporteerde inzichten die zijn geclusterd uit externe geschiedenis; gebruik ze om te bekijken wat imports naar boven brachten voordat iets ervan doorgroeit naar duurzaam geheugen.",
-      palaceExplainer:
+      wikiExplainer:
         "Dit is het gecompileerde geheugenwiki-oppervlak dat het systeem kan doorzoeken en waarover het kan redeneren; gebruik het om echte geheugenpagina's, beweringen, openstaande vragen en tegenstrijdigheden te inspecteren in plaats van ruwe geïmporteerde bronchats.",
       copyArchivePath: "Archiefpad kopiëren",
       loadingInsights: "Geïmporteerde inzichten laden…",
@@ -3832,9 +3861,9 @@ export const nl: TranslationMap = {
       riskReasons: "Risicoredenen:",
       labels: "Labels:",
       openSourcePage: "Bronpagina openen",
-      loadingPalace: "Geheugenpaleis laden…",
-      emptyPalace: "Geheugenpaleis is nog niet gevuld",
-      emptyPalaceHint:
+      loadingWiki: "Geheugenwiki laden…",
+      emptyWiki: "Geheugenwiki is nog niet gevuld",
+      emptyWikiHint:
         "Op dit moment bevat de wiki vooral ruwe bronimports en operationele rapporten. Dit tabblad wordt nuttig zodra syntheses, entiteiten of concepten worden geschreven.",
       claims: "Beweringen",
       openQuestions: "Openstaande vragen",
@@ -3913,7 +3942,7 @@ export const nl: TranslationMap = {
       tidyingKnowledgeGraph: "de kennisgrafiek opruimen…",
       replayingConversations: "gesprekken van vandaag opnieuw afspelen…",
       weavingShortTerm: "kortetermijn in langetermijn verweven…",
-      defragmentingMindPalace: "het mind palace defragmenteren…",
+      defragmentingMemoryLane: "geheugenlaan defragmenteren…",
       filingLooseThoughts: "losse gedachten opbergen…",
       connectingDots: "verre punten verbinden…",
       compostingContext: "oude contextvensters composteren…",
@@ -3938,6 +3967,7 @@ export const nl: TranslationMap = {
     emptySubtitle: "Sign in to a provider or add an API key, then refresh.",
     status: {
       ok: "Verbonden",
+      ready: "Gereed",
       expiring: "Expiring",
       expired: "Verlopen",
       missing: "Not signed in",
@@ -3991,6 +4021,16 @@ export const nl: TranslationMap = {
         unknown: "Verbinding mislukt",
         no_model: "Geen model beschikbaar",
       },
+    },
+    readiness: {
+      title: "AI-configuratie",
+      heading: "Verbind je AI",
+      signedInNoModels:
+        "Je bent aangemeld, maar dit account biedt geen bruikbare modellen. Kies een andere provider of account om door te gaan.",
+      notConfigured: "Kies een provider en verifieer het model dat OpenClaw zal gebruiken.",
+      noModels: "Geen modellen beschikbaar",
+      modelRequired: "Model vereist",
+      chooseProvider: "Kies een andere provider",
     },
     logout: {
       action: "Uitloggen",
@@ -4944,6 +4984,7 @@ export const nl: TranslationMap = {
       pause: "Pauzeren",
       seek: "Media zoeken",
       download: "{filename} downloaden",
+      preparing: "Afspelen voorbereiden…",
       videoUnavailable: "Kan dit formaat niet afspelen — download het in plaats daarvan.",
     },
     modelControls: {
@@ -5119,7 +5160,22 @@ export const nl: TranslationMap = {
         manageSkills: "Skills beheren",
         browseConnectors: "Connectors doorbladeren",
         addMcpServer: "MCP-server toevoegen…",
-        toolAccess: "Toegang tot tools",
+        addMcpServerTitle: "MCP-server toevoegen",
+        addMcpServerDescription: "Configureer de server en kies waar deze is ingeschakeld.",
+        scopeLabel: "Beschikbaarheid",
+        scopeSession: "Deze sessie",
+        scopeEverywhere: "Overal",
+        scopeSessionHint:
+          "De server wordt globaal uitgeschakeld opgeslagen en alleen voor deze sessie ingeschakeld.",
+        scopeEverywhereHint: "De server wordt opgeslagen en ingeschakeld voor elke sessie.",
+        toolAccess: {
+          label: "Toegang tot tools",
+          loading: "Tools laden…",
+          loadFailed: "Kon tools niet laden.",
+          noTools: "Geen tools beschikbaar voor deze connector.",
+          summary: "{enabled} van {total} tools aan",
+          summaryOne: "{enabled} van {total} tool aan",
+        },
         enabledCount: "{count} aan",
         loadingSkills: "Skills laden…",
         skillsLoadFailed: "Kan Skills niet laden.",

@@ -384,6 +384,8 @@ export const id: TranslationMap = {
       "Pembaruan terpasang tetapi versi yang berjalan tidak berubah — mulai ulang mungkin diblokir. Diharapkan v{expectedVersion}, berjalan v{actualVersion}.",
     handoffTimeout:
       "Serah terima pembaruan dimulai, tetapi penyelesaian tidak dilaporkan setelah tersambung kembali. Jalankan `openclaw update status` untuk hasil akhir.",
+    outcomeUnknown:
+      "Permintaan pembaruan mungkin telah diterima, tetapi Gateway tidak melaporkan hasil akhir setelah menyambung ulang. Jalankan `openclaw update status` sebelum mencoba lagi.",
     failureReasons: {
       dirty: "Commit atau stash perubahan, lalu coba lagi.",
       noUpstream: "Setel branch upstream, lalu coba lagi.",
@@ -2060,6 +2062,7 @@ export const id: TranslationMap = {
       title: "Siapkan model lokal",
       intro: "Unduh atau siapkan model lokal di Gateway ini.",
       button: "Siapkan / Unduh model",
+      ollamaButton: "Periksa & siapkan",
       ollamaLabel: "Ollama",
       ollamaHint: "Unduh model berkemampuan tools dari server Ollama Anda",
       llamaCppLabel: "Model lokal (llama.cpp)",
@@ -2069,15 +2072,24 @@ export const id: TranslationMap = {
       title: "Hubungkan dengan kunci API atau token",
       provider: "Penyedia",
       selectProvider: "Pilih penyedia",
+      selectProviderHint: "Pilih dari mana kredensial ini berasal",
       accessValue: "Kunci API atau token",
+      accessValueFor: "Kunci API atau token {provider}",
       accessValuePlaceholder: "Tempelkan kunci API atau token",
       connect: "Hubungkan",
+      connectAndVerify: "Sambungkan & verifikasi",
+      verifyHint: "OpenClaw memverifikasi balasan model asli sebelum menandai koneksi siap.",
       required: "Pilih penyedia dan masukkan kunci API atau token.",
     },
     success: {
       title: "AI Anda siap",
+      body: "OpenClaw menerima balasan asli dari {modelRef}. Anda dapat mulai mengobrol sekarang.",
+      activeModel: "Model aktif",
+      latency: "Terverifikasi dalam {latencyMs} ms",
       detail: "{modelRef} · {latencyMs} ms",
       openChat: "Buka Chat",
+      continueSetup: "Lanjutkan penyiapan",
+      stayHere: "Tetap di pengaturan",
       configuredModel: "Model yang dikonfigurasi",
     },
     failure: {
@@ -2264,6 +2276,11 @@ export const id: TranslationMap = {
       channelDegraded: "{channel} menurun — tanyakan apa yang terjadi",
       channelFallback: "Sebuah saluran",
       dismiss: "Tutup pembaruan ini",
+      channelSetupTitle: "Hubungi OpenClaw di luar aplikasi ini",
+      channelSetupBody:
+        "Aplikasi web sudah berfungsi. Tambahkan saluran hanya jika Anda ingin mengirim pesan ke OpenClaw dari layanan lain.",
+      channelSetupAction: "Siapkan saluran",
+      channelSetupDismiss: "Tetap gunakan aplikasi web",
     },
   },
   mcpServers: {
@@ -2277,6 +2294,10 @@ export const id: TranslationMap = {
     targetLabel: "URL atau perintah",
     nameInvalid: "Nama server menggunakan huruf, angka, titik, tanda hubung, atau garis bawah.",
     targetInvalid: "Masukkan URL untuk transport HTTP atau baris perintah yang valid untuk stdio.",
+    sessionEnableFailed:
+      "Server disimpan dalam keadaan dinonaktifkan secara global, tetapi pengaktifannya untuk sesi ini gagal: {error}",
+    sessionChanged: "Sesi aktif berubah sebelum dapat diaktifkan.",
+    sessionUnavailable: "Sesi aktif tidak tersedia; segarkan dan coba lagi.",
     nameTaken: "Server MCP bernama “{name}” sudah ada.",
     missing: "Server MCP “{name}” tidak ditemukan dalam konfigurasi.",
     missingTransport: "transport hilang",
@@ -2446,7 +2467,9 @@ export const id: TranslationMap = {
       description:
         "Tepat satu plugin memori memiliki slot memori. Memilih engine akan mengaktifkannya dan menonaktifkan yang lain.",
       rowTitle: "Engine memori",
+      openClawMemory: "OpenClaw Memory",
       off: "Nonaktif",
+      unavailable: "Tidak tersedia",
       autoHint: "Tidak ada engine yang dipatok di config, jadi slot kembali ke pemilik defaultnya.",
       explicitHint: "Engine ini dipatok di config di bawah plugins.slots.memory.",
       offHint: "Memory dimatikan dalam konfigurasi: plugins.slots.memory disetel ke none.",
@@ -2750,6 +2773,11 @@ export const id: TranslationMap = {
       title: "Pencarian Alat",
       description:
         "Jaga direktori alat yang terbatas tetap terlihat dan tunda sisanya di balik pencarian, sehingga katalog MCP dan plugin yang besar berhenti memenuhi prompt.",
+    },
+    loopDetection: {
+      title: "Deteksi loop alat",
+      description:
+        "Aktifkan penjaga riwayat bergulir yang memperingatkan atau memblokir panggilan alat berulang saat agen berhenti membuat kemajuan.",
     },
     localModelLean: {
       title: "Alat ramping untuk model lokal",
@@ -3781,12 +3809,12 @@ export const id: TranslationMap = {
       loadingPage: "Memuat halaman wiki…",
       dreamsTab: "Dreams",
       insightsTab: "Wawasan yang Diimpor",
-      palaceTab: "Memory Palace",
+      wikiTab: "Wiki Memori",
       dreamsExplainer:
         "Ini adalah diary mimpi mentah yang ditulis sistem saat memutar ulang dan mengonsolidasikan memori; gunakan untuk memeriksa apa yang diperhatikan sistem memori, dan di mana ia masih tampak berisik atau tipis.",
       insightsExplainer:
         "Ini adalah wawasan yang diimpor yang dikelompokkan dari riwayat eksternal; gunakan untuk meninjau apa yang muncul dari impor sebelum ada yang berkembang menjadi memori yang tahan lama.",
-      palaceExplainer:
+      wikiExplainer:
         "Ini adalah permukaan wiki memori terkompilasi yang dapat dicari dan dinalar oleh sistem; gunakan untuk memeriksa halaman memori aktual, klaim, pertanyaan terbuka, dan kontradiksi alih-alih obrolan sumber yang diimpor mentah.",
       copyArchivePath: "Salin path arsip",
       loadingInsights: "Memuat wawasan yang diimpor…",
@@ -3802,9 +3830,9 @@ export const id: TranslationMap = {
       riskReasons: "Alasan risiko:",
       labels: "Label:",
       openSourcePage: "Buka halaman sumber",
-      loadingPalace: "Memuat istana memori…",
-      emptyPalace: "Istana memori belum terisi",
-      emptyPalaceHint:
+      loadingWiki: "Memuat wiki memori…",
+      emptyWiki: "Wiki memori belum terisi",
+      emptyWikiHint:
         "Saat ini wiki sebagian besar berisi impor sumber mentah dan laporan operasional. Tab ini menjadi berguna setelah sintesis, entitas, atau konsep mulai ditulis.",
       claims: "Klaim",
       openQuestions: "Pertanyaan terbuka",
@@ -3881,7 +3909,7 @@ export const id: TranslationMap = {
       tidyingKnowledgeGraph: "merapikan knowledge graph…",
       replayingConversations: "memutar ulang percakapan hari ini…",
       weavingShortTerm: "merangkai jangka pendek menjadi jangka panjang…",
-      defragmentingMindPalace: "mendefragmentasi istana pikiran…",
+      defragmentingMemoryLane: "mendefragmentasi jalur memori…",
       filingLooseThoughts: "merapikan pikiran yang tercecer…",
       connectingDots: "menghubungkan titik-titik yang berjauhan…",
       compostingContext: "mengomposkan jendela konteks lama…",
@@ -3906,6 +3934,7 @@ export const id: TranslationMap = {
     emptySubtitle: "Sign in to a provider or add an API key, then refresh.",
     status: {
       ok: "Terhubung",
+      ready: "Siap",
       expiring: "Expiring",
       expired: "Kedaluwarsa",
       missing: "Not signed in",
@@ -3958,6 +3987,16 @@ export const id: TranslationMap = {
         unknown: "Koneksi gagal",
         no_model: "Tidak ada model yang tersedia",
       },
+    },
+    readiness: {
+      title: "Penyiapan AI",
+      heading: "Hubungkan AI Anda",
+      signedInNoModels:
+        "Anda sudah masuk, tetapi akun ini tidak menampilkan model yang dapat digunakan. Pilih penyedia atau akun lain untuk melanjutkan.",
+      notConfigured: "Pilih penyedia dan verifikasi model yang akan digunakan OpenClaw.",
+      noModels: "Tidak ada model tersedia",
+      modelRequired: "Model diperlukan",
+      chooseProvider: "Pilih penyedia lain",
     },
     logout: {
       action: "Keluar",
@@ -4907,6 +4946,7 @@ export const id: TranslationMap = {
       pause: "Jeda",
       seek: "Cari media",
       download: "Unduh {filename}",
+      preparing: "Menyiapkan pemutaran…",
       videoUnavailable: "Tidak dapat memutar format ini — unduh saja.",
     },
     modelControls: {
@@ -5078,7 +5118,22 @@ export const id: TranslationMap = {
         manageSkills: "Kelola Skills",
         browseConnectors: "Jelajahi konektor",
         addMcpServer: "Tambah server MCP…",
-        toolAccess: "Akses alat",
+        addMcpServerTitle: "Tambahkan server MCP",
+        addMcpServerDescription: "Konfigurasikan server dan pilih tempat pengaktifannya.",
+        scopeLabel: "Ketersediaan",
+        scopeSession: "Sesi ini",
+        scopeEverywhere: "Di mana saja",
+        scopeSessionHint:
+          "Server disimpan dalam keadaan nonaktif secara global dan hanya diaktifkan untuk sesi ini.",
+        scopeEverywhereHint: "Server disimpan dan diaktifkan untuk setiap sesi.",
+        toolAccess: {
+          label: "Akses alat",
+          loading: "Memuat alat…",
+          loadFailed: "Tidak dapat memuat alat.",
+          noTools: "Tidak ada alat yang tersedia untuk konektor ini.",
+          summary: "{enabled} dari {total} alat aktif",
+          summaryOne: "{enabled} dari {total} alat aktif",
+        },
         enabledCount: "{count} aktif",
         loadingSkills: "Memuat Skills…",
         skillsLoadFailed: "Tidak dapat memuat Skills.",

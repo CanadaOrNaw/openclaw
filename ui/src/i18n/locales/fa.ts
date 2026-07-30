@@ -384,6 +384,8 @@ export const fa: TranslationMap = {
       "به‌روزرسانی نصب شد اما نسخه در حال اجرا تغییر نکرد — ممکن است راه‌اندازی مجدد مسدود شده باشد. نسخه مورد انتظار v{expectedVersion}، در حال اجرا v{actualVersion}.",
     handoffTimeout:
       "تحویل به‌روزرسانی آغاز شد، اما تکمیل آن پس از اتصال مجدد گزارش نشد. برای نتیجه نهایی `openclaw update status` را اجرا کنید.",
+    outcomeUnknown:
+      "ممکن است درخواست به‌روزرسانی پذیرفته شده باشد، اما Gateway پس از اتصال مجدد نتیجه نهایی را گزارش نکرد. پیش از تلاش دوباره `openclaw update status` را اجرا کنید.",
     failureReasons: {
       dirty: "تغییرات را commit یا stash کنید، سپس دوباره تلاش کنید.",
       noUpstream: "یک شاخه upstream تنظیم کنید، سپس دوباره تلاش کنید.",
@@ -2053,6 +2055,7 @@ export const fa: TranslationMap = {
       title: "راه‌اندازی یک مدل محلی",
       intro: "یک مدل محلی را روی این Gateway دانلود یا آماده کنید.",
       button: "راه‌اندازی / دانلود مدل",
+      ollamaButton: "بررسی و راه‌اندازی",
       ollamaLabel: "Ollama",
       ollamaHint: "دانلود یک مدل مجهز به ابزار از سرور Ollama شما",
       llamaCppLabel: "مدل محلی (llama.cpp)",
@@ -2062,15 +2065,24 @@ export const fa: TranslationMap = {
       title: "اتصال با کلید API یا توکن",
       provider: "ارائه‌دهنده",
       selectProvider: "یک ارائه‌دهنده انتخاب کنید",
+      selectProviderHint: "انتخاب کنید این اعتبارنامه از کجا می‌آید",
       accessValue: "کلید API یا توکن",
+      accessValueFor: "کلید API یا توکن {provider}",
       accessValuePlaceholder: "یک کلید API یا توکن جای‌گذاری کنید",
       connect: "اتصال",
+      connectAndVerify: "اتصال و تأیید",
+      verifyHint: "OpenClaw پیش از آماده‌کردن اتصال، یک پاسخ واقعی مدل را تأیید می‌کند.",
       required: "یک ارائه‌دهنده انتخاب کنید و کلید API یا توکن را وارد کنید.",
     },
     success: {
       title: "هوش مصنوعی شما آماده است",
+      body: "OpenClaw یک پاسخ واقعی از {modelRef} دریافت کرد. اکنون می‌توانید گفتگو را آغاز کنید.",
+      activeModel: "مدل فعال",
+      latency: "تأیید‌شده در {latencyMs} میلی‌ثانیه",
       detail: "{modelRef} · {latencyMs} میلی‌ثانیه",
       openChat: "باز کردن گفتگو",
+      continueSetup: "ادامه راه‌اندازی",
+      stayHere: "ماندن در تنظیمات",
       configuredModel: "مدل پیکربندی‌شده",
     },
     failure: {
@@ -2259,6 +2271,11 @@ export const fa: TranslationMap = {
       channelDegraded: "{channel} تضعیف شده است — از من بپرسید چه اتفاقی افتاد",
       channelFallback: "یک کانال",
       dismiss: "رد کردن این به‌روزرسانی",
+      channelSetupTitle: "دسترسی به OpenClaw خارج از این برنامه",
+      channelSetupBody:
+        "برنامه وب هم‌اکنون کار می‌کند. فقط در صورتی که می‌خواهید از سرویس دیگری به OpenClaw پیام دهید، یک کانال اضافه کنید.",
+      channelSetupAction: "راه‌اندازی یک کانال",
+      channelSetupDismiss: "ادامه استفاده از برنامه وب",
     },
   },
   mcpServers: {
@@ -2272,6 +2289,10 @@ export const fa: TranslationMap = {
     targetLabel: "URL یا فرمان",
     nameInvalid: "نام سرورها از حروف، اعداد، نقطه، خط تیره یا زیرخط استفاده می‌کند.",
     targetInvalid: "برای انتقال‌های HTTP یک URL یا برای stdio یک خط فرمان معتبر وارد کنید.",
+    sessionEnableFailed:
+      "سرور به‌صورت سراسری غیرفعال ذخیره شد، اما فعال‌سازی آن برای این نشست ناموفق بود: {error}",
+    sessionChanged: "نشست فعال پیش از فعال‌شدن تغییر کرد.",
+    sessionUnavailable: "نشست فعال در دسترس نیست؛ صفحه را تازه‌سازی کرده و دوباره تلاش کنید.",
     nameTaken: "یک سرور MCP با نام «{name}» از قبل وجود دارد.",
     missing: "سرور MCP «{name}» در پیکربندی یافت نشد.",
     missingTransport: "انتقال موجود نیست",
@@ -2440,7 +2461,9 @@ export const fa: TranslationMap = {
       description:
         "دقیقاً یک افزونه حافظه صاحب جایگاه حافظه است. انتخاب یک موتور آن را فعال و بقیه را غیرفعال می‌کند.",
       rowTitle: "موتور حافظه",
+      openClawMemory: "OpenClaw Memory",
       off: "خاموش",
+      unavailable: "در دسترس نیست",
       autoHint:
         "هیچ موتوری در پیکربندی پین نشده است، بنابراین جایگاه به صاحب پیش‌فرض خود بازمی‌گردد.",
       explicitHint: "این موتور در پیکربندی تحت plugins.slots.memory پین شده است.",
@@ -2739,6 +2762,11 @@ export const fa: TranslationMap = {
       title: "جستجوی ابزار",
       description:
         "یک فهرست ابزار محدود را قابل مشاهده نگه دارید و بقیه را پشت جستجو به تعویق بیندازید، تا کاتالوگ‌های بزرگ MCP و افزونه دیگر پرامپت را شلوغ نکنند.",
+    },
+    loopDetection: {
+      title: "تشخیص حلقه ابزار",
+      description:
+        "فعال‌سازی محافظ‌های تاریخچه‌ی چرخشی که هنگام متوقف شدن پیشرفت یک عامل، درباره‌ی فراخوانی‌های تکراری ابزار هشدار می‌دهند یا آن‌ها را مسدود می‌کنند.",
     },
     localModelLean: {
       title: "ابزارهای سبک برای مدل‌های محلی",
@@ -3769,12 +3797,12 @@ export const fa: TranslationMap = {
       loadingPage: "در حال بارگذاری صفحه ویکی…",
       dreamsTab: "رؤیاها",
       insightsTab: "بینش‌های واردشده",
-      palaceTab: "کاخ حافظه",
+      wikiTab: "ویکی حافظه",
       dreamsExplainer:
         "این دفترچه خام رؤیاست که سیستم هنگام بازپخش و تثبیت حافظه می‌نویسد؛ از آن برای بررسی آنچه سیستم حافظه توجه می‌کند و جایی که هنوز پرنویز یا کم‌مایه به نظر می‌رسد استفاده کنید.",
       insightsExplainer:
         "این‌ها بینش‌های واردشده هستند که از تاریخچه خارجی خوشه‌بندی شده‌اند؛ از آن‌ها برای بازبینی آنچه واردات پیش از آنکه بخشی از آن به حافظه پایدار ارتقا یابد آشکار کرده استفاده کنید.",
-      palaceExplainer:
+      wikiExplainer:
         "این سطح ویکی حافظه گردآوری‌شده است که سیستم می‌تواند در آن جستجو و استدلال کند؛ از آن برای بررسی صفحات واقعی حافظه، ادعاها، پرسش‌های باز و تناقض‌ها به جای گفتگوهای خام واردشده استفاده کنید.",
       copyArchivePath: "کپی مسیر بایگانی",
       loadingInsights: "در حال بارگذاری بینش‌های واردشده…",
@@ -3790,9 +3818,9 @@ export const fa: TranslationMap = {
       riskReasons: "دلایل خطر:",
       labels: "برچسب‌ها:",
       openSourcePage: "باز کردن صفحهٔ منبع",
-      loadingPalace: "در حال بارگذاری کاخ حافظه…",
-      emptyPalace: "کاخ حافظه هنوز پر نشده است",
-      emptyPalaceHint:
+      loadingWiki: "در حال بارگذاری ویکی حافظه…",
+      emptyWiki: "ویکی حافظه هنوز پر نشده است",
+      emptyWikiHint:
         "در حال حاضر ویکی بیشتر شامل درون‌ریزی‌های خام منبع و گزارش‌های عملیاتی است. این برگه زمانی مفید می‌شود که ترکیب‌ها، موجودیت‌ها یا مفاهیم شروع به نوشته‌شدن کنند.",
       claims: "ادعاها",
       openQuestions: "پرسش‌های باز",
@@ -3868,7 +3896,7 @@ export const fa: TranslationMap = {
       tidyingKnowledgeGraph: "در حال مرتب‌سازی گراف دانش…",
       replayingConversations: "در حال بازپخش گفت‌وگوهای امروز…",
       weavingShortTerm: "در حال بافتن کوتاه‌مدت در بلندمدت…",
-      defragmentingMindPalace: "در حال یکپارچه‌سازی کاخ ذهن…",
+      defragmentingMemoryLane: "در حال یکپارچه‌سازی مسیر حافظه…",
       filingLooseThoughts: "در حال بایگانی افکار پراکنده…",
       connectingDots: "در حال وصل کردن نقاط دور…",
       compostingContext: "در حال تبدیل پنجره‌های زمینه قدیمی به کود…",
@@ -3893,6 +3921,7 @@ export const fa: TranslationMap = {
     emptySubtitle: "Sign in to a provider or add an API key, then refresh.",
     status: {
       ok: "متصل",
+      ready: "آماده",
       expiring: "Expiring",
       expired: "منقضی‌شده",
       missing: "Not signed in",
@@ -3946,6 +3975,17 @@ export const fa: TranslationMap = {
         unknown: "اتصال ناموفق بود",
         no_model: "هیچ مدلی در دسترس نیست",
       },
+    },
+    readiness: {
+      title: "راه‌اندازی هوش مصنوعی",
+      heading: "اتصال هوش مصنوعی شما",
+      signedInNoModels:
+        "شما وارد شده‌اید، اما این حساب هیچ مدل قابل استفاده‌ای در دسترس قرار نمی‌دهد. برای ادامه، ارائه‌دهنده یا حساب دیگری انتخاب کنید.",
+      notConfigured:
+        "یک ارائه‌دهنده انتخاب کنید و مدلی را که OpenClaw استفاده خواهد کرد تأیید کنید.",
+      noModels: "هیچ مدلی در دسترس نیست",
+      modelRequired: "مدل الزامی است",
+      chooseProvider: "ارائه‌دهنده دیگری انتخاب کنید",
     },
     logout: {
       action: "خروج",
@@ -4893,6 +4933,7 @@ export const fa: TranslationMap = {
       pause: "توقف",
       seek: "جستجوی رسانه",
       download: "دانلود {filename}",
+      preparing: "در حال آماده‌سازی پخش…",
       videoUnavailable: "این قالب قابل پخش نیست — به‌جای آن دانلود کنید.",
     },
     modelControls: {
@@ -5064,7 +5105,21 @@ export const fa: TranslationMap = {
         manageSkills: "مدیریت Skills",
         browseConnectors: "مرور رابط‌ها",
         addMcpServer: "افزودن سرور MCP…",
-        toolAccess: "دسترسی ابزار",
+        addMcpServerTitle: "افزودن سرور MCP",
+        addMcpServerDescription: "سرور را پیکربندی کنید و محل فعال بودن آن را انتخاب کنید.",
+        scopeLabel: "دسترس‌پذیری",
+        scopeSession: "این نشست",
+        scopeEverywhere: "همه‌جا",
+        scopeSessionHint: "سرور به‌صورت سراسری غیرفعال ذخیره می‌شود و فقط برای این نشست فعال می‌گردد.",
+        scopeEverywhereHint: "سرور برای هر نشست ذخیره و فعال می‌شود.",
+        toolAccess: {
+          label: "دسترسی ابزار",
+          loading: "در حال بارگذاری ابزارها…",
+          loadFailed: "بارگذاری ابزارها ممکن نشد.",
+          noTools: "ابزاری برای این کانکتور در دسترس نیست.",
+          summary: "{enabled} از {total} ابزار روشن",
+          summaryOne: "{enabled} از {total} ابزار روشن",
+        },
         enabledCount: "{count} فعال",
         loadingSkills: "در حال بارگذاری Skills…",
         skillsLoadFailed: "بارگذاری Skills ممکن نشد.",

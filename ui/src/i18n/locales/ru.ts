@@ -385,6 +385,8 @@ export const ru: TranslationMap = {
       "Обновление установлено, но выполняемая версия не изменилась — возможно, перезапуск был заблокирован. Ожидалась v{expectedVersion}, выполняется v{actualVersion}.",
     handoffTimeout:
       "Передача обновления начата, но завершение не было зафиксировано после переподключения. Выполните `openclaw update status`, чтобы узнать итоговый результат.",
+    outcomeUnknown:
+      "Запрос на обновление мог быть принят, но Gateway не сообщил окончательный результат после переподключения. Выполните `openclaw update status` перед повторной попыткой.",
     failureReasons: {
       dirty: "Зафиксируйте или спрячьте изменения, затем повторите.",
       noUpstream: "Установите upstream-ветку, затем повторите.",
@@ -2080,6 +2082,7 @@ export const ru: TranslationMap = {
       title: "Настроить локальную модель",
       intro: "Загрузите или подготовьте локальную модель на этом Gateway.",
       button: "Настроить / Загрузить модель",
+      ollamaButton: "Проверить и настроить",
       ollamaLabel: "Ollama",
       ollamaHint: "Загрузите модель с поддержкой инструментов с вашего сервера Ollama",
       llamaCppLabel: "Локальная модель (llama.cpp)",
@@ -2089,15 +2092,25 @@ export const ru: TranslationMap = {
       title: "Подключение с помощью API-ключа или токена",
       provider: "Поставщик",
       selectProvider: "Выберите провайдера",
+      selectProviderHint: "Выберите, откуда берётся эта учётная запись",
       accessValue: "API-ключ или токен",
+      accessValueFor: "API-ключ или токен {provider}",
       accessValuePlaceholder: "Вставьте API-ключ или токен",
       connect: "Подключить",
+      connectAndVerify: "Подключить и проверить",
+      verifyHint:
+        "OpenClaw проверяет реальный ответ модели, прежде чем отметить подключение как готовое.",
       required: "Выберите провайдера и введите API-ключ или токен.",
     },
     success: {
       title: "Ваш ИИ готов",
+      body: "OpenClaw получил реальный ответ от {modelRef}. Теперь можно начинать общение.",
+      activeModel: "Активная модель",
+      latency: "Проверено за {latencyMs} мс",
       detail: "{modelRef} · {latencyMs} мс",
       openChat: "Открыть чат",
+      continueSetup: "Продолжить настройку",
+      stayHere: "Остаться в настройках",
       configuredModel: "Настроенная модель",
     },
     failure: {
@@ -2288,6 +2301,11 @@ export const ru: TranslationMap = {
       channelDegraded: "{channel} работает нестабильно — спросите меня, что случилось",
       channelFallback: "Канал",
       dismiss: "Скрыть это обновление",
+      channelSetupTitle: "Свяжитесь с OpenClaw вне этого приложения",
+      channelSetupBody:
+        "Веб-приложение уже работает. Добавьте канал, только если хотите писать OpenClaw из другого сервиса.",
+      channelSetupAction: "Настроить канал",
+      channelSetupDismiss: "Продолжить использовать веб-приложение",
     },
   },
   mcpServers: {
@@ -2301,6 +2319,10 @@ export const ru: TranslationMap = {
     targetLabel: "URL или команда",
     nameInvalid: "В именах серверов используются буквы, цифры, точки, дефисы или подчёркивания.",
     targetInvalid: "Введите URL для HTTP-транспортов или корректную командную строку для stdio.",
+    sessionEnableFailed:
+      "Сервер был сохранён отключённым глобально, но включить его для этого сеанса не удалось: {error}",
+    sessionChanged: "Активный сеанс изменился, прежде чем его удалось включить.",
+    sessionUnavailable: "Активный сеанс недоступен; обновите страницу и попробуйте снова.",
     nameTaken: "Сервер MCP с именем «{name}» уже существует.",
     missing: "Сервер MCP «{name}» не найден в конфигурации.",
     missingTransport: "отсутствует транспорт",
@@ -2470,7 +2492,9 @@ export const ru: TranslationMap = {
       description:
         "Ровно один плагин памяти занимает слот памяти. Выбор движка включает его и отключает остальные.",
       rowTitle: "Движок памяти",
+      openClawMemory: "OpenClaw Memory",
       off: "Выкл.",
+      unavailable: "Недоступно",
       autoHint:
         "В конфигурации не закреплён ни один движок, поэтому слот возвращается к владельцу по умолчанию.",
       explicitHint: "Этот движок закреплён в конфигурации в plugins.slots.memory.",
@@ -2780,6 +2804,11 @@ export const ru: TranslationMap = {
       title: "Поиск инструментов",
       description:
         "Держите ограниченный каталог инструментов на виду, а остальное скрывайте за поиском, чтобы большие каталоги MCP и плагинов не перегружали промпт.",
+    },
+    loopDetection: {
+      title: "Обнаружение циклов инструментов",
+      description:
+        "Включите защиту на основе истории вызовов, которая предупреждает или блокирует повторные вызовы инструментов, когда агент перестаёт продвигаться.",
     },
     localModelLean: {
       title: "Облегчённые инструменты для локальных моделей",
@@ -3812,12 +3841,12 @@ export const ru: TranslationMap = {
       loadingPage: "Загрузка страницы вики…",
       dreamsTab: "Сны",
       insightsTab: "Импортированные выводы",
-      palaceTab: "Дворец памяти",
+      wikiTab: "Вики памяти",
       dreamsExplainer:
         "Это необработанный дневник снов, который система пишет при воспроизведении и консолидации памяти; используйте его, чтобы увидеть, что замечает система памяти и где она всё ещё выглядит шумной или скудной.",
       insightsExplainer:
         "Это импортированные выводы, сгруппированные из внешней истории; используйте их, чтобы проверить, что выявил импорт, прежде чем это станет частью долговременной памяти.",
-      palaceExplainer:
+      wikiExplainer:
         "Это скомпилированная вики-поверхность памяти, по которой система может искать и рассуждать; используйте её для изучения реальных страниц памяти, утверждений, открытых вопросов и противоречий, а не необработанных импортированных исходных чатов.",
       copyArchivePath: "Копировать путь к архиву",
       loadingInsights: "Загрузка импортированных выводов…",
@@ -3833,9 +3862,9 @@ export const ru: TranslationMap = {
       riskReasons: "Причины риска:",
       labels: "Метки:",
       openSourcePage: "Открыть исходную страницу",
-      loadingPalace: "Загрузка дворца памяти…",
-      emptyPalace: "Дворец памяти ещё не заполнен",
-      emptyPalaceHint:
+      loadingWiki: "Загрузка вики памяти…",
+      emptyWiki: "Вики памяти ещё не заполнена",
+      emptyWikiHint:
         "Сейчас в вики в основном сырые импортированные источники и операционные отчёты. Эта вкладка станет полезной, когда начнут записываться синтезы, сущности или концепции.",
       claims: "Утверждения",
       openQuestions: "Открытые вопросы",
@@ -3912,7 +3941,7 @@ export const ru: TranslationMap = {
       tidyingKnowledgeGraph: "приведение графа знаний в порядок…",
       replayingConversations: "воспроизведение сегодняшних разговоров…",
       weavingShortTerm: "вплетение краткосрочного в долгосрочное…",
-      defragmentingMindPalace: "дефрагментация чертогов разума…",
+      defragmentingMemoryLane: "дефрагментация памяти…",
       filingLooseThoughts: "раскладывание разрозненных мыслей по местам…",
       connectingDots: "соединение отдаленных точек…",
       compostingContext: "компостирование старых окон контекста…",
@@ -3937,6 +3966,7 @@ export const ru: TranslationMap = {
     emptySubtitle: "Sign in to a provider or add an API key, then refresh.",
     status: {
       ok: "Подключено",
+      ready: "Готово",
       expiring: "Expiring",
       expired: "Истек",
       missing: "Not signed in",
@@ -3990,6 +4020,16 @@ export const ru: TranslationMap = {
         unknown: "Не удалось подключиться",
         no_model: "Нет доступных моделей",
       },
+    },
+    readiness: {
+      title: "Настройка ИИ",
+      heading: "Подключите ваш ИИ",
+      signedInNoModels:
+        "Вы вошли в систему, но этот аккаунт не предоставляет доступных моделей. Выберите другого провайдера или аккаунт, чтобы продолжить.",
+      notConfigured: "Выберите провайдера и проверьте модель, которую будет использовать OpenClaw.",
+      noModels: "Нет доступных моделей",
+      modelRequired: "Требуется модель",
+      chooseProvider: "Выбрать другого провайдера",
     },
     logout: {
       action: "Выйти",
@@ -4949,6 +4989,7 @@ export const ru: TranslationMap = {
       pause: "Приостановить",
       seek: "Перемотать медиа",
       download: "Скачать {filename}",
+      preparing: "Подготовка воспроизведения…",
       videoUnavailable: "Невозможно воспроизвести этот формат — скачайте вместо этого.",
     },
     modelControls: {
@@ -5121,7 +5162,22 @@ export const ru: TranslationMap = {
         manageSkills: "Управление Skills",
         browseConnectors: "Обзор коннекторов",
         addMcpServer: "Добавить сервер MCP…",
-        toolAccess: "Доступ к инструментам",
+        addMcpServerTitle: "Добавить MCP-сервер",
+        addMcpServerDescription: "Настройте сервер и выберите, где он будет включён.",
+        scopeLabel: "Доступность",
+        scopeSession: "Эта сессия",
+        scopeEverywhere: "Везде",
+        scopeSessionHint:
+          "Сервер сохраняется глобально отключённым и включается только для этой сессии.",
+        scopeEverywhereHint: "Сервер сохраняется и включается для каждой сессии.",
+        toolAccess: {
+          label: "Доступ к инструментам",
+          loading: "Загрузка инструментов…",
+          loadFailed: "Не удалось загрузить инструменты.",
+          noTools: "Нет доступных инструментов для этого коннектора.",
+          summary: "Включено инструментов: {enabled} из {total}",
+          summaryOne: "Включено инструментов: {enabled} из {total}",
+        },
         enabledCount: "{count} вкл.",
         loadingSkills: "Загрузка Skills…",
         skillsLoadFailed: "Не удалось загрузить Skills.",
